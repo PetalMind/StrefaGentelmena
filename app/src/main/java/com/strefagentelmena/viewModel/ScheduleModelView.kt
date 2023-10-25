@@ -4,33 +4,44 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.filesFunctions
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
 import java.io.File
-import java.io.FileReader
 import java.io.FileWriter
 import java.text.SimpleDateFormat
-import java.time.LocalDate
+import java.util.Date
 import java.util.Locale
 
 class ScheduleModelView : ViewModel() {
     val appointments = MutableLiveData<List<Appointment>>(emptyList())
-    val selectedAppointment = MutableLiveData<Appointment?>()
-    val deleteDialog = MutableLiveData(false)
-    val selectedAppointmentDate = MutableLiveData("")
-    val selectedAppointmentTime = MutableLiveData("")
+    private val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+    private val currentDate: String = sdf.format(Date())
+    val currentSelectedAppoinmentsDate = MutableLiveData<String>(currentDate)
+    val currentWeekDays = mutableStateOf<List<String>>(emptyList())
+
     val messages = MutableLiveData<String?>(null)
     val viewState = MutableLiveData<AppState>(AppState.Idle)
 
+    /**
+     *Dialogs states
+     */
+    val showAppointmentDialog = MutableLiveData(false)
+    val deleteDialog = MutableLiveData(false)
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    val selectedAppoimentsDate: MutableLiveData<LocalDate> = MutableLiveData(LocalDate.now())
+    /**
+     * Appoiments Data
+     *
+     */
+    val selectedAppointmentDate = MutableLiveData("")
+    val selectedAppointmentTime = MutableLiveData("")
+    val selectedAppointment = MutableLiveData<Appointment?>()
 
 
     fun clearMessages() {
@@ -39,11 +50,6 @@ class ScheduleModelView : ViewModel() {
 
     fun setMessages(newValue: String) {
         messages.value = newValue
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun changeAppointmentsDate(newDate: LocalDate) {
-        selectedAppoimentsDate.value = newDate
     }
 
     /**
@@ -67,6 +73,10 @@ class ScheduleModelView : ViewModel() {
 
     fun showDeleteDialog() {
         deleteDialog.value = true
+    }
+
+    fun changeAppoinmentsDate(newValue: String) {
+        currentSelectedAppoinmentsDate.value = newValue
     }
 
     /**
@@ -117,13 +127,6 @@ class ScheduleModelView : ViewModel() {
             ?.first
     }
 
-    //dialogs
-    val showAppointmentDialog = MutableLiveData(false)
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    val selectedDate = MutableLiveData(LocalDate.now()) // Wybrana data
-    val showNotification = MutableLiveData(false)  // Czy pokazać powiadomienie
-
 
     /**
      * Show Apoiment Dialog.
@@ -139,16 +142,6 @@ class ScheduleModelView : ViewModel() {
      */
     fun hideApoimentDialog() {
         showAppointmentDialog.value = false
-    }
-
-    /**
-     * Change Date.
-     *
-     * @param date
-     */
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun changeDate(date: LocalDate) {
-        selectedDate.value = date
     }
 
     /**
@@ -231,7 +224,7 @@ class ScheduleModelView : ViewModel() {
 
             saveAppointmentToFile(context)
             setMessages("Wizyta ${selectedAppointment.value?.customer?.fullName} właśnie przeszła metamorfozę w systemie.")
-            loadAppointmentFromFile(context)
+            filesFunctions.loadAppointmentFromFile(context)
         }
     }
 
@@ -250,19 +243,15 @@ class ScheduleModelView : ViewModel() {
         }
     }
 
-    fun loadAppointmentFromFile(context: Context) {
-        val file = File(context.filesDir, "appointment.json")
-
-        if (file.exists()) {
-            FileReader(file).use {
-                val type = object : TypeToken<List<Appointment>>() {}.type
-                val loadedAppointments: List<Appointment> = Gson().fromJson(it, type)
-                // Tutaj możesz przekształcić obiekty daty na stringi, jeśli to konieczne
-                appointments.value = loadedAppointments
-                viewState.value = AppState.Success
-            }
+    fun loadAllData(context: Context) {
+        viewState.value = AppState.Loading
+        try {
+            appointments.value = filesFunctions.loadAppointmentFromFile(context)
+        } catch (e: Exception) {
+            viewState.value = AppState.Error
         }
-    }
 
+        viewState.value = AppState.Success
+    }
 
 }

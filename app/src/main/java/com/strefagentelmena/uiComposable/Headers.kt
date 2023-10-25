@@ -1,12 +1,12 @@
 package com.strefagentelmena.uiComposable
 
-import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
@@ -31,11 +33,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -44,10 +51,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.R
+import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Locale
 
 val headersUI = Headers()
@@ -124,7 +133,7 @@ class Headers {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun getVisitTimes(appointments: List<Appointment>?, selectedDate: LocalDate): String {
-        val filteredAppointments = appointments?.filterNot { it.date.isNullOrEmpty() }?.filter {
+        val filteredAppointments = appointments?.filterNot { it.date.isEmpty() }?.filter {
             LocalDate.parse(it.date, DateTimeFormatter.ofPattern("dd.MM.yyyy")) == selectedDate
         } ?: emptyList()
         val sortedAppointments = filteredAppointments.sortedBy { it.startTime }
@@ -141,7 +150,7 @@ class Headers {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun getCustomerCount(appointments: List<Appointment>?, selectedDate: LocalDate): Int {
-        return appointments?.filterNot { it.date.isNullOrEmpty() }?.filter {
+        return appointments?.filterNot { it.date.isEmpty() }?.filter {
             LocalDate.parse(it.date, DateTimeFormatter.ofPattern("dd.MM.yyyy")) == selectedDate
         }?.size ?: 0
     }
@@ -150,7 +159,7 @@ class Headers {
     @Composable
     fun CalendarHeaderView(viewModel: ScheduleModelView) {
         val context = LocalContext.current
-        val selectedDate by viewModel.selectedDate.observeAsState(LocalDate.now())
+        val selectedDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
         val formatter = DateTimeFormatter.ofPattern("d MMMM", Locale("pl"))
 
         Column {
@@ -159,9 +168,7 @@ class Headers {
                     .fillMaxWidth()
                     .padding(8.dp)  // Increased padding
                     .clickable {  // Made the whole row clickable
-                        showDatePickerDialog(context) { year, month, day ->
-                            viewModel.changeDate(LocalDate.of(year, month + 1, day))
-                        }
+
                     },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -173,10 +180,12 @@ class Headers {
                     modifier = Modifier.size(32.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = selectedDate.format(formatter),
-                    style = MaterialTheme.typography.headlineLarge,  // Changed to h6 for better readability
-                )
+                selectedDate?.let {
+                    Text(
+                        text = it.format(formatter),
+                        style = MaterialTheme.typography.headlineLarge,  // Changed to h6 for better readability
+                    )
+                }
                 Spacer(modifier = Modifier.weight(1f))  // Spacer remains here
             }
 
@@ -190,37 +199,126 @@ class Headers {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                val customerCount = getCustomerCount(viewModel.appointments.value, selectedDate)
-                val visitTimes = getVisitTimes(viewModel.appointments.value, selectedDate)
-
-                IconAndNumber(
-                    iconResourceId = R.drawable.ic_clients,
-                    number = customerCount.toString(),
-                    text = "Klienci",
-                    tooltipText = "Klienci z dnia dzisiejszego"
-                )
-
-                IconAndNumber(
-                    iconResourceId = R.drawable.ic_clock,
-                    number = visitTimes,
-                    text = "Dzień Pracy",
-                    tooltipText = "Godziny pracy w dniu dzisiejszym",
-                )
+//                val customerCount = getCustomerCount(viewModel.appointments.value, selectedDate)
+//                val visitTimes = getVisitTimes(viewModel.appointments.value, selectedDate)
+//
+//                IconAndNumber(
+//                    iconResourceId = R.drawable.ic_clients,
+//                    number = customerCount.toString(),
+//                    text = "Klienci",
+//                    tooltipText = "Klienci z dnia dzisiejszego"
+//                )
+//
+//                IconAndNumber(
+//                    iconResourceId = R.drawable.ic_clock,
+//                    number = visitTimes,
+//                    text = "Dzień Pracy",
+//                    tooltipText = "Godziny pracy w dniu dzisiejszym",
+//                )
             }
         }
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    @OptIn(ExperimentalMaterial3Api::class)
-    fun showDatePickerDialog(context: Context, dateSetListener: (Int, Int, Int) -> Unit) {
-        val current = LocalDate.now()
-        val datePickerDialog = android.app.DatePickerDialog(context, { _, year, month, dayOfMonth ->
-            dateSetListener(year, month, dayOfMonth)
-        }, current.year, current.monthValue - 1, current.dayOfMonth)
+    @Composable
+    fun CalendarHeader(
+        currentDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH),
+        onDaySelected: (String) -> Unit,
+    ) {
+        val selectedDay = remember { mutableIntStateOf(currentDay) }
+        val daysInCurrentWeek = remember {
+            mutableStateOf(appFunctions.getCurrentWeekDays())
+        }
 
-        datePickerDialog.show()
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
+
+        LaunchedEffect(onDaySelected) {
+            daysInCurrentWeek.value = appFunctions.getCurrentWeekDays()
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = colorsUI.headersBlue)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colorsUI.grey, shape = RoundedCornerShape(4.dp))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        listOf(
+                            "PON.",
+                            "WT.",
+                            "ŚR.",
+                            "CZW.",
+                            "PT.",
+                            "SOB.",
+                            "NIEDZ."
+                        ).forEach { day ->
+                            Text(
+                                text = day,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.Black,
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        daysInCurrentWeek.value.forEach { dayNumber ->
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        if (dayNumber.toInt() == selectedDay.intValue) colorsUI.yellow else Color.Transparent,
+                                        shape = CircleShape
+                                    )
+                                    .padding(4.dp)
+                            ) {
+                                Text(
+                                    text = dayNumber.toString(),
+                                    style = if (dayNumber.toInt() == selectedDay.intValue) MaterialTheme.typography.headlineMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ) else MaterialTheme.typography.bodyLarge,
+                                    color = if (dayNumber.toInt() == selectedDay.intValue) Color.Black else colorsUI.darkGrey,
+                                    modifier = Modifier
+                                        .clickable {
+                                            selectedDay.intValue = dayNumber.toInt()
+                                            val formattedDate = String.format(
+                                                "%02d.%02d.%04d",
+                                                dayNumber,
+                                                currentMonth,
+                                                currentYear
+                                            )
+                                            onDaySelected(formattedDate)
+                                        }
+                                        .padding(4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+
 
     @Composable
     fun IconAndNumber(

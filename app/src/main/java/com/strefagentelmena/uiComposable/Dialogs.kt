@@ -1,5 +1,6 @@
 package com.strefagentelmena.uiComposable
 
+import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
@@ -64,11 +65,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.DashboardModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import java.time.LocalDate
 
 val dialogsUI = Dialogs()
 
@@ -609,5 +612,29 @@ class Dialogs {
                 itemText = { item -> item }
             )
         }
+
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    @OptIn(ExperimentalMaterial3Api::class)
+    fun showDatePickerDialog(
+        context: Context,
+        dateSetListener: (String) -> Unit,
+        viewModel: ScheduleModelView,
+    ) {
+        val current = LocalDate.now()
+        val datePickerDialog = android.app.DatePickerDialog(context, { _, year, month, dayOfMonth ->
+            val formattedDate = "${dayOfMonth.toString().padStart(2, '0')}.${
+                (month + 1).toString().padStart(2, '0')
+            }.$year"
+            dateSetListener(formattedDate)
+
+            // Aktualizujemy dni tygodnia w viewModel
+            val weekDaysAsInts = appFunctions.getCurrentWeekDays(formattedDate)
+
+        }, current.year, current.monthValue - 1, current.dayOfMonth)
+
+        datePickerDialog.show()
     }
 }

@@ -18,6 +18,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -52,9 +55,12 @@ import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.DashboardModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import java.util.Locale
 
 val screenSchedule = Schedule()
 
@@ -78,7 +84,7 @@ class Schedule() {
         when (viewState) {
             AppState.Idle -> {
                 LaunchedEffect(Unit) {
-                    viewModel.loadAppointmentFromFile(context)
+                    viewModel.loadAllData(context = context)
                 }
             }
 
@@ -110,6 +116,7 @@ class Schedule() {
      * @param viewModel
      * @param dashboardModelView
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentSuccesConent(
         customersModelView: CustomersModelView,
@@ -121,6 +128,14 @@ class Schedule() {
         val showApoimentDialog by viewModel.showAppointmentDialog.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
         val context = LocalContext.current
+        val currentSelectedAppoinmentsDate by viewModel.currentSelectedAppoinmentsDate.observeAsState(
+            ""
+        )
+        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+
+        val currentSelectedDay: Int = currentSelectedAppoinmentsDate?.let {
+            sdf.parse(it)?.date ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+        } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
 
         // Inicjalizacja stanu Scaffold
         val scope = rememberCoroutineScope()
@@ -137,7 +152,7 @@ class Schedule() {
 
         // Efekt wyzwalany, gdy wartość 'message' się zmienia
         LaunchedEffect(message) {
-            if (message?.isNotEmpty() == true && message != "" && message != null) {
+            if (message?.isNotEmpty() == true && message != "") {
                 scope.launch {
                     message?.let {
                         snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short)
@@ -162,6 +177,15 @@ class Schedule() {
                     onBackPressed = {
                         navController.navigate("dashboard")
                     },
+                    compose = {
+                        IconButton(onClick = {
+                            dialogsUI.showDatePickerDialog(context, dateSetListener = {
+                                viewModel.currentSelectedAppoinmentsDate.value = it
+                            }, viewModel = viewModel)
+                        }) {
+                            Icon(Icons.Default.DateRange, contentDescription = null)
+                        }
+                    },
                     onClick = {
                     },
                 )
@@ -175,18 +199,21 @@ class Schedule() {
             },
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
-                if (typeOfView.value == "calendar") {
-                    TimeSlotsView(viewModel = viewModel)
-                } else {
-                    headersUI.CalendarHeaderView(viewModel)
+                //  headersUI.CalendarHeaderView(viewModel)
 
-                    AppointmentsList(viewModel) { selectedAppointment ->
-                        viewModel.selectAppointment(selectedAppointment)
-                        customersModelView.selectedCustomer.value = selectedAppointment.customer
-                        isNew.value = false
+                headersUI.CalendarHeader(
+                    onDaySelected = {
+                        viewModel.currentSelectedAppoinmentsDate.value = it.toString()
+                    },
+                    currentDay = currentSelectedDay,
+                )
 
-                        viewModel.showApoimentDialog()
-                    }
+                AppointmentsList(viewModel) { selectedAppointment ->
+                    viewModel.selectAppointment(selectedAppointment)
+                    customersModelView.selectedCustomer.value = selectedAppointment.customer
+                    isNew.value = false
+
+                    viewModel.showApoimentDialog()
                 }
             }
         }
@@ -340,13 +367,12 @@ class Schedule() {
     @Composable
     fun AppointmentsList(viewModel: ScheduleModelView, onClick: (Appointment) -> Unit) {
         val appointmentsList by viewModel.appointments.observeAsState(emptyList())
-        val selectedDate by viewModel.selectedDate.observeAsState(LocalDate.now())
+        val selectedDate by viewModel.currentSelectedAppoinmentsDate.observeAsState(LocalDate.now())
 
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-        val selectedDateString = selectedDate.format(formatter)
 
         val filteredAppointments = appointmentsList.filter {
-            it.date == selectedDateString
+            it.date == selectedDate
         }.sortedBy {
             LocalTime.parse(it.startTime, DateTimeFormatter.ofPattern("HH:mm"))
         }
