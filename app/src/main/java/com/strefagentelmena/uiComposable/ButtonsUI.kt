@@ -1,6 +1,8 @@
 package com.strefagentelmena.uiComposable
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -96,7 +98,14 @@ class ButtonsUI {
                 .padding(padding)
                 .size(width, height),
         ) {
-            Text(text, style = TextStyle(fontSize = fontSize, fontWeight = FontWeight.Bold, color = colorsUI.fontGrey))
+            Text(
+                text,
+                style = TextStyle(
+                    fontSize = fontSize,
+                    fontWeight = FontWeight.Bold,
+                    color = colorsUI.fontGrey
+                )
+            )
         }
 
     }
@@ -114,5 +123,21 @@ class ButtonsUI {
             containerColor = colorsUI.buttonsGreen,
             contentColor = MaterialTheme.colorScheme.onSecondary
         )
+    }
+
+    @Composable
+    fun ButtonsRow(
+        onClick: () -> Unit,
+        onDismiss: () -> Unit,
+        cancelText: String = "Anuluj",
+        confirmText: String = "Zapisz"
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(1f)
+        ) {
+            buttonsUI.CustomTextButton(text = cancelText, onClick = { onDismiss() })
+            Spacer(modifier = Modifier.weight(1f))
+            PrimaryButton(text = confirmText, onClick = { onClick() }, containerColor = colorsUI.amaranthPurple)
+        }
     }
 }

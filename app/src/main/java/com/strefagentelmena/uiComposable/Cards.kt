@@ -1,6 +1,7 @@
 package com.strefagentelmena.uiComposable
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,8 +40,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDismissState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +57,7 @@ import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 val cardUI = Cards()
@@ -212,88 +216,99 @@ class Cards {
         onEdit: (Customer) -> Unit
     ) {
         val dismissState = rememberDismissState(initialValue = DismissValue.Default)
+        val visible = rememberSaveable { mutableStateOf(true) }
 
-        SwipeToDismiss(
-            state = dismissState,
-            background = {
-                val color = when (dismissState.dismissDirection) {
-                    DismissDirection.StartToEnd -> colorsUI.mintGreen
-                    DismissDirection.EndToStart -> colorsUI.amaranthPurple
-                    null -> Color.Transparent
-                }
+        AnimatedVisibility(visible = visible.value) {
+            SwipeToDismiss(
+                state = dismissState,
+                background = {
+                    val color = when (dismissState.dismissDirection) {
+                        DismissDirection.StartToEnd -> colorsUI.mintGreen
+                        DismissDirection.EndToStart -> colorsUI.amaranthPurple
+                        null -> Color.Transparent
+                    }
 
-                val direction = dismissState.dismissDirection
+                    val direction = dismissState.dismissDirection
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(color)
-                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(color)
+                    ) {
 
-                    if (direction == DismissDirection.StartToEnd) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(color)
-                                .padding(8.dp)
-                        ) {
-                            Column(modifier = Modifier.align(Alignment.CenterStart)) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                )
-                                Text(
-                                    text = "Edytuj", fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                    color = Color.White
-                                )
+                        if (direction == DismissDirection.StartToEnd) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(color)
+                                    .padding(8.dp)
+                            ) {
+                                Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                    )
+                                    Text(
+                                        text = "Edytuj", fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        color = Color.White
+                                    )
+                                }
                             }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(color)
-                                .padding(8.dp)
-                        ) {
-                            Column(modifier = Modifier.align(Alignment.CenterEnd)) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                )
-                                Spacer(modifier = Modifier.heightIn(5.dp))
-                                Text(
-                                    text = "Usuń",
-                                    textAlign = TextAlign.Center,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.LightGray
-                                )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(color)
+                                    .padding(8.dp)
+                            ) {
+                                Column(modifier = Modifier.align(Alignment.CenterEnd)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                    )
+                                    Spacer(modifier = Modifier.heightIn(5.dp))
+                                    Text(
+                                        text = "Usuń",
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.LightGray
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            },
-            dismissContent = {
-                CustomerListCard(
-                    customer = customer,
-                    onClick = onClick
-                )
-            },
-            directions = setOf(DismissDirection.EndToStart, DismissDirection.StartToEnd),
-        )
+                },
+                dismissContent = {
+                    CustomerListCard(
+                        customer = customer,
+                        onClick = onClick
+                    )
+                },
+                directions = setOf(DismissDirection.EndToStart, DismissDirection.StartToEnd),
+            )
+        }
 
-        LaunchedEffect(dismissState) {
-            if (dismissState.isDismissed(DismissDirection.EndToStart)) {
-                onDismiss(customer)
-            }
-
-            if (dismissState.isDismissed(DismissDirection.StartToEnd)) {
+        LaunchedEffect(dismissState.targetValue) {
+            if (dismissState.targetValue == DismissValue.DismissedToEnd) {
+                delay(300)
                 onEdit(customer)
+                dismissState.snapTo(DismissValue.Default)
+            } else if (dismissState.targetValue == DismissValue.DismissedToStart) {
+                onDismiss(customer)
+                delay(300)
+            }
+        }
+
+        LaunchedEffect(dismissState.currentValue) {
+            if (dismissState.currentValue == DismissValue.DismissedToEnd || dismissState.currentValue == DismissValue.DismissedToStart) {
+                delay(300)
+                dismissState.snapTo(DismissValue.Default)
             }
         }
     }

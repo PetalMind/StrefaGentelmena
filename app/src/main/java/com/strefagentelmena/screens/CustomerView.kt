@@ -53,11 +53,13 @@ class CustomerView {
     ) {
         val customerList by viewModel.customersLists.observeAsState(arrayListOf())
         val searchedCustomerList by viewModel.searchedCustomersLists.observeAsState(arrayListOf())
-
-        val showAddClientDialog by viewModel.booleanAddClientDialog.observeAsState(false)
-        val context = LocalContext.current
+        val clientDialogState by viewModel.clientDialogState.observeAsState(false)
         val searchState by viewModel.searchState.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
+        val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
+val selectedClient by viewModel.selectedCustomer.observeAsState(Customer())
+
+        val context = LocalContext.current
         val searchText = remember { mutableStateOf("") }
 
         val showedList by rememberUpdatedState(
@@ -144,29 +146,39 @@ class CustomerView {
                             viewModel.selectedCustomer.value = customer
                             viewModel.showAddCustomerDialog()
                         },
-                        onEdit = { customer ->
-                            viewModel.selectedCustomer.value = customer
+                        onEdit = {
+                            viewModel.selectedCustomer.value = it
                             viewModel.showAddCustomerDialog()
                         },
-                        onDelete = { customer -> }
+                        onDelete = {
+                            viewModel.selectedCustomer.value = it
+                            viewModel.showDeleteDialog()
+                        }
                     )
                 }
             }
         }
 
-        if (showAddClientDialog == true) {
-            dialogsUI.OnAddOrEditCustomerDialog(showFullScreenDialog = showAddClientDialog,
+        if (clientDialogState == true) {
+            dialogsUI.OnAddOrEditCustomerDialog(showFullScreenDialog = clientDialogState,
                 onClose = { viewModel.closeAddClientDialog() },
                 onAddCustomer = {
                     if (viewModel.validateAllFields()
                     ) {
-                        viewModel.addCustomer(context)
+                         viewModel.addCustomer(context)
                     }
                 },
                 viewModel = viewModel,
                 onEditCustomer = {
                     viewModel.editCustomer(context)
                 })
+        }
+
+        if (deleteDialogState == true) {
+            dialogsUI.DeleteDialog(onDismiss = { viewModel.closeDeleteDialog() }, onConfirm = {
+                selectedClient?.let { viewModel.deleteCustomer(context = context, customer = it) }
+                viewModel.closeDeleteDialog()
+            }, objectName = selectedClient?.fullName ?: "")
         }
     }
 
@@ -183,10 +195,10 @@ class CustomerView {
                 cardUI.SwipeToDismissCustomerCard(customer = customer, onClick = {
                     onCustomerClick(customer)
                 },
-                    onDismiss = { it ->
-                        onDelete(customer)
+                    onDismiss = {
+                        onDelete(it)
                     },
-                    onEdit = { it -> onEdit(customer) })
+                    onEdit = { onEdit(it) })
             }
         }
     }

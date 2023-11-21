@@ -21,15 +21,13 @@ class CustomersModelView : ViewModel() {
 
     private val idGenerator = CustomerIdGenerator()
 
-    val booleanAddClientDialog = MutableLiveData<Boolean>(false)
+    val clientDialogState = MutableLiveData<Boolean>(false)
+    val deleteDialogState = MutableLiveData<Boolean>(false)
 
     //Customer data
     private val customerName = MutableLiveData<String>("")
     private val customerLastName = MutableLiveData<String>("")
     private val customerPhoneNumber = MutableLiveData<String>("")
-
-
-//
 
     fun loadClients(context: Context) {
         customersLists.value = fileFuctionsClients.loadCustomersFromFile(context)
@@ -39,12 +37,23 @@ class CustomersModelView : ViewModel() {
         val customersToSearch = customersLists.value ?: emptyList()
         val matchingCustomers = if (query.isNotEmpty()) {
             customersToSearch.filter { customer ->
-                customer.fullName.contains(query, ignoreCase = true) || customer.phoneNumber?.contains(query, ignoreCase = true) == true
+                customer.fullName.contains(
+                    query,
+                    ignoreCase = true
+                ) || customer.phoneNumber?.contains(query, ignoreCase = true) == true
             }
         } else {
             customersToSearch
         }
         searchedCustomersLists.value = matchingCustomers
+    }
+
+    fun showDeleteDialog() {
+        deleteDialogState.value = true
+    }
+
+    fun closeDeleteDialog() {
+        deleteDialogState.value = false
     }
 
     fun setCustomerName(name: String) {
@@ -55,7 +64,7 @@ class CustomersModelView : ViewModel() {
         customerLastName.value = lastname
     }
 
-    fun setCustomerPhoneNumber(phoneNumber: String){
+    fun setCustomerPhoneNumber(phoneNumber: String) {
         customerPhoneNumber.value = phoneNumber
     }
 
@@ -77,7 +86,7 @@ class CustomersModelView : ViewModel() {
      *
      */
     fun showAddCustomerDialog() {
-        booleanAddClientDialog.value = true
+        clientDialogState.value = true
     }
 
     /**
@@ -85,10 +94,10 @@ class CustomersModelView : ViewModel() {
      *
      */
     fun closeAddClientDialog() {
-        booleanAddClientDialog.value = false
+        clientDialogState.value = false
     }
 
-    private fun createNewCustomer(): Customer{
+    private fun createNewCustomer(): Customer {
         return Customer(
             id = idGenerator.generateId(),
             firstName = customerName.value,
@@ -98,7 +107,7 @@ class CustomersModelView : ViewModel() {
     }
 
 
-    private fun clearSelectedClientAndData(){
+    private fun clearSelectedClientAndData() {
         selectedCustomer.value = null
         customerPhoneNumber.value = ""
         customerLastName.value = ""
@@ -133,6 +142,19 @@ class CustomersModelView : ViewModel() {
 
         closeAddClientDialog()
         clearSelectedClientAndData()
+    }
+
+    fun deleteCustomer(context: Context, customer: Customer) {
+        val currentList = customersLists.value?.toMutableList() ?: return
+        val index = currentList.indexOfFirst { it.id == customer.id }
+        if (index != -1) {
+            currentList.removeAt(index)
+            customersLists.value = currentList.toList()
+            searchedCustomersLists.value = customersLists.value
+            // Aktualizuj listę klientów
+            setMessage("Klient ${customer.fullName} został usunięty")
+            fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+        }
     }
 
     fun generateCustomers(context: Context, numberOfCustomers: Int) {

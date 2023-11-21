@@ -22,7 +22,8 @@ class CustomerIdGenerator {
     }
 }
 
-class Customer(
+class
+Customer(
     var id: Int? = null,
     var firstName: String? = null,
     var lastName: String? = null,
