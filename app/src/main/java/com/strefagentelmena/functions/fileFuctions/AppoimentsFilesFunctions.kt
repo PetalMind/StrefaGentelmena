@@ -1,17 +1,16 @@
-package com.strefagentelmena.functions
+package com.strefagentelmena.functions.fileFuctions
 
 import android.content.Context
-import androidx.lifecycle.MutableLiveData
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.models.Appointment
 import java.io.File
 import java.io.FileReader
+import java.io.FileWriter
 
-val filesFunctions = FilesFunctions()
+val filesFunctionsAppoiments = FilesFunctionsAppoiments()
 
-class FilesFunctions {
+class FilesFunctionsAppoiments {
     fun loadAppointmentFromFile(
         context: Context,
     ): List<Appointment> {
@@ -26,6 +25,16 @@ class FilesFunctions {
             }
         } else {
             emptyList()
+        }
+    }
+
+    fun saveAppointmentToFile(context: Context, appointments: List<Appointment>?) {
+        val gson = Gson()
+        val jsonString = gson.toJson(appointments)
+        val file = File(context.filesDir, "appointment.json")
+
+        FileWriter(file).use {
+            it.write(jsonString)
         }
     }
 

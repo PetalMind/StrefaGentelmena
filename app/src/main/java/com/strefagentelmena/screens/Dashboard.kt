@@ -1,10 +1,10 @@
 package com.strefagentelmena.screens
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,13 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -34,16 +28,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -55,8 +50,10 @@ import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.ui.theme.StrefaGentelmenaTheme
 import com.strefagentelmena.uiComposable.PopUpDialogs
+import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
+import com.strefagentelmena.uiComposable.footerUI
 import com.strefagentelmena.uiComposable.headersUI
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.DashboardModelView
@@ -66,7 +63,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
 import java.util.Locale
 
 val screenDashboard = Dashboard()
@@ -77,13 +73,18 @@ class Dashboard {
     fun PermissionAwareComponent() {
         val smsPermissionState = rememberPermissionState(Manifest.permission.SEND_SMS)
 
-        if (!smsPermissionState.hasPermission) {
-            // Jeżeli uprawnienia nie są przyznane, proś o nie
-            Button(onClick = { smsPermissionState.launchPermissionRequest() }) {
-                Text("Udziel uprawnień do SMS")
+        if (!smsPermissionState.hasPermission && !smsPermissionState.shouldShowRationale) {
+            // Wyświetl pytanie o uprawnienia, nawet jeśli wcześniej zostały one odmówione
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                buttonsUI.CustomTextButton(
+                    text = "Udziel uprawnień do SMS",
+                    onClick = { smsPermissionState.launchPermissionRequest() },
+                    width = 250.dp
+                )
             }
-        } else {
-            // Uprawnienia są przyznane, wykonaj działanie
         }
     }
 
@@ -121,10 +122,6 @@ class Dashboard {
             }
 
             AppState.Success -> {
-                LaunchedEffect(Unit) {
-                    dashboardViewModel.sendNotificationsForUpcomingAppointments(context)
-                }
-
                 DashboardSuccessView(viewModel, navController, dashboardViewModel)
             }
 
@@ -145,6 +142,7 @@ class Dashboard {
         // Efekt wyzwalany, gdy wartość 'messages' się zmienia
     }
 
+    @SuppressLint("StateFlowValueCalledInComposition")
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun DashboardSuccessView(
@@ -155,6 +153,7 @@ class Dashboard {
         val messages by dashboardViewModel.messages.observeAsState("")
         val showNotifyDialog by dashboardViewModel.showNotifyDialog.observeAsState(false)
         val clientsToNotify by dashboardViewModel.appointmentsToNotify.observeAsState(emptyList())
+        val greetingRandom by dashboardViewModel.displayGreetings.observeAsState("")
         val context = LocalContext.current
 
         val currentTimeString = remember {
@@ -172,7 +171,6 @@ class Dashboard {
                 LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM", Locale.getDefault()))
             )
         }
-
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -190,12 +188,13 @@ class Dashboard {
         LaunchedEffect(currentTimeString) {
             while (true) {
                 delay(15000L)
+
                 currentTimeString.value =
                     LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+
+                dashboardViewModel.sendNotificationsForUpcomingAppointments(context)
             }
         }
-
-
 
         StrefaGentelmenaTheme(dynamicColor = false, darkTheme = false) {
             Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
@@ -210,32 +209,23 @@ class Dashboard {
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .shadow(
+                                    elevation = 8.dp,
+                                    shape = RoundedCornerShape(0.dp, 0.dp, 16.dp, 16.dp)
+                                )
+                                .fillMaxWidth(),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                Column(horizontalAlignment = Alignment.Start) {
-                                    DashboardHeaderGreetings(
-                                        currentTimeString = currentTimeString,
-                                        currentStringDate = currentStringDate,
-                                        currentDayAndMonth = currentDayAndMonth,
-                                        greeting = dashboardViewModel.displayGreetings.value,
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                            }
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                headersUI.DashboardHeader()
-                            }
+                            DashboardHeaderGreetings(
+                                currentTimeString = currentTimeString,
+                                currentStringDate = currentStringDate,
+                                currentDayAndMonth = currentDayAndMonth,
+                                greeting = greetingRandom,
+                            )
                         }
+
+                        headersUI.LogoHeader()
 
                         PermissionAwareComponent()
 
@@ -252,8 +242,6 @@ class Dashboard {
                             )
                         }
 
-
-                        //                    buttonsUI.DashboardButtons(navController)
                         if (showNotifyDialog) {
                             PopUpDialogs().CustomPopup(
                                 onClick = {
@@ -272,11 +260,15 @@ class Dashboard {
                                 clientCountString = clientsToNotify.size.toString()
                             )
                         }
+
+                        Spacer(modifier = Modifier.weight(1f))
+                        footerUI.AppFooter(context = context)
                     }
                 }
             }
         }
     }
+
 
     @Composable
     fun DashboardHeaderGreetings(
@@ -287,36 +279,49 @@ class Dashboard {
     ) {
         val randomGreeting = remember { mutableStateOf(greeting) }
 
-        Column(horizontalAlignment = Alignment.Start) {
-            Text(
-                text = randomGreeting.value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = currentTimeString.value,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 32.sp
-                    ),
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = colorsUI.teaGreen,
+                    shape = RoundedCornerShape(0.dp, 0.dp, 16.dp, 16.dp)
                 )
+        ) {
+            Column(horizontalAlignment = Alignment.Start, modifier = Modifier.padding(16.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = currentTimeString.value,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 32.sp
+                        ),
+                        color = colorsUI.fontGrey
+                    )
 
-                Spacer(modifier = Modifier.width(5.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
+
+                    Text(
+                        text = currentStringDate.value,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colorsUI.fontGrey
+                    )
+                    Text(
+                        text = ", ${currentDayAndMonth.value}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colorsUI.fontGrey
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = currentStringDate.value,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text(
-                    text = ", ${currentDayAndMonth.value}",
-                    style = MaterialTheme.typography.titleLarge
+                    text = randomGreeting.value,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = colorsUI.fontGrey
                 )
             }
         }

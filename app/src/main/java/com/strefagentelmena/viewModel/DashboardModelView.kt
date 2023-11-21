@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.greetingsManager
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,26 +29,8 @@ class DashboardModelView : ViewModel() {
     val appointmentsToNotify = MutableLiveData<List<Appointment>>(emptyList())
     val showNotifyDialog = MutableLiveData<Boolean>(false)
 
-
-    private val greetings = listOf(
-        "Miło Cię widzieć Kinga,",
-        "Dzień dobry, Szefowo!",
-        "Witam w królestwie elegancji Kingi,",
-        "Kinga, witaj w Twoim imperium!",
-        "Właścicielka wchodzi na pokład! Witaj, Kinga,",
-        "Witaj w Twoim królestwie, Kinga!",
-        "Dzień dobry, Kapitanie! Salon jest gotowy do działania,",
-        "Twój salon tętni życiem, Kinga. Witaj ponownie!",
-        "Jesteś tu jak w domu, Kinga. Witaj w Twoim salonie!",
-        "Kinga, witaj w miejscu, które Tworzysz każdego dnia!"
-    )
-
-    private val _displayGreetings = MutableStateFlow(greetings.randomOrNull() ?: "")
-    val displayGreetings: StateFlow<String> = _displayGreetings
-
-    private fun randomGreeting(): String {
-        return greetings.randomOrNull() ?: "Brak pozdrowień, coś poszło nie tak."
-    }
+    private val _displayGreetings = MutableLiveData(greetingsManager.randomGreeting())
+    val displayGreetings: MutableLiveData<String> = _displayGreetings
 
 //    fun createNotification(customerList: List<Appointment>, data: String) {
 //        val notification = Notification(
@@ -172,7 +155,7 @@ class DashboardModelView : ViewModel() {
         appointment.notificationSent = true
 
         if (index != -1) {
-            currentAppointments[index] = appointment ?: return
+            currentAppointments[index] = appointment
             appointmentsLists.value = currentAppointments
 
             saveAppointmentToFile(context)

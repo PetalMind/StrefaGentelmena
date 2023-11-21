@@ -64,11 +64,11 @@ val headersUI = Headers()
 @OptIn(ExperimentalMaterial3Api::class)
 class Headers {
     @Composable
-    fun DashboardHeader() {
+    fun LogoHeader() {
         Image(
             painter = painterResource(id = R.drawable.logo),
             contentDescription = "Logo",
-            modifier = Modifier.size(240.dp)
+            modifier = Modifier.size(200.dp)
         )
     }
 
@@ -102,7 +102,7 @@ class Headers {
         compose: @Composable () -> Unit = {},
         onClick: () -> Unit = {},
     ) {
-        Surface(shadowElevation = 3.dp) {
+        Surface(shadowElevation = 3.dp,) {
             TopAppBar(
                 title = {
                     Text(
@@ -124,7 +124,7 @@ class Headers {
                     compose()
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = colorsUI.teaGreen
                 ),
                 modifier = modifier
             )
@@ -227,14 +227,14 @@ class Headers {
     ) {
         val selectedDay = remember { mutableIntStateOf(currentDay) }
         val daysInCurrentWeek = remember {
-            mutableStateOf(appFunctions.getCurrentWeekDays())
+            mutableStateOf(appFunctions.getCurrentWeekDays(selectedDay.value.toString()))
         }
 
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
 
         LaunchedEffect(onDaySelected) {
-            daysInCurrentWeek.value = appFunctions.getCurrentWeekDays()
+            daysInCurrentWeek.value = appFunctions.getCurrentWeekDays(selectedDay.value.toString())
         }
 
         Column(

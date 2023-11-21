@@ -11,24 +11,34 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DismissDirection
+import androidx.compose.material3.DismissValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltipBox
 import androidx.compose.material3.PlainTooltipState
+import androidx.compose.material3.SwipeToDismiss
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDismissState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -160,6 +170,9 @@ class Cards {
                 .clickable(onClick = onClick)
                 .padding(8.dp),
             shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colorsUI.papaya,
+            ),
             elevation = CardDefaults.cardElevation(4.dp),
         ) {
             Column(
@@ -190,6 +203,102 @@ class Cards {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun SwipeToDismissCustomerCard(
+        customer: Customer,
+        onClick: () -> Unit,
+        onDismiss: (Customer) -> Unit,
+        onEdit: (Customer) -> Unit
+    ) {
+        val dismissState = rememberDismissState(initialValue = DismissValue.Default)
+
+        SwipeToDismiss(
+            state = dismissState,
+            background = {
+                val color = when (dismissState.dismissDirection) {
+                    DismissDirection.StartToEnd -> colorsUI.mintGreen
+                    DismissDirection.EndToStart -> colorsUI.amaranthPurple
+                    null -> Color.Transparent
+                }
+
+                val direction = dismissState.dismissDirection
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(color)
+                ) {
+
+                    if (direction == DismissDirection.StartToEnd) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(color)
+                                .padding(8.dp)
+                        ) {
+                            Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Text(
+                                    text = "Edytuj", fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(color)
+                                .padding(8.dp)
+                        ) {
+                            Column(modifier = Modifier.align(Alignment.CenterEnd)) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                )
+                                Spacer(modifier = Modifier.heightIn(5.dp))
+                                Text(
+                                    text = "Usuń",
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.LightGray
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            dismissContent = {
+                CustomerListCard(
+                    customer = customer,
+                    onClick = onClick
+                )
+            },
+            directions = setOf(DismissDirection.EndToStart, DismissDirection.StartToEnd),
+        )
+
+        LaunchedEffect(dismissState) {
+            if (dismissState.isDismissed(DismissDirection.EndToStart)) {
+                onDismiss(customer)
+            }
+
+            if (dismissState.isDismissed(DismissDirection.StartToEnd)) {
+                onEdit(customer)
+            }
+        }
+    }
+
+
     @Composable
     fun CustomerListCard(
         customer: Customer,
@@ -197,6 +306,9 @@ class Cards {
     ) {
         Card(shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colorsUI.papaya,
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onClick() }
@@ -213,7 +325,7 @@ class Cards {
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(colorsUI.murrey)
                 ) {
                     Icon(
                         Icons.Default.Person,

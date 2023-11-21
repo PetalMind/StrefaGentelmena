@@ -3,13 +3,9 @@ package com.strefagentelmena.viewModel
 import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.strefagentelmena.functions.fileFuctions.fileFuctionsClients
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
-import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
 
 class CustomersModelView : ViewModel() {
     val customersLists = MutableLiveData<List<Customer>>(emptyList())
@@ -22,7 +18,6 @@ class CustomersModelView : ViewModel() {
     val firstNameError = MutableLiveData<String>()
     val lastNameError = MutableLiveData<String>()
     val phoneNumberError = MutableLiveData<String>()
-    val appointmentDateError = MutableLiveData<String>()
 
     private val idGenerator = CustomerIdGenerator()
 
@@ -32,17 +27,19 @@ class CustomersModelView : ViewModel() {
     private val customerName = MutableLiveData<String>("")
     private val customerLastName = MutableLiveData<String>("")
     private val customerPhoneNumber = MutableLiveData<String>("")
-    private val customerAppointmentDate = MutableLiveData<String>("")
 
 
 //
+
+    fun loadClients(context: Context) {
+        customersLists.value = fileFuctionsClients.loadCustomersFromFile(context)
+    }
 
     fun searchCustomers(query: String) {
         val customersToSearch = customersLists.value ?: emptyList()
         val matchingCustomers = if (query.isNotEmpty()) {
             customersToSearch.filter { customer ->
-                customer.fullName?.contains(query, ignoreCase = true) == true ||
-                        customer.phoneNumber?.contains(query, ignoreCase = true) == true
+                customer.fullName.contains(query, ignoreCase = true) || customer.phoneNumber?.contains(query, ignoreCase = true) == true
             }
         } else {
             customersToSearch
@@ -50,49 +47,28 @@ class CustomersModelView : ViewModel() {
         searchedCustomersLists.value = matchingCustomers
     }
 
+    fun setCustomerName(name: String) {
+        customerName.value = name
+    }
+
+    fun setCustomerLastName(lastname: String) {
+        customerLastName.value = lastname
+    }
+
+    fun setCustomerPhoneNumber(phoneNumber: String){
+        customerPhoneNumber.value = phoneNumber
+    }
 
     fun setShowSearchState(showSearchState: Boolean) {
         searchState.value = showSearchState
     }
 
-    fun setMessage(message: String) {
+    private fun setMessage(message: String) {
         messages.value = message
     }
 
     fun clearMessage() {
         messages.value = ""
-    }
-
-    fun findCustomerByName(name: String): Customer? {
-        return customersLists.value?.firstOrNull { it.fullName == name }
-    }
-
-    /**
-     * Set Customer Appointment Date.
-     *
-     * @param appointmentDate
-     */
-    fun setCustomerAppointmentDate(appointmentDate: String) {
-        customerAppointmentDate.value = appointmentDate
-    }
-
-    /**
-     * Add Customer.
-     *
-     * @param customer
-     */
-    fun addCustomer(customer: Customer, context: Context) {
-        val currentList = customersLists.value?.toMutableList() ?: mutableListOf()
-        currentList.add(customer)
-        customersLists.value = currentList.toList()
-        searchedCustomersLists.value = customersLists.value
-
-        // Aktualizuj listę klientów
-        setMessage("Klient ${customer.fullName} został dodany")
-
-        closeAddClientDialog()
-
-        saveCustomersToFile(context)
     }
 
 
@@ -110,6 +86,70 @@ class CustomersModelView : ViewModel() {
      */
     fun closeAddClientDialog() {
         booleanAddClientDialog.value = false
+    }
+
+    private fun createNewCustomer(): Customer{
+        return Customer(
+            id = idGenerator.generateId(),
+            firstName = customerName.value,
+            lastName = customerLastName.value,
+            phoneNumber = customerPhoneNumber.value
+        )
+    }
+
+
+    private fun clearSelectedClientAndData(){
+        selectedCustomer.value = null
+        customerPhoneNumber.value = ""
+        customerLastName.value = ""
+        customerName.value = ""
+    }
+
+    /**
+     * Załadowanie danych klienta
+     */
+    fun setSelectedCustomerData() {
+        customerName.value = selectedCustomer.value?.firstName ?: ""
+        customerLastName.value = selectedCustomer.value?.lastName ?: ""
+        customerPhoneNumber.value = selectedCustomer.value?.phoneNumber ?: ""
+    }
+
+    /**
+     * Add Customer.
+     *
+     */
+    fun addCustomer(context: Context) {
+        val currentList = customersLists.value?.toMutableList() ?: mutableListOf()
+        val newClient = createNewCustomer()
+
+        currentList.add(newClient)
+
+        customersLists.value = currentList.toList()
+        searchedCustomersLists.value = customersLists.value
+
+        // Aktualizuj listę klientów
+        setMessage("Klient ${newClient.fullName} został dodany")
+        fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+
+        closeAddClientDialog()
+        clearSelectedClientAndData()
+    }
+
+    fun generateCustomers(context: Context, numberOfCustomers: Int) {
+        val currentList = customersLists.value?.toMutableList() ?: mutableListOf()
+
+        repeat(numberOfCustomers) {
+            val newClient = createNewCustomer()
+
+            currentList.add(newClient)
+
+            customersLists.value = currentList.toList()
+            searchedCustomersLists.value = customersLists.value
+
+            // Aktualizuj listę klientów
+            setMessage("Klient ${newClient.fullName} został dodany")
+            fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+        }
     }
 
 
@@ -131,57 +171,31 @@ class CustomersModelView : ViewModel() {
 
     fun validatePhoneNumber(phoneNumber: String) {
         if (phoneNumber.length != 9) {
-            phoneNumberError.postValue("Numer telefonu musi mieć 9 cyfr")
+            phoneNumberError.value = "Numer telefonu musi mieć 9 cyfr"
         } else {
-            phoneNumberError.postValue("")
-        }
-    }
-
-    fun validateAppointmentDate(appointmentDate: String) {
-        if (appointmentDate.isEmpty()) {
-            appointmentDateError.postValue("Data wizyty nie może być pusta")
-        } else {
-            appointmentDateError.postValue("")
-        }
-    }
-
-
-    fun createNewCustomer(
-        firstName: String?,
-        lastName: String?,
-        phoneNumber: String?,
-    ): Customer {
-        return Customer().apply {
-            this.id = CustomerIdGenerator().generateId()
-            this.firstName = firstName
-            this.lastName = lastName
-            this.phoneNumber = phoneNumber
-            this.lastAppointmentDate = ""
+            phoneNumberError.value = ""
         }
     }
 
     fun validateAllFields(
-        firstName: String,
-        lastName: String,
-        phoneNumber: String,
     ): Boolean {
         var isValid = true
 
-        if (firstName.isEmpty()) {
+        if (customerName.value?.isEmpty() == true) {
             firstNameError.postValue("Imię nie może być puste")
             isValid = false
         } else {
             firstNameError.postValue("")
         }
 
-        if (lastName.isEmpty()) {
+        if (customerLastName.value?.isEmpty() == true) {
             lastNameError.postValue("Nazwisko nie może być puste")
             isValid = false
         } else {
             lastNameError.postValue("")
         }
 
-        if (phoneNumber.length != 9) {
+        if (customerPhoneNumber.value?.length != 9) {
             phoneNumberError.postValue("Numer telefonu musi mieć 9 cyfr")
             isValid = false
         } else {
@@ -192,47 +206,21 @@ class CustomersModelView : ViewModel() {
         return isValid
     }
 
-    fun saveCustomersToFile(context: Context) {
-        val gson = Gson()
-        val jsonString = gson.toJson(customersLists.value)
-        val file = File(context.filesDir, "customers.json")
-
-        FileWriter(file).use {
-            it.write(jsonString)
-        }
-    }
-
-    fun loadCustomersFromFile(context: Context) {
-        val file = File(context.filesDir, "customers.json")
-
-        if (file.exists()) {
-            FileReader(file).use {
-                val type = object : TypeToken<List<Customer>>() {}.type
-                val loadedCustomers: List<Customer> = Gson().fromJson(it, type)
-                customersLists.value = loadedCustomers
-                searchedCustomersLists.value = loadedCustomers
-            }
-        }
-    }
 
     fun editCustomer(
-        id: Int,
-        firstName: String,
-        lastName: String,
-        phoneNumber: String,
         context: Context,
     ) {
         // Pobierz listę klientów (zakładam, że masz listę klientów w ViewModel)
         val customersList = customersLists.value ?: return
 
         // Znajdź i edytuj klienta o danym ID
-        val customerToEditIndex = customersList.indexOfFirst { it.id == id }
+        val customerToEditIndex = customersList.indexOfFirst { it.id == selectedCustomer.value?.id }
         if (customerToEditIndex == -1) return
 
         val updatedCustomer = customersList[customerToEditIndex].copy(
-            firstName = firstName,
-            lastName = lastName,
-            phoneNumber = phoneNumber
+            firstName = customerName.value,
+            lastName = customerLastName.value,
+            phoneNumber = customerPhoneNumber.value
         )
 
         val updatedCustomersList = customersList.toMutableList().apply {
@@ -244,8 +232,7 @@ class CustomersModelView : ViewModel() {
         setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
 
         // Zapisz zmiany
-        saveCustomersToFile(context)
+        fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+        closeAddClientDialog()
     }
-
-
 }

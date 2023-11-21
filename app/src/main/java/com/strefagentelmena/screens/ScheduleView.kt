@@ -64,7 +64,7 @@ import java.util.Locale
 
 val screenSchedule = Schedule()
 
-class Schedule() {
+class Schedule {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
@@ -219,7 +219,7 @@ class Schedule() {
         }
 
         if (showApoimentDialog) {
-            dialogsUI.onAddOrEditSchedule(
+            dialogsUI.OnAddOrEditSchedule(
                 viewModel = viewModel,
                 customersViewModel = customersModelView,
                 isNew = isNew.value,
@@ -434,7 +434,7 @@ class Schedule() {
             }
         }
 
-        Box() {
+        Box {
             // Iteruj przez `filteredAppointments` i dodaj komponenty wizualne dla każdej wizyty
         }
     }

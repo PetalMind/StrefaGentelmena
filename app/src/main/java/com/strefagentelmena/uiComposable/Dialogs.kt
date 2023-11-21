@@ -7,7 +7,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.Interaction
@@ -79,29 +79,26 @@ class Dialogs {
 
     @OptIn(ExperimentalComposeUiApi::class)
     @Composable
-    fun onAddOrEditCustomerDialog(
+    fun OnAddOrEditCustomerDialog(
         viewModel: CustomersModelView,
         showFullScreenDialog: Boolean?,
         onClose: () -> Unit,
-        onAddCustomer: (firstName: String, lastName: String, phoneNumber: String) -> Unit,
-        onEditCustomer: (id: Int, firstName: String, lastName: String, phoneNumber: String) -> Unit,
+        onAddCustomer: () -> Unit,
+        onEditCustomer: () -> Unit,
     ) {
         if (showFullScreenDialog == true) {
             val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
+            val headerText =
+                if (selectedCustomer == null) "Nowy klient" else "Edytuj klienta"
 
             var firstName by remember { mutableStateOf(selectedCustomer?.firstName ?: "") }
             var lastName by remember { mutableStateOf(selectedCustomer?.lastName ?: "") }
             var phoneNumber by remember { mutableStateOf(selectedCustomer?.phoneNumber ?: "") }
-            val buttonText =
-                if (selectedCustomer == null) "Nowy" else "Edytuj"
-
 
             //errors fromViewModel
             val firstNameError by viewModel.firstNameError.observeAsState("")
             val lastNameError by viewModel.lastNameError.observeAsState("")
             val phoneNumberError by viewModel.phoneNumberError.observeAsState("")
-            val appointmentDateError by viewModel.appointmentDateError.observeAsState("")
-            val isFocuse = remember { mutableStateOf(false) }
 
             val focusRequester = remember { FocusRequester() }
             val keyboardController = LocalSoftwareKeyboardController.current
@@ -109,6 +106,12 @@ class Dialogs {
             LaunchedEffect(Unit) {
                 focusRequester.requestFocus()
                 keyboardController?.show()
+            }
+
+            LaunchedEffect(selectedCustomer) {
+                if (selectedCustomer != null) {
+                    viewModel.setSelectedCustomerData()
+                }
             }
 
             Dialog(
@@ -126,7 +129,7 @@ class Dialogs {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         headersUI.AppBarWithBackArrow(
-                            title = "$buttonText klient",
+                            title = headerText,
                             onClick = {},
                             onBackPressed = { onClose() },
                             compose = {
@@ -135,16 +138,9 @@ class Dialogs {
                                     fontSize = 20.sp,
                                     onClick = {
                                         if (selectedCustomer == null) {
-                                            onAddCustomer(firstName, lastName, phoneNumber)
+                                            onAddCustomer()
                                         } else {
-                                            selectedCustomer?.id?.let { id ->
-                                                onEditCustomer(
-                                                    id,
-                                                    firstName,
-                                                    lastName,
-                                                    phoneNumber
-                                                )
-                                            }
+                                            onEditCustomer()
                                         }
                                     }
                                 )
@@ -156,6 +152,7 @@ class Dialogs {
                                 onValueChange = {
                                     firstName = it
                                     viewModel.validateFirstName(it)
+                                    viewModel.setCustomerName(it)
                                 },
                                 label = "Imię",
                                 modifier = Modifier
@@ -177,6 +174,7 @@ class Dialogs {
                                 onValueChange = {
                                     lastName = it
                                     viewModel.validateLastName(it)
+                                    viewModel.setCustomerLastName(it)
                                 },
                                 label = "Nazwisko",
                                 isError = lastNameError.isNotEmpty(),
@@ -197,6 +195,7 @@ class Dialogs {
                                         phoneNumber = it
                                     }
                                     viewModel.validatePhoneNumber(it)
+                                    viewModel.setCustomerPhoneNumber(it)
                                 },
                                 label = "Numer Telefonu",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -210,6 +209,20 @@ class Dialogs {
                                 },
                                 autoFocus = false
                             )
+
+                            if (selectedCustomer != null) {
+                                Text(
+                                    "Ostatnia wizyta:",
+                                    modifier = Modifier.padding(top = 16.dp),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    text = selectedCustomer?.appointment?.date ?: "Brak ostatniej wizyty",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
                         }
                     }
                 }
@@ -220,7 +233,7 @@ class Dialogs {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun onAddOrEditSchedule(
+    fun OnAddOrEditSchedule(
         viewModel: ScheduleModelView,
         customersViewModel: CustomersModelView,
         dashboardModelView: DashboardModelView,
@@ -410,11 +423,12 @@ class Dialogs {
                                     }
                                 )
                             },
-                            colors = TextFieldDefaults.textFieldColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                disabledContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-
-                                ),
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
@@ -437,7 +451,7 @@ class Dialogs {
                                 AnimatedContent(
                                     targetState = isSelected,
                                     transitionSpec = {
-                                        fadeIn() with fadeOut()
+                                        fadeIn() togetherWith fadeOut()
                                     }, label = ""
                                 ) { targetState ->
                                     val visibility = if (targetState) {
@@ -587,11 +601,13 @@ class Dialogs {
                     },
                     modifier = Modifier
                         .fillMaxWidth(),
-                    colors = TextFieldDefaults.textFieldColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        disabledContainerColor = MaterialTheme.colorScheme.surface,
                         focusedIndicatorColor = MaterialTheme.colorScheme.surface,
                         unfocusedIndicatorColor = MaterialTheme.colorScheme.surface,
-                        disabledIndicatorColor = MaterialTheme.colorScheme.surface
+                        disabledIndicatorColor = MaterialTheme.colorScheme.surface,
                     ),
                     shape = RoundedCornerShape(0.dp)  // Brak zaokrąglenia
                 )

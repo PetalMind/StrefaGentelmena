@@ -199,7 +199,7 @@ class TextFields {
         // Request focus and show the keyboard
         LaunchedEffect(focusRequester) {
             focusRequester.requestFocus()
-            keyboardController?.showSoftwareKeyboard()
+            keyboardController?.show()
             searchText.value = ""
         }
     }
@@ -290,11 +290,13 @@ class TextFields {
                     fontWeight = FontWeight.Bold
                 ),
                 interactionSource = interactionSource,
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
                     focusedIndicatorColor = MaterialTheme.colorScheme.surface,
                     unfocusedIndicatorColor = MaterialTheme.colorScheme.surface,
-                    disabledIndicatorColor = MaterialTheme.colorScheme.surface
+                    disabledIndicatorColor = MaterialTheme.colorScheme.surface,
                 ),
                 leadingIcon = {
                     Icon(

@@ -31,7 +31,7 @@ class Customer(
     var phoneNumber: String? = null,
     var agreedToBeNotify: Boolean = false,
 ) {
-    val fullName: String?
+    val fullName: String
         get() = "$firstName $lastName"
 
     fun copy(

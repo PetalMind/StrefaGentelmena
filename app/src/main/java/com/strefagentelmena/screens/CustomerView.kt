@@ -3,6 +3,7 @@ package com.strefagentelmena.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,9 +14,11 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,7 +27,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -65,8 +70,8 @@ class CustomerView {
         val snackbarHostState = remember { SnackbarHostState() }
 
         LaunchedEffect(Unit) {
-            viewModel.loadCustomersFromFile(context)
             viewModel.clearMessage()
+            viewModel.loadClients(context)
         }
 
         // Efekt wyzwalany, gdy wartość 'message' się zmienia
@@ -94,7 +99,9 @@ class CustomerView {
                 headersUI.AppBarWithBackArrow(title = "Klienci salonu", onBackPressed = {
                     navController.navigate("dashboard")
                 }, compose = {
-                    IconButton(onClick = { viewModel.setShowSearchState(!searchState) }) {
+                    IconButton(onClick = {
+                        viewModel.setShowSearchState(!searchState)
+                    }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = "Search",
@@ -120,40 +127,45 @@ class CustomerView {
                     }
                 }
 
-                ClientLazyColumn(
-                    customerList = showedList,
-                    paddingValues = PaddingValues(8.dp, 4.dp),
-                    onCustomerClick = { customer ->
-                        viewModel.selectedCustomer.value = customer
-                        viewModel.showAddCustomerDialog()
-                    },
-                )
+                if (showedList.isEmpty()) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            text = "Lista klientów jest pusta",
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    ClientLazyColumn(
+                        customerList = showedList,
+                        paddingValues = PaddingValues(8.dp, 4.dp),
+                        onCustomerClick = { customer ->
+                            viewModel.selectedCustomer.value = customer
+                            viewModel.showAddCustomerDialog()
+                        },
+                        onEdit = { customer ->
+                            viewModel.selectedCustomer.value = customer
+                            viewModel.showAddCustomerDialog()
+                        },
+                        onDelete = { customer -> }
+                    )
+                }
             }
         }
 
         if (showAddClientDialog == true) {
-            dialogsUI.onAddOrEditCustomerDialog(showFullScreenDialog = showAddClientDialog,
+            dialogsUI.OnAddOrEditCustomerDialog(showFullScreenDialog = showAddClientDialog,
                 onClose = { viewModel.closeAddClientDialog() },
-                onAddCustomer = { firstName, lastName, phoneNumber ->
-                    if (viewModel.validateAllFields(
-                            firstName,
-                            lastName,
-                            phoneNumber,
-                        )
+                onAddCustomer = {
+                    if (viewModel.validateAllFields()
                     ) {
-                        val newCustomer = viewModel.createNewCustomer(
-                            firstName = firstName,
-                            lastName = lastName,
-                            phoneNumber = phoneNumber,
-                        )
-
-                        viewModel.addCustomer(newCustomer, context = context)
+                        viewModel.addCustomer(context)
                     }
                 },
                 viewModel = viewModel,
-                onEditCustomer = { id, firstName, lastName, phoneNumber ->
-                    viewModel.editCustomer(id, firstName, lastName, phoneNumber, context)
-                    viewModel.closeAddClientDialog()
+                onEditCustomer = {
+                    viewModel.editCustomer(context)
                 })
         }
     }
@@ -163,12 +175,18 @@ class CustomerView {
         customerList: List<Customer>,
         paddingValues: PaddingValues,
         onCustomerClick: (Customer) -> Unit,
+        onDelete: (Customer) -> Unit,
+        onEdit: (Customer) -> Unit
     ) {
         LazyColumn(contentPadding = paddingValues) {
             items(customerList, key = { it.id ?: 0 }) { customer ->
-                cardUI.CustomerListCard(customer, onClick = {
+                cardUI.SwipeToDismissCustomerCard(customer = customer, onClick = {
                     onCustomerClick(customer)
-                })
+                },
+                    onDismiss = { it ->
+                        onDelete(customer)
+                    },
+                    onEdit = { it -> onEdit(customer) })
             }
         }
     }

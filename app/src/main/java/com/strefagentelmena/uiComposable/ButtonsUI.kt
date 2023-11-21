@@ -96,7 +96,7 @@ class ButtonsUI {
                 .padding(padding)
                 .size(width, height),
         ) {
-            Text(text, style = TextStyle(fontSize = fontSize))
+            Text(text, style = TextStyle(fontSize = fontSize, fontWeight = FontWeight.Bold, color = colorsUI.fontGrey))
         }
 
     }

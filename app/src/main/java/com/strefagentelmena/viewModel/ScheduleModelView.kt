@@ -9,7 +9,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.functions.filesFunctions
+import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
@@ -189,7 +189,7 @@ class ScheduleModelView : ViewModel() {
         appointments.value = currentAppointments
 
         // Tu kod do wysyłania powiadomienia
-        saveAppointmentToFile(context)
+        filesFunctionsAppoiments.saveAppointmentToFile(context, appointments.value)
         setMessages("${selectedAppointment.value?.customer?.fullName} już niedługo na twoim fotelu")
     }
 
@@ -201,8 +201,10 @@ class ScheduleModelView : ViewModel() {
     fun removeAppointment(id: Int, context: Context) {
         val currentAppointments = appointments.value?.toMutableList() ?: return
         currentAppointments.removeAll { it.id == id }
+
         appointments.value = currentAppointments
-        saveAppointmentToFile(context)
+
+        filesFunctionsAppoiments.saveAppointmentToFile(context, appointments.value)
         setMessages("Jedna wizyta mniej do zrobienia")
     }
 
@@ -222,31 +224,16 @@ class ScheduleModelView : ViewModel() {
             currentAppointments[index] = selectedAppointment.value ?: return
             appointments.value = currentAppointments
 
-            saveAppointmentToFile(context)
+            filesFunctionsAppoiments.saveAppointmentToFile(context, appointments.value)
             setMessages("Wizyta ${selectedAppointment.value?.customer?.fullName} właśnie przeszła metamorfozę w systemie.")
-            filesFunctions.loadAppointmentFromFile(context)
-        }
-    }
-
-    /**
-     * Save Appointment To File.
-     *
-     * @param context
-     */
-    fun saveAppointmentToFile(context: Context) {
-        val gson = Gson()
-        val jsonString = gson.toJson(appointments.value)
-        val file = File(context.filesDir, "appointment.json")
-
-        FileWriter(file).use {
-            it.write(jsonString)
+            filesFunctionsAppoiments.loadAppointmentFromFile(context)
         }
     }
 
     fun loadAllData(context: Context) {
         viewState.value = AppState.Loading
         try {
-            appointments.value = filesFunctions.loadAppointmentFromFile(context)
+            appointments.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
         } catch (e: Exception) {
             viewState.value = AppState.Error
         }
