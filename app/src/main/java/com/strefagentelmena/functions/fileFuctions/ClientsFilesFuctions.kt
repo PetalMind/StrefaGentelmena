@@ -8,7 +8,7 @@ import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
 
-val fileFuctionsClients = ClientsFilesFuctions()
+val fileFunctionsClients = ClientsFilesFuctions()
 class ClientsFilesFuctions {
     fun loadCustomersFromFile(context: Context): List<Customer> {
         val file = File(context.filesDir, "customers.json")

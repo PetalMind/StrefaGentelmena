@@ -243,15 +243,15 @@ class Dialogs {
     @Composable
     fun OnAddOrEditSchedule(
         viewModel: ScheduleModelView,
-        customersViewModel: CustomersModelView,
-        dashboardModelView: DashboardModelView,
         isNew: Boolean,
     ) {
         val title = if (isNew) "Dodaj wizytę" else "Edytuj wizytę"
         val context = LocalContext.current
+
         val deleteDialogState by viewModel.deleteDialog.observeAsState(false)
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
-        val selectedClient by customersViewModel.selectedCustomer.observeAsState()
+        val customersList by viewModel.customersList.observeAsState(emptyList())
+        val selectedClient by viewModel.selectedClient.observeAsState(null)
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState(if (!isNew) selectedAppointment?.date else "")
         val selectedTime by viewModel.selectedAppointmentTime.observeAsState(if (!isNew) selectedAppointment?.startTime else "")
 
@@ -299,11 +299,13 @@ class Dialogs {
                                                     context
                                                 )
                                             } else {
-                                                viewModel.editAppointment(context)
+                                                viewModel.editAppointment(
+                                                    context,
+                                                    customersList
+                                                        ?: return@CustomTextButton,
+                                                )
                                                 viewModel.hideApoimentDialog()
                                             }
-                                        } else {
-
                                         }
                                     },
                                     padding = 6.dp,
@@ -314,10 +316,8 @@ class Dialogs {
 
                     Column(modifier = Modifier.padding(16.dp)) {
                         formUI.AppointmentForm(
-                            customerViewModel = customersViewModel,
                             scheduleModelView = viewModel,
                             isNew = isNew,
-                            dashboardModelView = dashboardModelView
                         )
                     }
                 }

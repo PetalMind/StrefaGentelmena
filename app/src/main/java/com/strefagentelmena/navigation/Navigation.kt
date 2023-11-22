@@ -39,11 +39,9 @@ class Navigation {
                 )
             }
             composable(Screen.Schedule.route) {
-                screenSchedule.scheduleView(
+                screenSchedule.ScheduleView(
                     viewModel = schuduleModelView,
                     navController = navController,
-                    customersModelView = customersModelView,
-                    dashboardModelView = dashboardModelView
                 )
             }
         }

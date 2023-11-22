@@ -33,11 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,7 +95,7 @@ class Dashboard {
         dashboardViewModel: DashboardModelView,
     ) {
         val context = LocalContext.current
-        val appointments by scheduleViewModel.appointments.observeAsState(emptyList())
+        val appointments by scheduleViewModel.appointmentsList.observeAsState(emptyList())
         val viewState by dashboardViewModel.viewState.observeAsState(AppState.Idle)
         val clientsToNotify by dashboardViewModel.appointmentsToNotify.observeAsState(emptyList())
 
@@ -248,8 +245,8 @@ class Dashboard {
                                     clientsToNotify.forEach {
                                         smsManager.sendNotification(
                                             it,
-                                            context = context
                                         )
+
                                         dashboardViewModel.editAppointment(context, it)
                                     }
                                     dashboardViewModel.hideNotifyDialog()

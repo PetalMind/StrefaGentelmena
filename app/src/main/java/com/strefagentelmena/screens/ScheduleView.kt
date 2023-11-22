@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.strefagentelmena.dataSource.pernamentFormats
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.uiComposable.buttonsUI
@@ -51,8 +52,6 @@ import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
-import com.strefagentelmena.viewModel.CustomersModelView
-import com.strefagentelmena.viewModel.DashboardModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -68,13 +67,11 @@ class Schedule {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
-    fun scheduleView(
-        customersModelView: CustomersModelView,
+    fun ScheduleView(
         navController: NavController,
         viewModel: ScheduleModelView,
-        dashboardModelView: DashboardModelView,
     ) {
-        val appointments by dashboardModelView.appointmentsLists.observeAsState(emptyList())
+        val appointments by viewModel.appointmentsList.observeAsState(emptyList())
         val showApoimentDialog by viewModel.showAppointmentDialog.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
         val context = LocalContext.current
@@ -85,6 +82,7 @@ class Schedule {
             AppState.Idle -> {
                 LaunchedEffect(Unit) {
                     viewModel.loadAllData(context = context)
+                    viewModel.loadCustomersList(context = context)
                 }
             }
 
@@ -98,10 +96,8 @@ class Schedule {
 
             AppState.Success -> {
                 AppointmentSuccesConent(
-                    customersModelView = customersModelView,
                     navController = navController,
                     viewModel = viewModel,
-                    dashboardModelView = dashboardModelView
                 )
             }
         }
@@ -119,18 +115,16 @@ class Schedule {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentSuccesConent(
-        customersModelView: CustomersModelView,
         navController: NavController,
         viewModel: ScheduleModelView,
-        dashboardModelView: DashboardModelView,
     ) {
-        val appointments by dashboardModelView.appointmentsLists.observeAsState(emptyList())
         val showApoimentDialog by viewModel.showAppointmentDialog.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
         val context = LocalContext.current
         val currentSelectedAppoinmentsDate by viewModel.currentSelectedAppoinmentsDate.observeAsState(
             ""
         )
+
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
         val currentSelectedDay: Int = currentSelectedAppoinmentsDate?.let {
@@ -164,7 +158,7 @@ class Schedule {
 
         LaunchedEffect(Unit) {
             viewModel.clearMessages()
-            dashboardModelView.loadAppointmentFromFile(context = context)
+            viewModel.loadCustomersList(context)
         }
 
         Scaffold(
@@ -192,8 +186,8 @@ class Schedule {
             },
             floatingActionButton = {
                 buttonsUI.ExtendedFab(text = "Dodaj wizytę", icon = Icons.Default.Add) {
-                    customersModelView.selectedCustomer.value = null
                     isNew.value = true
+                    viewModel.selectedClient.value = null
                     viewModel.showApoimentDialog()
                 }
             },
@@ -201,16 +195,15 @@ class Schedule {
             Column(modifier = Modifier.padding(innerPadding)) {
                 //  headersUI.CalendarHeaderView(viewModel)
 
-                headersUI.CalendarHeader(
-                    onDaySelected = {
-                        viewModel.currentSelectedAppoinmentsDate.value = it.toString()
-                    },
-                    currentDay = currentSelectedDay,
-                )
+//                headersUI.CalendarHeader(
+//                    onDaySelected = {
+//                        viewModel.currentSelectedAppoinmentsDate.value = it.toString()
+//                    },x
+//                    currentDay = currentSelectedDay,
+//                )
 
                 AppointmentsList(viewModel) { selectedAppointment ->
-                    viewModel.selectAppointment(selectedAppointment)
-                    customersModelView.selectedCustomer.value = selectedAppointment.customer
+                    viewModel.selectAppointmentAndClient(selectedAppointment)
                     isNew.value = false
 
                     viewModel.showApoimentDialog()
@@ -221,13 +214,18 @@ class Schedule {
         if (showApoimentDialog) {
             dialogsUI.OnAddOrEditSchedule(
                 viewModel = viewModel,
-                customersViewModel = customersModelView,
                 isNew = isNew.value,
-                dashboardModelView = dashboardModelView
             )
         }
     }
 
+    /**
+     * Time line with appointments
+     *
+     * @param appointments
+     * @param onClick
+     * @receiver
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun TimeLineWithAppointments(
@@ -235,39 +233,33 @@ class Schedule {
         onClick: (Appointment) -> Unit,
     ) {
         // Helper function to generate time intervals
-        fun generateTimeIntervals(start: LocalTime, end: LocalTime): List<LocalTime> {
-            val intervals = mutableListOf<LocalTime>()
-            var current = start.plusMinutes(15)  // Start at the first 30 minute interval
-            while (current.isBefore(end)) {
-                intervals.add(current)
-                current = current.plusMinutes(15)  // Add 30 minutes to the current time
-            }
-            return intervals
-        }
-
         LazyColumn {
             itemsIndexed(appointments) { index, appointment ->
                 val startTime =
-                    LocalTime.parse(appointment.startTime, DateTimeFormatter.ofPattern("HH:mm"))
+                    LocalTime.parse(
+                        appointment.startTime, DateTimeFormatter.ofPattern(
+                            pernamentFormats.TIME_FORMAT_PATTERN
+                        )
+                    )
+                val endTime = startTime.plusHours(1) // Dodaj 1 godzinę do czasu rozpoczęcia
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
                 ) {
                     // Draw hours, vertical time line, and circle
                     Column {
                         // Add additional 30 minute time intervals if not the last appointment
                         Row(
                             modifier = Modifier
-                                .width(80.dp)
+                                .width(90.dp)
                                 .padding(8.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically  // Vertically center the contents
                         ) {
 
                             if (index == 0 || appointments[index - 1].startTime != appointment.startTime) {
-                                Column {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Row {
                                         Canvas(
                                             modifier = Modifier
@@ -279,7 +271,7 @@ class Schedule {
                                                 )  // Set background color and shape
                                         ) {
                                             drawCircle(
-                                                color = colorsUI.rusticBrown,
+                                                color = colorsUI.mintGreen,
                                                 radius = size.width / 2,
                                                 center = Offset(
                                                     size.width / 2,
@@ -293,20 +285,22 @@ class Schedule {
                                                 startTime.hour,
                                                 startTime.minute
                                             ),
-                                            fontSize = 16.sp,
+                                            fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier
                                                 //     .align(Alignment.CenterVertically)  // Vertically center align the text
                                                 .padding(start = 8.dp)  // Add some padding to separate the text from the line and circle
                                         )
                                     }
+
                                     if (index < appointments.size - 1) {
                                         val nextAppointment = appointments[index + 1]
-                                        val endTime = LocalTime.parse(
+                                        val endTimesAppointment = LocalTime.parse(
                                             nextAppointment.startTime,
                                             DateTimeFormatter.ofPattern("HH:mm")
                                         )
-                                        val intervals = generateTimeIntervals(startTime, endTime)
+
+                                        val intervals = generateTimeIntervals(startTime, endTimesAppointment)
                                         intervals.forEach { interval ->
                                             Row(
                                                 modifier = Modifier
@@ -314,21 +308,41 @@ class Schedule {
                                                 horizontalArrangement = Arrangement.Start,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(
-                                                    text = String.format(
-                                                        "%02d:%02d",
-                                                        interval.hour,
-                                                        interval.minute
-                                                    ),
-                                                    fontSize = 10.sp,
-                                                    color = Color.Gray,
-                                                    fontWeight = FontWeight.Normal,
-                                                    modifier = Modifier
-                                                        .padding(
-                                                            start = 12.dp,
-                                                            bottom = 4.dp
-                                                        )  // Adjust padding as needed
-                                                )
+                                              if (interval == endTime){
+                                                  Row{
+                                                      Text(
+                                                          text = String.format(
+                                                              "%02d:%02d",
+                                                              interval.hour,
+                                                              interval.minute
+                                                          ),
+                                                          fontSize = 14.sp,
+                                                          color = colorsUI.teaGreen,
+                                                          fontWeight = FontWeight.Bold,
+                                                          modifier = Modifier
+                                                              .padding(
+                                                                  start = 12.dp,
+                                                                  bottom = 4.dp
+                                                              )  // Adjust padding as needed
+                                                      )
+                                                  }
+                                              }else{
+                                                  Text(
+                                                      text = String.format(
+                                                          "%02d:%02d",
+                                                          interval.hour,
+                                                          interval.minute
+                                                      ),
+                                                      fontSize = 10.sp,
+                                                      color = Color.Gray,
+                                                      fontWeight = FontWeight.Normal,
+                                                      modifier = Modifier
+                                                          .padding(
+                                                              start = 12.dp,
+                                                              bottom = 4.dp
+                                                          )  // Adjust padding as needed
+                                                  )
+                                              }
                                             }
                                         }
                                     }
@@ -341,7 +355,6 @@ class Schedule {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(4.dp)
                     ) {
                         cardUI.CustomerAppoimentListCard(appointment) {
                             onClick(appointment)
@@ -366,7 +379,7 @@ class Schedule {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentsList(viewModel: ScheduleModelView, onClick: (Appointment) -> Unit) {
-        val appointmentsList by viewModel.appointments.observeAsState(emptyList())
+        val appointmentsList by viewModel.appointmentsList.observeAsState(emptyList())
         val selectedDate by viewModel.currentSelectedAppoinmentsDate.observeAsState(LocalDate.now())
 
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
@@ -395,7 +408,7 @@ class Schedule {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun TimeSlotsView(viewModel: ScheduleModelView) {
-        val appointmentsList by viewModel.appointments.observeAsState(emptyList())
+        val appointmentsList by viewModel.appointmentsList.observeAsState(emptyList())
         // Zakładamy, że mamy już funkcję, która filtruje wizyty na wybrany dzień
         val filteredAppointments = listOf("1", 2, 3, 4)
 

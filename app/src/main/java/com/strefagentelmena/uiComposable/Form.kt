@@ -14,12 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.strefagentelmena.viewModel.CustomersModelView
-import com.strefagentelmena.viewModel.DashboardModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
 
@@ -31,20 +29,18 @@ class Form {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentForm(
-        customerViewModel: CustomersModelView,
         scheduleModelView: ScheduleModelView,
-        dashboardModelView: DashboardModelView,
         isNew: Boolean = true,
     ) {
         val selectedAppointment by scheduleModelView.selectedAppointment.observeAsState(null)
+        val selectedDate by scheduleModelView.selectedAppointmentDate.observeAsState(LocalDate.now())
 
 
         val startTime by scheduleModelView.selectedAppointmentTime.observeAsState(
             if (isNew) "" else selectedAppointment?.startTime ?: ""
         )
 
-        val selectedDate by scheduleModelView.selectedAppointmentDate.observeAsState(LocalDate.now())
-
+        val context = LocalContext.current
 
         val customerIdError by remember { mutableStateOf(false) }
         val dateError by remember { mutableStateOf(false) }
@@ -52,10 +48,12 @@ class Form {
 
         LaunchedEffect(Unit) {
             if (isNew) scheduleModelView.clearDate()
+            if (isNew) scheduleModelView.selectedClient.value = null
+            scheduleModelView.loadCustomersList(context = context)
         }
 
         Column {
-            selectorsUI.ClientSelector(customersModelView = customerViewModel, scheduleModelView =  scheduleModelView, viewModel = dashboardModelView)
+            selectorsUI.ClientSelector(viewModel = scheduleModelView)
 
             if (customerIdError) {
                 Text("Wymagany klient", color = Color.Red)

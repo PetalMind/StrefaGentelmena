@@ -3,7 +3,8 @@ package com.strefagentelmena.viewModel
 import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.strefagentelmena.functions.fileFuctions.fileFuctionsClients
+import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
+import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
 
@@ -30,7 +31,7 @@ class CustomersModelView : ViewModel() {
     private val customerPhoneNumber = MutableLiveData<String>("")
 
     fun loadClients(context: Context) {
-        customersLists.value = fileFuctionsClients.loadCustomersFromFile(context)
+        customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
     }
 
     fun searchCustomers(query: String) {
@@ -138,7 +139,7 @@ class CustomersModelView : ViewModel() {
 
         // Aktualizuj listę klientów
         setMessage("Klient ${newClient.fullName} został dodany")
-        fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+        fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
 
         closeAddClientDialog()
         clearSelectedClientAndData()
@@ -153,7 +154,7 @@ class CustomersModelView : ViewModel() {
             searchedCustomersLists.value = customersLists.value
             // Aktualizuj listę klientów
             setMessage("Klient ${customer.fullName} został usunięty")
-            fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+            fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
         }
     }
 
@@ -170,7 +171,7 @@ class CustomersModelView : ViewModel() {
 
             // Aktualizuj listę klientów
             setMessage("Klient ${newClient.fullName} został dodany")
-            fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+            fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
         }
     }
 
@@ -229,6 +230,25 @@ class CustomersModelView : ViewModel() {
     }
 
 
+    fun loadAndEditAppointments(context: Context, updatedCustomer: Customer) {
+        // Załaduj listę wizyt z pliku
+        val appointmentsList = filesFunctionsAppoiments.loadAppointmentFromFile(context)
+
+        // Znajdź wizyty przypisane do wybranego klienta
+        val appointmentsToEdit =
+            appointmentsList.filter { it.customer.id == selectedCustomer.value?.id }
+
+        // Edytuj wizyty (przykładowa operacja, zastąp ją właściwą logiką edycji)
+        appointmentsToEdit.forEach { appointment ->
+            // Przykładowa edycja: Zmiana czasu rozpoczęcia na 12:00
+            appointment.customer = updatedCustomer
+            // Możesz dodać więcej operacji edycji w zależności od potrzeb
+        }
+
+        // Zapisz zaktualizowaną listę wizyt z powrotem do pliku
+        filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList)
+    }
+
     fun editCustomer(
         context: Context,
     ) {
@@ -242,7 +262,7 @@ class CustomersModelView : ViewModel() {
         val updatedCustomer = customersList[customerToEditIndex].copy(
             firstName = customerName.value,
             lastName = customerLastName.value,
-            phoneNumber = customerPhoneNumber.value
+            phoneNumber = customerPhoneNumber.value,
         )
 
         val updatedCustomersList = customersList.toMutableList().apply {
@@ -251,10 +271,11 @@ class CustomersModelView : ViewModel() {
 
         // Aktualizuj listę klientów
         customersLists.value = updatedCustomersList
+        loadAndEditAppointments(context, updatedCustomer)
         setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
 
         // Zapisz zmiany
-        fileFuctionsClients.saveCustomersToFile(context, customersLists.value)
+        fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
         closeAddClientDialog()
     }
 }

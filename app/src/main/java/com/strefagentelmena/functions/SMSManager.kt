@@ -22,7 +22,6 @@ class SMSManager {
      */
     fun sendNotification(
         appointment: Appointment,
-        context: Context,
     ) {
         if (appointment.notificationSent) return
 
@@ -59,7 +58,7 @@ class SMSManager {
 
         // Definiowanie granic czasowych dla wysyłania SMS
         val earliestTimeInMinutes = 7 * 60 + 30  // 7:30
-        val latestTimeInMinutes = 22 * 60        // 21:00
+        val latestTimeInMinutes = 23 * 60 + 40    // 22:00
 
         if (daysDifference == 1L && currentTimeInMinutes in earliestTimeInMinutes..latestTimeInMinutes) {
             sendSMS(

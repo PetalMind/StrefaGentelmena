@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
@@ -383,48 +384,24 @@ class Cards {
         onClick: () -> Unit,
     ) {
         Card(
+            colors = CardDefaults.cardColors(
+                containerColor = colorsUI.papaya
+            ),
             shape = RoundedCornerShape(12.dp), // Zmieniłem kształt narożników na nieco mniej zaokrąglone
             elevation = CardDefaults.cardElevation(6.dp), // Podniosłem nieco elewację, aby dodać karcie głębi
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp) // Zwiększyłem nieco wysokość karty
+                .height(80.dp) // Zwiększyłem nieco wysokość karty
                 .clickable { onClick() }
                 .padding(10.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondary)
-                ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(20.dp))
-
-                Column(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = appointment.customer.fullName ?: "Brak imienia",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = appointment.customer.fullName ?: "Brak imienia",
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

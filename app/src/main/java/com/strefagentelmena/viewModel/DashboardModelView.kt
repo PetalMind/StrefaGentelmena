@@ -8,6 +8,9 @@ import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.fileFuctions.ClientsFilesFuctions
+import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
+import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.greetingsManager
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
@@ -149,32 +152,31 @@ class DashboardModelView : ViewModel() {
         }
     }
 
-    fun editAppointment(context: Context, appointment: Appointment) {
+    fun editAppointment(
+        context: Context,
+        appointment: Appointment,
+        notificationIsSent: Boolean = false
+    ) {
         val currentAppointments = appointmentsLists.value?.toMutableList() ?: return
         val index = currentAppointments.indexOfFirst { it.id == appointment.id }
-        appointment.notificationSent = true
+        val selectedClient = findCustomerByName(appointment.customer.fullName) ?: return
+        val clientIndex = customersLists.value?.indexOf(selectedClient) ?: return
 
-        if (index != -1) {
+        appointment.notificationSent = notificationIsSent
+
+
+
+        if (index != -1 && clientIndex != -1) {
             currentAppointments[index] = appointment
+            selectedClient.appointment = appointment
+
             appointmentsLists.value = currentAppointments
 
-            saveAppointmentToFile(context)
-            loadAppointmentFromFile(context)
-        }
-    }
+            filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsLists.value)
+            appointmentsLists.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
 
-    /**
-     * Save Appointment To File.
-     *
-     * @param context
-     */
-    fun saveAppointmentToFile(context: Context) {
-        val gson = Gson()
-        val jsonString = gson.toJson(appointmentsLists.value)
-        val file = File(context.filesDir, "appointment.json")
-
-        FileWriter(file).use {
-            it.write(jsonString)
+            customersLists.value?.get(clientIndex)?.appointment = appointment
+            fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
         }
     }
 
