@@ -30,7 +30,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Person
@@ -74,7 +73,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.viewModel.CustomersModelView
-import com.strefagentelmena.viewModel.DashboardModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -316,7 +314,7 @@ class Dialogs {
 
                     Column(modifier = Modifier.padding(16.dp)) {
                         formUI.AppointmentForm(
-                            scheduleModelView = viewModel,
+                            viewModel = viewModel,
                             isNew = isNew,
                         )
                     }

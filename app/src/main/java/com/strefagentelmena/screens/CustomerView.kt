@@ -57,7 +57,7 @@ class CustomerView {
         val searchState by viewModel.searchState.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
-val selectedClient by viewModel.selectedCustomer.observeAsState(Customer())
+        val selectedClient by viewModel.selectedCustomer.observeAsState(Customer())
 
         val context = LocalContext.current
         val searchText = remember { mutableStateOf("") }
@@ -65,7 +65,6 @@ val selectedClient by viewModel.selectedCustomer.observeAsState(Customer())
         val showedList by rememberUpdatedState(
             if (searchState) searchedCustomerList else customerList
         )
-
 
         // Inicjalizacja stanu Scaffold
         val scope = rememberCoroutineScope()
@@ -165,7 +164,7 @@ val selectedClient by viewModel.selectedCustomer.observeAsState(Customer())
                 onAddCustomer = {
                     if (viewModel.validateAllFields()
                     ) {
-                         viewModel.addCustomer(context)
+                        viewModel.addCustomer(context)
                     }
                 },
                 viewModel = viewModel,

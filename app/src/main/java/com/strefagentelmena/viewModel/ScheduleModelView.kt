@@ -59,6 +59,10 @@ class ScheduleModelView : ViewModel() {
         selectedClient.value = newValue
     }
 
+    fun setNewAppoimentsDate(newValue: String) {
+        currentSelectedAppoinmentsDate.value = newValue
+    }
+
     /**
      * Clear Date.
      *

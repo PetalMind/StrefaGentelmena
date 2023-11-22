@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -127,9 +128,17 @@ class Schedule {
 
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
-        val currentSelectedDay: Int = currentSelectedAppoinmentsDate?.let {
-            sdf.parse(it)?.date ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-        } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+        val currentSelectedDay = remember {
+            mutableIntStateOf(currentSelectedAppoinmentsDate?.let {
+                sdf.parse(it)?.date ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+            } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH))
+        }
+
+        LaunchedEffect(currentSelectedAppoinmentsDate) {
+            currentSelectedDay.intValue = currentSelectedAppoinmentsDate?.let {
+                sdf.parse(it)?.date ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+            } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+        }
 
         // Inicjalizacja stanu Scaffold
         val scope = rememberCoroutineScope()
@@ -158,7 +167,7 @@ class Schedule {
 
         LaunchedEffect(Unit) {
             viewModel.clearMessages()
-            viewModel.loadCustomersList(context)
+            viewModel.loadAllData(context = context)
         }
 
         Scaffold(
@@ -174,7 +183,7 @@ class Schedule {
                     compose = {
                         IconButton(onClick = {
                             dialogsUI.showDatePickerDialog(context, dateSetListener = {
-                                viewModel.currentSelectedAppoinmentsDate.value = it
+                                viewModel.setNewAppoimentsDate(it)
                             }, viewModel = viewModel)
                         }) {
                             Icon(Icons.Default.DateRange, contentDescription = null)
@@ -193,14 +202,16 @@ class Schedule {
             },
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
-                //  headersUI.CalendarHeaderView(viewModel)
+                headersUI.CalendarHeaderView(viewModel)
 
-//                headersUI.CalendarHeader(
-//                    onDaySelected = {
-//                        viewModel.currentSelectedAppoinmentsDate.value = it.toString()
-//                    },x
-//                    currentDay = currentSelectedDay,
-//                )
+                headersUI.CalendarHeader(
+                    onDaySelected = {
+                        viewModel.setNewAppoimentsDate(it)
+                    },
+                    currentDayFormatter = currentSelectedAppoinmentsDate,
+                    currentDay = currentSelectedDay.intValue,
+                )
+
 
                 AppointmentsList(viewModel) { selectedAppointment ->
                     viewModel.selectAppointmentAndClient(selectedAppointment)
@@ -300,7 +311,8 @@ class Schedule {
                                             DateTimeFormatter.ofPattern("HH:mm")
                                         )
 
-                                        val intervals = generateTimeIntervals(startTime, endTimesAppointment)
+                                        val intervals =
+                                            generateTimeIntervals(startTime, endTimesAppointment)
                                         intervals.forEach { interval ->
                                             Row(
                                                 modifier = Modifier
@@ -308,41 +320,41 @@ class Schedule {
                                                 horizontalArrangement = Arrangement.Start,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                              if (interval == endTime){
-                                                  Row{
-                                                      Text(
-                                                          text = String.format(
-                                                              "%02d:%02d",
-                                                              interval.hour,
-                                                              interval.minute
-                                                          ),
-                                                          fontSize = 14.sp,
-                                                          color = colorsUI.teaGreen,
-                                                          fontWeight = FontWeight.Bold,
-                                                          modifier = Modifier
-                                                              .padding(
-                                                                  start = 12.dp,
-                                                                  bottom = 4.dp
-                                                              )  // Adjust padding as needed
-                                                      )
-                                                  }
-                                              }else{
-                                                  Text(
-                                                      text = String.format(
-                                                          "%02d:%02d",
-                                                          interval.hour,
-                                                          interval.minute
-                                                      ),
-                                                      fontSize = 10.sp,
-                                                      color = Color.Gray,
-                                                      fontWeight = FontWeight.Normal,
-                                                      modifier = Modifier
-                                                          .padding(
-                                                              start = 12.dp,
-                                                              bottom = 4.dp
-                                                          )  // Adjust padding as needed
-                                                  )
-                                              }
+                                                if (interval == endTime) {
+                                                    Row {
+                                                        Text(
+                                                            text = String.format(
+                                                                "%02d:%02d",
+                                                                interval.hour,
+                                                                interval.minute
+                                                            ),
+                                                            fontSize = 14.sp,
+                                                            color = colorsUI.fontGrey,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier
+                                                                .padding(
+                                                                    start = 12.dp,
+                                                                    bottom = 4.dp
+                                                                )  // Adjust padding as needed
+                                                        )
+                                                    }
+                                                } else {
+                                                    Text(
+                                                        text = String.format(
+                                                            "%02d:%02d",
+                                                            interval.hour,
+                                                            interval.minute
+                                                        ),
+                                                        fontSize = 10.sp,
+                                                        color = Color.Gray,
+                                                        fontWeight = FontWeight.Normal,
+                                                        modifier = Modifier
+                                                            .padding(
+                                                                start = 12.dp,
+                                                                bottom = 4.dp
+                                                            )  // Adjust padding as needed
+                                                    )
+                                                }
                                             }
                                         }
                                     }

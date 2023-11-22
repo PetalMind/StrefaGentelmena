@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.viewModel.ScheduleModelView
-import java.time.LocalDate
 
 
 val formUI = Form()
@@ -29,16 +28,17 @@ class Form {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentForm(
-        scheduleModelView: ScheduleModelView,
+        viewModel: ScheduleModelView,
         isNew: Boolean = true,
     ) {
-        val selectedAppointment by scheduleModelView.selectedAppointment.observeAsState(null)
-        val selectedDate by scheduleModelView.selectedAppointmentDate.observeAsState(LocalDate.now())
+        val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
+        val selectedDate by viewModel.selectedAppointmentDate.observeAsState()
+        val currentSelectedAppoinmentsDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
 
-
-        val startTime by scheduleModelView.selectedAppointmentTime.observeAsState(
+        val startTime by viewModel.selectedAppointmentTime.observeAsState(
             if (isNew) "" else selectedAppointment?.startTime ?: ""
         )
+
 
         val context = LocalContext.current
 
@@ -47,13 +47,14 @@ class Form {
         val startTimeError by remember { mutableStateOf(false) }
 
         LaunchedEffect(Unit) {
-            if (isNew) scheduleModelView.clearDate()
-            if (isNew) scheduleModelView.selectedClient.value = null
-            scheduleModelView.loadCustomersList(context = context)
+            if (isNew) viewModel.clearDate()
+            if (isNew) viewModel.selectedClient.value = null
+
+            viewModel.loadCustomersList(context = context)
         }
 
         Column {
-            selectorsUI.ClientSelector(viewModel = scheduleModelView)
+            selectorsUI.ClientSelector(viewModel = viewModel)
 
             if (customerIdError) {
                 Text("Wymagany klient", color = Color.Red)
@@ -63,8 +64,9 @@ class Form {
 
             textModernTextFieldUI.DateOutlinedTextField(
                 value = selectedDate.toString(),
-                onValueChange = { scheduleModelView.setNewDataAppointment(it) }
-            ) {}
+                onValueChange = { viewModel.setNewDataAppointment(it) },
+                onFocusLost = {}
+            )
 
             if (dateError) {
                 Text("Niepoprawna data", color = Color.Red)
@@ -74,7 +76,7 @@ class Form {
 
             textModernTextFieldUI.TimeOutlinedTextField(
                 value = startTime,
-                onValueChange = { scheduleModelView.setNewTime(it) }
+                onValueChange = { viewModel.setNewTime(it) }
             ) {}
 
             if (startTimeError) {

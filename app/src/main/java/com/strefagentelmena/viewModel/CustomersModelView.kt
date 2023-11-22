@@ -230,7 +230,7 @@ class CustomersModelView : ViewModel() {
     }
 
 
-    fun loadAndEditAppointments(context: Context, updatedCustomer: Customer) {
+    private fun loadAndEditAppointments(context: Context, updatedCustomer: Customer) {
         // Załaduj listę wizyt z pliku
         val appointmentsList = filesFunctionsAppoiments.loadAppointmentFromFile(context)
 
@@ -272,6 +272,7 @@ class CustomersModelView : ViewModel() {
         // Aktualizuj listę klientów
         customersLists.value = updatedCustomersList
         loadAndEditAppointments(context, updatedCustomer)
+
         setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
 
         // Zapisz zmiany

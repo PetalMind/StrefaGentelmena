@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Notifications
@@ -56,6 +57,7 @@ import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.Locale
 
@@ -102,7 +104,7 @@ class Headers {
         compose: @Composable () -> Unit = {},
         onClick: () -> Unit = {},
     ) {
-        Surface(shadowElevation = 3.dp,) {
+        Surface(shadowElevation = 3.dp) {
             TopAppBar(
                 title = {
                     Text(
@@ -158,83 +160,65 @@ class Headers {
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun CalendarHeaderView(viewModel: ScheduleModelView) {
-        val context = LocalContext.current
-        val selectedDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
-        val formatter = DateTimeFormatter.ofPattern("d MMMM", Locale("pl"))
+        val selectedDateText by viewModel.currentSelectedAppoinmentsDate.observeAsState()
+        val dateFormatter = DateTimeFormatter.ofPattern("d MMMM", Locale("pl-PL"))
+        val apoimentsList by viewModel.appointmentsList.observeAsState(emptyList())
 
-        Column {
+        var selectedDate: LocalDate? = try {
+            LocalDate.parse(selectedDateText, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+        } catch (e: DateTimeParseException) {
+            null
+        }
+
+        LaunchedEffect(selectedDateText) {
+            selectedDate = try {
+                LocalDate.parse(selectedDateText, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+            } catch (e: DateTimeParseException) {
+                null
+            }
+        }
+
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .background(color = colorsUI.papaya)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)  // Increased padding
-                    .clickable {  // Made the whole row clickable
+                    .padding(8.dp)
+                    .clickable {
 
                     },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.weight(1f))  // Spacer added here
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = "Calendar Icon",
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 selectedDate?.let {
                     Text(
-                        text = it.format(formatter),
-                        style = MaterialTheme.typography.headlineLarge,  // Changed to h6 for better readability
+                        text = it.format(dateFormatter),
+                        style = MaterialTheme.typography.headlineLarge,
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))  // Spacer remains here
-            }
-
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(colorsUI.grey),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-//                val customerCount = getCustomerCount(viewModel.appointments.value, selectedDate)
-//                val visitTimes = getVisitTimes(viewModel.appointments.value, selectedDate)
-//
-//                IconAndNumber(
-//                    iconResourceId = R.drawable.ic_clients,
-//                    number = customerCount.toString(),
-//                    text = "Klienci",
-//                    tooltipText = "Klienci z dnia dzisiejszego"
-//                )
-//
-//                IconAndNumber(
-//                    iconResourceId = R.drawable.ic_clock,
-//                    number = visitTimes,
-//                    text = "Dzień Pracy",
-//                    tooltipText = "Godziny pracy w dniu dzisiejszym",
-//                )
             }
         }
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun CalendarHeader(
         currentDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH),
+        currentDayFormatter: String = appFunctions.getCurrentFormattedDate(),
         onDaySelected: (String) -> Unit,
     ) {
         val selectedDay = remember { mutableIntStateOf(currentDay) }
+        val selectedDayFormatter = remember { mutableStateOf(currentDayFormatter) }
         val daysInCurrentWeek = remember {
-            mutableStateOf(appFunctions.getCurrentWeekDays(selectedDay.value.toString()))
+            mutableStateOf(appFunctions.getCurrentWeekDays(selectedDayFormatter.value))
         }
 
-        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
-
-        LaunchedEffect(onDaySelected) {
-            daysInCurrentWeek.value = appFunctions.getCurrentWeekDays(selectedDay.value.toString())
+        LaunchedEffect(currentDay, onDaySelected) {
+            selectedDay.intValue = currentDay
+            selectedDayFormatter.value = currentDayFormatter
+            daysInCurrentWeek.value = appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
         }
 
         Column(
@@ -251,6 +235,16 @@ class Headers {
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    val daysOfWeek = listOf(
+                        "PON.",
+                        "WT.",
+                        "ŚR.",
+                        "CZW.",
+                        "PT.",
+                        "SOB.",
+                        "NIEDZ."
+                    )
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -259,19 +253,41 @@ class Headers {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        listOf(
-                            "PON.",
-                            "WT.",
-                            "ŚR.",
-                            "CZW.",
-                            "PT.",
-                            "SOB.",
-                            "NIEDZ."
-                        ).forEach { day ->
+                        // Przycisk do przewijania do tyłu
+                        IconButton(
+                            onClick = {
+                                selectedDayFormatter.value =
+                                    appFunctions.getPreviousWeek(selectedDayFormatter.value)
+                                daysInCurrentWeek.value =
+                                    appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Previous Week"
+                            )
+                        }
+
+                        daysOfWeek.forEach { day ->
                             Text(
                                 text = day,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color.Black,
+                            )
+                        }
+
+                        // Przycisk do przewijania do przodu
+                        IconButton(
+                            onClick = {
+                                selectedDayFormatter.value =
+                                    appFunctions.getNextWeek(selectedDayFormatter.value)
+                                daysInCurrentWeek.value =
+                                    appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Next Week"
                             )
                         }
                     }
@@ -284,32 +300,36 @@ class Headers {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         daysInCurrentWeek.value.forEach { dayNumber ->
+                            val isSelectedDay = dayNumber.toInt() == selectedDay.intValue
+
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        if (dayNumber.toInt() == selectedDay.intValue) colorsUI.yellow else Color.Transparent,
+                                        if (isSelectedDay) colorsUI.yellow else Color.Transparent,
                                         shape = CircleShape
                                     )
                                     .padding(4.dp)
+                                    .clickable {
+                                        selectedDay.intValue = dayNumber
+
+                                        val formattedDate = String.format(
+                                            "%02d.%02d.%04d",
+                                            dayNumber,
+                                            selectedDayFormatter.value.split(".")[1].toInt(),
+                                            selectedDayFormatter.value.split(".")[2].toInt()
+                                        )
+
+                                        selectedDayFormatter.value = formattedDate
+                                        onDaySelected(formattedDate)
+                                    }
                             ) {
                                 Text(
                                     text = dayNumber.toString(),
-                                    style = if (dayNumber.toInt() == selectedDay.intValue) MaterialTheme.typography.headlineMedium.copy(
+                                    style = if (isSelectedDay) MaterialTheme.typography.headlineMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ) else MaterialTheme.typography.bodyLarge,
-                                    color = if (dayNumber.toInt() == selectedDay.intValue) Color.Black else colorsUI.darkGrey,
-                                    modifier = Modifier
-                                        .clickable {
-                                            selectedDay.intValue = dayNumber.toInt()
-                                            val formattedDate = String.format(
-                                                "%02d.%02d.%04d",
-                                                dayNumber,
-                                                currentMonth,
-                                                currentYear
-                                            )
-                                            onDaySelected(formattedDate)
-                                        }
-                                        .padding(4.dp)
+                                    color = if (isSelectedDay) Color.Black else colorsUI.darkGrey,
+                                    modifier = Modifier.padding(4.dp)
                                 )
                             }
                         }
