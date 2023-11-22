@@ -65,6 +65,7 @@ class SMSManager {
                 appointment.customer.phoneNumber,
                 "Przypominamy o wizycie w dniu ${appointment.date} o godzinie ${appointment.startTime} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola."
             )
+
         }
     }
 

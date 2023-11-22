@@ -178,9 +178,11 @@ class Headers {
             }
         }
 
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .background(color = colorsUI.papaya)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(color = colorsUI.papaya)
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -310,17 +312,19 @@ class Headers {
                                     )
                                     .padding(4.dp)
                                     .clickable {
-                                        selectedDay.intValue = dayNumber
+                                        if (dayNumber != 7) {
+                                            selectedDay.intValue = dayNumber
 
-                                        val formattedDate = String.format(
-                                            "%02d.%02d.%04d",
-                                            dayNumber,
-                                            selectedDayFormatter.value.split(".")[1].toInt(),
-                                            selectedDayFormatter.value.split(".")[2].toInt()
-                                        )
+                                            val formattedDate = String.format(
+                                                "%02d.%02d.%04d",
+                                                dayNumber,
+                                                selectedDayFormatter.value.split(".")[1].toInt(),
+                                                selectedDayFormatter.value.split(".")[2].toInt()
+                                            )
 
-                                        selectedDayFormatter.value = formattedDate
-                                        onDaySelected(formattedDate)
+                                            selectedDayFormatter.value = formattedDate
+                                            onDaySelected(formattedDate)
+                                        }
                                     }
                             ) {
                                 Text(

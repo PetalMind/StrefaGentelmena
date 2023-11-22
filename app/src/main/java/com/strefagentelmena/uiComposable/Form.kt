@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.viewModel.ScheduleModelView
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 
 val formUI = Form()
@@ -36,9 +38,14 @@ class Form {
         val currentSelectedAppoinmentsDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
 
         val startTime by viewModel.selectedAppointmentTime.observeAsState(
-            if (isNew) "" else selectedAppointment?.startTime ?: ""
+            if (isNew) {
+                val currentTime = LocalTime.now()
+                viewModel.setNewTime(currentTime.format(DateTimeFormatter.ofPattern("HH:mm")))
+                    .toString()
+            } else {
+                selectedAppointment?.startTime ?: ""
+            }
         )
-
 
         val context = LocalContext.current
 
@@ -49,6 +56,7 @@ class Form {
         LaunchedEffect(Unit) {
             if (isNew) viewModel.clearDate()
             if (isNew) viewModel.selectedClient.value = null
+            viewModel.selectedAppointmentDate.value = currentSelectedAppoinmentsDate
 
             viewModel.loadCustomersList(context = context)
         }

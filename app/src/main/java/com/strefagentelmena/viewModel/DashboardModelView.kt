@@ -2,6 +2,7 @@ package com.strefagentelmena.viewModel
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -19,8 +20,11 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
+import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Date
 import java.util.Locale
 
 class DashboardModelView : ViewModel() {
@@ -114,43 +118,48 @@ class DashboardModelView : ViewModel() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun sendNotificationsForUpcomingAppointments(
         context: Context,
+        formattedDate: String,  // Dodaj ten parametr do funkcji
     ) {
         val appointmentsToSend = mutableListOf<Appointment>()
+        val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
         if (appointmentsLists.value?.isNotEmpty() == true) {
             appointmentsLists.value?.forEach { appointment ->
-                try {
-                    val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.getDefault())
-                    val formattedDate = LocalDate.now().format(formatter)
+                if (appointment.notificationSent) return@forEach
 
-                    if (appointment.notificationSent) {
-                        return@forEach
-                    }
-                    if (appointment.date <= formattedDate) {
-                        return@forEach
+                try {
+                    val appointmentDate = dateFormatter.parse(appointment.date)
+
+                    val appointmentLocalDate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        appointmentDate?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
                     } else {
+                        // For versions below Oreo, use SimpleDateFormat
+                        val formattedDate = dateFormatter.parse(formattedDate)
+                        formattedDate?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                    }
+
+                    val formattedDateLocalDate =
+                        LocalDate.parse(formattedDate, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+
+                    if (appointmentLocalDate == formattedDateLocalDate?.plusDays(1)) {
                         appointmentsToSend.add(appointment)
+                    }
+
+                    if (appointmentDate != null && appointmentLocalDate != null) {
+                        if (appointmentDate <= Date() && appointmentLocalDate > formattedDateLocalDate) {
+                            appointmentsToSend.add(appointment)
+                        }
                     }
                 } catch (e: Exception) {
                     viewState.value = AppState.Error
                 }
             }
-
-            appointmentsToNotify.value = appointmentsToSend
-
-            if (appointmentsToNotify.value?.isNotEmpty() == true) {
-                showNotifyDialog.value = true
-            }
-            try {
-                loadAllData(context)
-            } catch (e: Exception) {
-                // Możesz dodać tutaj logowanie błędu lub inną formę informacji dla dewelopera lub użytkownika
-            }
         }
     }
+
 
     fun editAppointment(
         context: Context,

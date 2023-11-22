@@ -151,6 +151,13 @@ class Dashboard {
         val showNotifyDialog by dashboardViewModel.showNotifyDialog.observeAsState(false)
         val clientsToNotify by dashboardViewModel.appointmentsToNotify.observeAsState(emptyList())
         val greetingRandom by dashboardViewModel.displayGreetings.observeAsState("")
+        val currentDay = remember {
+            mutableStateOf(
+                LocalDate.now()
+                    .format(DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.getDefault()))
+            )
+        }
+
         val context = LocalContext.current
 
         val currentTimeString = remember {
@@ -189,7 +196,10 @@ class Dashboard {
                 currentTimeString.value =
                     LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
 
-                dashboardViewModel.sendNotificationsForUpcomingAppointments(context)
+                dashboardViewModel.sendNotificationsForUpcomingAppointments(
+                    context,
+                    currentDay.value
+                )
             }
         }
 
@@ -247,7 +257,7 @@ class Dashboard {
                                             it,
                                         )
 
-                                        dashboardViewModel.editAppointment(context, it)
+                                        dashboardViewModel.editAppointment(context, it, true)
                                     }
                                     dashboardViewModel.hideNotifyDialog()
                                 },
