@@ -1,7 +1,6 @@
 package com.strefagentelmena.screens
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -52,9 +51,7 @@ import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.footerUI
 import com.strefagentelmena.uiComposable.headersUI
-import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.DashboardModelView
-import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -90,22 +87,15 @@ class Dashboard {
     @Composable
     fun DashboardView(
         navController: NavController,
-        viewModel: CustomersModelView,
-        scheduleViewModel: ScheduleModelView,
-        dashboardViewModel: DashboardModelView,
+        viewModel: DashboardModelView,
     ) {
         val context = LocalContext.current
-        val appointments by scheduleViewModel.appointmentsList.observeAsState(emptyList())
-        val viewState by dashboardViewModel.viewState.observeAsState(AppState.Idle)
-        val clientsToNotify by dashboardViewModel.appointmentsToNotify.observeAsState(emptyList())
-
-        LaunchedEffect(Unit) {
-            dashboardViewModel.loadAllData(context = context)
-        }
+        val viewState by viewModel.viewState.observeAsState(AppState.Idle)
+        val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
 
         when (viewState) {
             AppState.Idle -> {
-                dashboardViewModel.loadAllData(context = context)
+                viewModel.loadAllData(context = context)
             }
 
             AppState.Loading -> {
@@ -119,7 +109,7 @@ class Dashboard {
             }
 
             AppState.Success -> {
-                DashboardSuccessView(viewModel, navController, dashboardViewModel)
+                DashboardSuccessView(navController, viewModel)
             }
 
             else -> {
@@ -139,18 +129,17 @@ class Dashboard {
         // Efekt wyzwalany, gdy wartość 'messages' się zmienia
     }
 
-    @SuppressLint("StateFlowValueCalledInComposition")
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun DashboardSuccessView(
-        viewModel: CustomersModelView,
         navController: NavController,
-        dashboardViewModel: DashboardModelView,
+        viewModel: DashboardModelView,
     ) {
-        val messages by dashboardViewModel.messages.observeAsState("")
-        val showNotifyDialog by dashboardViewModel.showNotifyDialog.observeAsState(false)
-        val clientsToNotify by dashboardViewModel.appointmentsToNotify.observeAsState(emptyList())
-        val greetingRandom by dashboardViewModel.displayGreetings.observeAsState("")
+        val messages by viewModel.messages.observeAsState("")
+        val showNotifyDialog by viewModel.showNotifyDialog.observeAsState(false)
+        val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
+        val greetingRandom by viewModel.displayGreetings.observeAsState("")
+
         val currentDay = remember {
             mutableStateOf(
                 LocalDate.now()
@@ -188,6 +177,14 @@ class Dashboard {
             }
         }
 
+        LaunchedEffect(clientsToNotify, Unit) {
+            viewModel.loadAllData(context = context)
+
+            if (clientsToNotify.isNotEmpty()) {
+                viewModel.showNotifyDialog.value = true
+            }
+        }
+
         // Aktualizacja aktualnego czasu co 30 sekund
         LaunchedEffect(currentTimeString) {
             while (true) {
@@ -196,8 +193,7 @@ class Dashboard {
                 currentTimeString.value =
                     LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
 
-                dashboardViewModel.sendNotificationsForUpcomingAppointments(
-                    context,
+                viewModel.sendNotificationsForUpcomingAppointments(
                     currentDay.value
                 )
             }
@@ -238,7 +234,7 @@ class Dashboard {
 
                         Row {
                             cardUI.DashboardSmallCard(iconId = R.drawable.ic_clients,
-                                labelText = dashboardViewModel.customersLists.value?.size.toString(),
+                                labelText = viewModel.customersLists.value?.size.toString(),
                                 nameText = "Klienci Salonu",
                                 onClick = { navController.navigate("AddCustomer") })
 
@@ -248,29 +244,30 @@ class Dashboard {
                                 }, nameText = "Plan Dnia"
                             )
                         }
-
-                        if (showNotifyDialog) {
-                            PopUpDialogs().CustomPopup(
-                                onClick = {
-                                    clientsToNotify.forEach {
-                                        smsManager.sendNotification(
-                                            it,
-                                        )
-
-                                        dashboardViewModel.editAppointment(context, it, true)
-                                    }
-                                    dashboardViewModel.hideNotifyDialog()
-                                },
-                                onDismissRequest = {
-                                    dashboardViewModel.hideNotifyDialog()
-                                },
-                                clientCountString = clientsToNotify.size.toString()
-                            )
-                        }
-
                         Spacer(modifier = Modifier.weight(1f))
+
                         footerUI.AppFooter(context = context)
                     }
+                }
+                if (showNotifyDialog) {
+                    PopUpDialogs().NotifyDialog(
+                        onClick = {
+                            clientsToNotify.forEach {
+                                smsManager.sendNotification(
+                                    it,
+                                )
+
+                                viewModel.editAppointment(context, it, true)
+                            }
+                            viewModel.hideNotifyDialog()
+
+                        },
+                        onDismissRequest = {
+                            viewModel.hideNotifyDialog()
+                        },
+                        clientCountString = clientsToNotify.size.toString(),
+                        appoiments = clientsToNotify
+                    )
                 }
             }
         }

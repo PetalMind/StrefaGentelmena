@@ -23,8 +23,6 @@ class SMSManager {
     fun sendNotification(
         appointment: Appointment,
     ) {
-        if (appointment.notificationSent) return
-
         val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
         val currentDate = Calendar.getInstance()
         val currentHour = currentDate.get(Calendar.HOUR_OF_DAY)

@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -74,87 +75,98 @@ class DashboardModelView : ViewModel() {
         setViewState(AppState.Loading)
 
         try {
-            loadCustomersFromFile(context)
-            loadAppointmentFromFile(context)
+            loadCustomersList(context)
+            loadApointmentsList(context)
+
             setViewState(AppState.Success)
         } catch (e: Exception) {
             setViewState(AppState.Error)
         }
-
     }
 
     /**
-     * Load Customers From File.
+     * Load customers list
      *
      * @param context
+     * @return
      */
-    fun loadCustomersFromFile(context: Context) {
-        val file = File(context.filesDir, "customers.json")
+    private fun loadCustomersList(context: Context): List<Customer> {
+        // Sprawdź, czy funkcja loadCustomersFromFile zwraca poprawny typ
+        val loadedCustomers = fileFunctionsClients.loadCustomersFromFile(context)
 
-        if (file.exists()) {
-            FileReader(file).use {
-                val type = object : TypeToken<List<Customer>>() {}.type
-                val loadedCustomers: List<Customer> = Gson().fromJson(it, type)
-                customersLists.value = loadedCustomers
-            }
+        // Dodaj warunek, aby uniknąć zwracania pustej listy, jeśli coś poszło nie tak
+        if (loadedCustomers.isNotEmpty()) {
+            // Zaktualizuj customersLists.value, jeśli to jest wymagane
+            customersLists.value = loadedCustomers
         }
+
+        // Zwróć załadowanych klientów
+        return loadedCustomers
     }
 
-    /**
-     * Load Appointment From File.
-     *
-     * @param context
-     */
-    fun loadAppointmentFromFile(context: Context) {
-        val file = File(context.filesDir, "appointment.json")
+    private fun loadApointmentsList(context: Context): List<Appointment> {
+        // Sprawdź, czy funkcja loadCustomersFromFile zwraca poprawny typ
+        val loadedAppointments = filesFunctionsAppoiments.loadAppointmentFromFile(context)
 
-        if (file.exists()) {
-            FileReader(file).use {
-                val type = object : TypeToken<List<Appointment>>() {}.type
-                val loadedAppointments: List<Appointment> = Gson().fromJson(it, type)
-
-                appointmentsLists.value = loadedAppointments
-            }
+        // Dodaj warunek, aby uniknąć zwracania pustej listy, jeśli coś poszło nie tak
+        if (loadedAppointments.isNotEmpty()) {
+            // Zaktualizuj customersLists.value, jeśli to jest wymagane
+            appointmentsLists.value = loadedAppointments
         }
+
+        // Zwróć załadowanych klientów
+        return loadedAppointments
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+
+    @RequiresApi(Build.VERSION_CODES.O)
     fun sendNotificationsForUpcomingAppointments(
-        context: Context,
-        formattedDate: String,  // Dodaj ten parametr do funkcji
+        formattedDate: String,
     ) {
         val appointmentsToSend = mutableListOf<Appointment>()
         val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
-        if (appointmentsLists.value?.isNotEmpty() == true) {
-            appointmentsLists.value?.forEach { appointment ->
-                if (appointment.notificationSent) return@forEach
+        appointmentsLists.value?.let { appointments ->
+            if (appointments.isNotEmpty()) {
+                for (appointment in appointments) {
+                    if (appointment.notificationSent) continue
 
-                try {
-                    val appointmentDate = dateFormatter.parse(appointment.date)
+                    try {
+                        val appointmentDate = dateFormatter.parse(appointment.date)
 
-                    val appointmentLocalDate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        appointmentDate?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-                    } else {
-                        // For versions below Oreo, use SimpleDateFormat
-                        val formattedDate = dateFormatter.parse(formattedDate)
-                        formattedDate?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-                    }
+                        val appointmentLocalDate = appointmentDate?.let {
+                            val calendar = Calendar.getInstance()
+                            calendar.time = it
+                            val year = calendar.get(Calendar.YEAR)
+                            val month =
+                                calendar.get(Calendar.MONTH) + 1 // Calendar.MONTH jest indeksowane od zera
+                            val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-                    val formattedDateLocalDate =
-                        LocalDate.parse(formattedDate, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-
-                    if (appointmentLocalDate == formattedDateLocalDate?.plusDays(1)) {
-                        appointmentsToSend.add(appointment)
-                    }
-
-                    if (appointmentDate != null && appointmentLocalDate != null) {
-                        if (appointmentDate <= Date() && appointmentLocalDate > formattedDateLocalDate) {
-                            appointmentsToSend.add(appointment)
+                            LocalDate.of(year, month, day)
                         }
+
+                        val formattedDateLocalDate =
+                            LocalDate.parse(
+                                formattedDate,
+                                DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                            )
+
+                        appointmentLocalDate?.let {
+                            // Sprawdzamy, czy wizyta jest dokładnie jutro
+                            if (it == formattedDateLocalDate.plusDays(1)) {
+                                appointmentsToSend.add(appointment)
+                            }
+                        }
+                        appointmentsToSend.let {
+                            if (it.isNotEmpty()) {
+                                appointmentsToNotify.value = appointmentsToSend
+                            }
+                        }
+
+                    } catch (e: Exception) {
+                        // Obsłuż błąd odpowiednio, np. wyślij log do konsoli lub zaktualizuj stan widoku
+                        viewState.value = AppState.Error
                     }
-                } catch (e: Exception) {
-                    viewState.value = AppState.Error
                 }
             }
         }
@@ -171,21 +183,22 @@ class DashboardModelView : ViewModel() {
         val selectedClient = findCustomerByName(appointment.customer.fullName) ?: return
         val clientIndex = customersLists.value?.indexOf(selectedClient) ?: return
 
-        appointment.notificationSent = notificationIsSent
-
-
-
         if (index != -1 && clientIndex != -1) {
+            appointment.notificationSent = notificationIsSent
+
             currentAppointments[index] = appointment
             selectedClient.appointment = appointment
 
             appointmentsLists.value = currentAppointments
 
             filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsLists.value)
-            appointmentsLists.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
 
             customersLists.value?.get(clientIndex)?.appointment = appointment
             fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
+
+            customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
+            appointmentsLists.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
+
         }
     }
 

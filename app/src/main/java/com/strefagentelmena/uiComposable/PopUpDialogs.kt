@@ -1,5 +1,6 @@
 package com.strefagentelmena.uiComposable
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -26,16 +29,55 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.strefagentelmena.R
+import com.strefagentelmena.models.Appointment
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class PopUpDialogs {
+
     @Composable
-    fun CustomPopup(
-        clientCountString: String = "3",
+    fun IconHeader() {
+        Row(
+            modifier = Modifier.padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_clock),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                painter = painterResource(id = R.drawable.ic_bomb),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp)
+
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                painter = painterResource(id = R.drawable.ic_fire),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp)
+
+            )
+
+        }
+    }
+
+    @Composable
+    fun NotifyDialog(
+        clientCountString: String = "0",
+        appoiments: List<Appointment> = emptyList(),
         onDismissRequest: () -> Unit,
         onClick: () -> Unit,
     ) {
+        val showClientList = remember { mutableStateOf(false) }
+
         Dialog(
-            onDismissRequest = { /*TODO*/ },
+            onDismissRequest = { onDismissRequest() },
             properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
         ) {
             Box(
@@ -48,41 +90,13 @@ class PopUpDialogs {
                     shape = RoundedCornerShape(16.dp),
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(
-                            modifier = Modifier.padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_clock),
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp)
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_bomb),
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp)
-
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_fire),
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp)
-
-                            )
-
-                        }
+                        IconHeader()
 
                         Text(
-                            text = "Zostaw to mnie, Kingo! Chcesz wysłać powiadomienia?",
+                            text = "Zostaw to mnie! Chcesz wysłać powiadomienia?",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(top = 16.dp)
@@ -94,26 +108,56 @@ class PopUpDialogs {
                             modifier = Modifier.padding(top = 8.dp)
                         )
 
-                        Row(
+                        // Dodajemy AnimatedVisibility do obszaru z przyciskiem "Pokaż listę klientów"
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .align(Alignment.CenterHorizontally),
+                            contentAlignment = Alignment.Center
                         ) {
-                            TextButton(onClick = { onDismissRequest() }) {
-                                Text("Następnym razem")
-                            }
-
-                            Button(onClick = { onClick() }) {
+                            TextButton(onClick = { showClientList.value = !showClientList.value }) {
                                 Text(
-                                    "Wyślij",
-                                    fontSize = 18.sp,
+                                    text = if (showClientList.value) "Ukryj listę" else "Pokaż listę",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
                                 )
                             }
                         }
                     }
+
+                    AnimatedVisibility(visible = showClientList.value) {
+                        // Tutaj wyświetlamy listę klientów (zmień na odpowiednią logikę)
+                        if (showClientList.value) {
+                            Column(
+                                modifier = Modifier.padding(
+                                    horizontal = 16.dp,
+                                    vertical = 4.dp
+                                )
+                            ) {
+                                appoiments.forEach { appointment ->
+                                    Row {
+                                        Text(
+                                            text = appointment.customer.fullName,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(text = appointment.date, fontSize = 14.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    buttonsUI.ButtonsRow(
+                        onClick = { onClick() },
+                        onDismiss = { onDismissRequest() },
+                        cancelText = "Pomiń",
+                        confirmText = "Wyślij",
+                    )
                 }
             }
         }
     }
 }
+

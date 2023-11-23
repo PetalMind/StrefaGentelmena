@@ -28,8 +28,6 @@ class Navigation {
             composable(Screen.Dashboard.route) {
                 screenDashboard.DashboardView(
                     navController,
-                    customersModelView,
-                    schuduleModelView,
                     dashboardModelView
                 )
             }
