@@ -160,7 +160,7 @@ class CustomerView {
         }
 
         if (clientDialogState == true) {
-            dialogsUI.OnAddOrEditCustomerDialog(showFullScreenDialog = clientDialogState,
+            dialogsUI.OnAddOrEditCustomerDialog(
                 onClose = { viewModel.closeAddClientDialog() },
                 onAddCustomer = {
                     if (viewModel.validateAllFields()
@@ -171,13 +171,18 @@ class CustomerView {
                 viewModel = viewModel,
                 onEditCustomer = {
                     viewModel.editCustomer(context)
-                })
+                },
+                onDeleteCustomer = {
+                    viewModel.showDeleteDialog()
+                }
+            )
         }
 
         if (deleteDialogState == true) {
             dialogsUI.DeleteDialog(onDismiss = { viewModel.closeDeleteDialog() }, onConfirm = {
                 selectedClient?.let { viewModel.deleteCustomer(context = context, customer = it) }
                 viewModel.closeDeleteDialog()
+                viewModel.closeAllDialogs()
             }, objectName = selectedClient?.fullName ?: "")
         }
     }

@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
@@ -86,135 +87,148 @@ class Dialogs {
     @Composable
     fun OnAddOrEditCustomerDialog(
         viewModel: CustomersModelView,
-        showFullScreenDialog: Boolean?,
         onClose: () -> Unit,
         onAddCustomer: () -> Unit,
         onEditCustomer: () -> Unit,
+        onDeleteCustomer: () -> Unit
     ) {
-        if (showFullScreenDialog == true) {
-            val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
-            val headerText =
-                if (selectedCustomer == null) "Nowy klient" else "Edytuj klienta"
+        val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
+        val headerText =
+            if (selectedCustomer == null) "Nowy klient" else "Edytuj klienta"
 
-            var firstName by remember { mutableStateOf(selectedCustomer?.firstName ?: "") }
-            var lastName by remember { mutableStateOf(selectedCustomer?.lastName ?: "") }
-            var phoneNumber by remember { mutableStateOf(selectedCustomer?.phoneNumber ?: "") }
+        var firstName by remember { mutableStateOf(selectedCustomer?.firstName ?: "") }
+        var lastName by remember { mutableStateOf(selectedCustomer?.lastName ?: "") }
+        var phoneNumber by remember { mutableStateOf(selectedCustomer?.phoneNumber ?: "") }
 
-            //errors fromViewModel
-            val firstNameError by viewModel.firstNameError.observeAsState("")
-            val lastNameError by viewModel.lastNameError.observeAsState("")
-            val phoneNumberError by viewModel.phoneNumberError.observeAsState("")
+        //errors fromViewModel
+        val firstNameError by viewModel.firstNameError.observeAsState("")
+        val lastNameError by viewModel.lastNameError.observeAsState("")
+        val phoneNumberError by viewModel.phoneNumberError.observeAsState("")
 
-            val focusRequester = remember { FocusRequester() }
-            val keyboardController = LocalSoftwareKeyboardController.current
+        val focusRequester = remember { FocusRequester() }
+        val keyboardController = LocalSoftwareKeyboardController.current
 
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
-                keyboardController?.show()
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+
+        LaunchedEffect(selectedCustomer) {
+            if (selectedCustomer != null) {
+                viewModel.setSelectedCustomerData()
             }
+        }
 
-            LaunchedEffect(selectedCustomer) {
-                if (selectedCustomer != null) {
-                    viewModel.setSelectedCustomerData()
-                }
-            }
-
-            Dialog(
-                onDismissRequest = { onClose() },
-                properties = DialogProperties(usePlatformDefaultWidth = false)
+        Dialog(
+            onDismissRequest = { onClose() },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        headersUI.AppBarWithBackArrow(
-                            title = headerText,
-                            onClick = {},
-                            onBackPressed = { onClose() },
-                            compose = {
-                                buttonsUI.CustomTextButton(
-                                    text = "Zapisz",
-                                    fontSize = 20.sp,
+                    headersUI.AppBarWithBackArrow(
+                        title = headerText,
+                        onClick = {},
+                        onBackPressed = { onClose() },
+                        compose = {
+                            if (selectedCustomer != null) {
+                                buttonsUI.HeaderIconButton(
+                                    icon = R.drawable.ic_delete,
                                     onClick = {
-                                        if (selectedCustomer == null) {
-                                            onAddCustomer()
-                                        } else {
-                                            onEditCustomer()
-                                        }
-                                    }
+                                        onDeleteCustomer()
+                                    },
+                                    containerColor = colorsUI.carmine
                                 )
-                            })
+                            }
+                        })
 
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            textModernTextFieldUI.ModernTextField(
-                                value = firstName,
-                                onValueChange = {
-                                    firstName = it
-                                    viewModel.validateFirstName(it)
-                                    viewModel.setCustomerName(it)
-                                },
-                                label = "Imię",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester),
-                                isError = firstNameError.isNotEmpty(),
-                                supportText = firstNameError,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Person,
-                                        contentDescription = "Person",
-                                    )
-                                },
-                                autoFocus = true,
-                            )
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        textModernTextFieldUI.ModernTextField(
+                            value = firstName,
+                            onValueChange = {
+                                firstName = it
+                                viewModel.validateFirstName(it)
+                                viewModel.setCustomerName(it)
+                            },
+                            label = "Imię",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester),
+                            isError = firstNameError.isNotEmpty(),
+                            supportText = firstNameError,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Person,
+                                    contentDescription = "Person",
+                                )
+                            },
+                            autoFocus = true,
+                        )
 
-                            textModernTextFieldUI.ModernTextField(
-                                value = lastName,
-                                onValueChange = {
-                                    lastName = it
-                                    viewModel.validateLastName(it)
-                                    viewModel.setCustomerLastName(it)
-                                },
-                                label = "Nazwisko",
-                                isError = lastNameError.isNotEmpty(),
-                                supportText = lastNameError,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Person,
-                                        contentDescription = "Person",
-                                    )
-                                },
-                                autoFocus = false
-                            )
+                        textModernTextFieldUI.ModernTextField(
+                            value = lastName,
+                            onValueChange = {
+                                lastName = it
+                                viewModel.validateLastName(it)
+                                viewModel.setCustomerLastName(it)
+                            },
+                            label = "Nazwisko",
+                            isError = lastNameError.isNotEmpty(),
+                            supportText = lastNameError,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Person,
+                                    contentDescription = "Person",
+                                )
+                            },
+                            autoFocus = false
+                        )
 
-                            textModernTextFieldUI.ModernTextField(
-                                value = phoneNumber,
-                                onValueChange = {
-                                    if (it.length <= 9) {
-                                        phoneNumber = it
-                                    }
-                                    viewModel.validatePhoneNumber(it)
-                                    viewModel.setCustomerPhoneNumber(it)
-                                },
-                                label = "Numer Telefonu",
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                isError = phoneNumberError.isNotEmpty(),
-                                supportText = phoneNumberError,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Phone,
-                                        contentDescription = "Person",
-                                    )
-                                },
-                                autoFocus = false
-                            )
-                        }
+                        textModernTextFieldUI.ModernTextField(
+                            value = phoneNumber,
+                            onValueChange = {
+                                if (it.length <= 9) {
+                                    phoneNumber = it
+                                }
+                                viewModel.validatePhoneNumber(it)
+                                viewModel.setCustomerPhoneNumber(it)
+                            },
+                            label = "Numer Telefonu",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            isError = phoneNumberError.isNotEmpty(),
+                            supportText = phoneNumberError,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Phone,
+                                    contentDescription = "Person",
+                                )
+                            },
+                            autoFocus = false
+                        )
+
+                        buttonsUI.ButtonsRow(
+                            cancelText = "Anuluj",
+                            confirmText = "Zapisz",
+                            onClick = {
+                                if (selectedCustomer == null) {
+                                    onAddCustomer()
+                                } else {
+                                    onEditCustomer()
+                                }
+                            },
+                            onDismiss = {
+                                onClose()
+                            },
+                            containerColor = colorsUI.green,
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
                     }
                 }
             }
@@ -236,7 +250,7 @@ class Dialogs {
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState(if (isNewState) selectedAppointment?.date else "")
         val selectedTime by viewModel.selectedAppointmentTime.observeAsState(if (isNewState) selectedAppointment?.startTime else "")
 
-        val title = if (isNewState) "Dodaj wizytę" else "Edytuj wizytę"
+        val title = if (isNewState) "Dodaj" else "Edytujv"
         val context = LocalContext.current
 
         Dialog(
@@ -258,50 +272,51 @@ class Dialogs {
                             onBackPressed = { viewModel.hideApoimentDialog() },
                             compose = {
                                 if (selectedAppointment != null) {
-                                    buttonsUI.CustomTextButton(
-                                        text = "Usuń",
-                                        fontSize = 16.sp,
-                                        onClick = {
-                                            viewModel.showDeleteDialog()
-                                        },
-                                        width = 60.dp,
-                                    )
+                                        buttonsUI.HeaderIconButton(
+                                            icon = R.drawable.ic_delete,
+                                            onClick = {
+                                                viewModel.showDeleteDialog()
+                                            },
+                                            containerColor = colorsUI.carmine
+                                        )
+
+                                        buttonsUI.HeaderIconButton(
+                                            icon = R.drawable.ic_notification,
+                                            onClick = {
+
+                                            },
+                                            containerColor = colorsUI.sunset
+                                        )
                                 }
-
-                                buttonsUI.CustomTextButton(
-                                    text = "Zapisz",
-                                    fontSize = 16.sp,
-                                    onClick = {
-                                        if (selectedClient != null && selectedDate?.isNotEmpty() == true && selectedTime?.isNotEmpty() == true) {
-                                            if (isNewState) {
-                                                viewModel.createNewApointment(
-                                                    isNew = isNewState,
-                                                    selectedClient = selectedClient,
-                                                    date = selectedDate ?: return@CustomTextButton,
-                                                    startTime = selectedTime
-                                                        ?: return@CustomTextButton,
-                                                    context
-                                                )
-                                            } else {
-                                                viewModel.editAppointment(
-                                                    context,
-                                                    customersList
-                                                        ?: return@CustomTextButton,
-                                                )
-
-                                                viewModel.hideApoimentDialog()
-                                            }
-                                        }
-                                    },
-                                    padding = 6.dp,
-                                    width = 70.dp
-                                )
                             })
                     }
 
                     Column(modifier = Modifier.padding(16.dp)) {
                         formUI.AppointmentForm(
                             viewModel = viewModel,
+                            onSave = {
+                                if (selectedClient != null && selectedDate?.isNotEmpty() == true && selectedTime?.isNotEmpty() == true) {
+                                    if (isNewState) {
+                                        viewModel.createNewApointment(
+                                            isNew = isNewState,
+                                            selectedClient = selectedClient,
+                                            date = selectedDate ?: return@AppointmentForm,
+                                            startTime = selectedTime
+                                                ?: return@AppointmentForm,
+                                            context
+                                        )
+                                    } else {
+                                        viewModel.editAppointment(
+                                            context,
+                                            customersList
+                                                ?: return@AppointmentForm,
+                                        )
+
+                                        viewModel.hideApoimentDialog()
+                                    }
+                                }
+                            },
+                            onCancel = { viewModel.hideApoimentDialog() },
                         )
                     }
                 }

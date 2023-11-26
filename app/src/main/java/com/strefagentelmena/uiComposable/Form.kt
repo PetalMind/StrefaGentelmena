@@ -32,6 +32,8 @@ class Form {
     @Composable
     fun AppointmentForm(
         viewModel: ScheduleModelView,
+        onSave: () -> Unit,
+        onCancel: () -> Unit,
     ) {
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState()
@@ -90,6 +92,15 @@ class Form {
             if (startTimeError) {
                 Text("Niepoprawna godzina rozpoczęcia", color = Color.Red)
             }
+
+            buttonsUI.ButtonsRow(
+                onClick = { onSave() },
+                onDismiss = { onCancel() },
+                containerColor = colorsUI.green,
+                cancelText = "Anuluj",
+                confirmText = "Zapisz",
+                modifier = Modifier.padding(top = 16.dp)
+            )
         }
     }
 
