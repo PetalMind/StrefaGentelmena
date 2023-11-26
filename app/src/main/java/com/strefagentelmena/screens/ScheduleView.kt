@@ -206,6 +206,7 @@ class Schedule {
                     currentDayFormatter = currentSelectedAppoinmentsDate,
                     currentDay = currentSelectedDay.intValue,
                 )
+
                 AppointmentsList(viewModel) { selectedAppointment ->
                     viewModel.selectAppointmentAndClient(selectedAppointment)
                     viewModel.setAppoimentState(false)
@@ -237,6 +238,8 @@ class Schedule {
         viewModel: ScheduleModelView
     ) {
         val notificationDialogState by viewModel.onNotificationClickState.observeAsState(false)
+        val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
+        val context = LocalContext.current
         // Helper function to generate time intervals
         LazyColumn {
             itemsIndexed(appointments) { index, appointment ->
@@ -373,8 +376,15 @@ class Schedule {
                     }
                 }
                 if (notificationDialogState) {
-                    //   smsManager.sendNotification(appointment = appointment)
-                    Log.e("notification", "notification sent ${appointment.customer.fullName}")
+                    dialogsUI.SendNotificationDialog(
+                        objectName = selectedAppointment?.customer?.fullName ?: "",
+                        onConfirm = {
+                            viewModel.sendNotificationForAppointment(context = context)
+                            viewModel.hideNotificationState()
+                            viewModel.hideApoimentDialog()
+                        },
+                        onDismiss = { viewModel.hideNotificationState() })
+
                 }
             }
         }

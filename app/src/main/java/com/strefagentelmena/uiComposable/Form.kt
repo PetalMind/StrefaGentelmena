@@ -45,21 +45,22 @@ class Form {
         val customerIdError by remember { mutableStateOf(false) }
         val dateError by remember { mutableStateOf(false) }
         val startTimeError by remember { mutableStateOf(false) }
-        val startTime by viewModel.selectedAppointmentTime.observeAsState(
+        val startTime by viewModel.selectedAppointmentTime.observeAsState("")
+
+        LaunchedEffect(Unit) {
             if (isNewAppointment) {
+                viewModel.selectedClient.value = null
+                viewModel.clearDate()
+
                 val currentTime = LocalTime.now()
+
                 viewModel.setNewTime(currentTime.format(DateTimeFormatter.ofPattern("HH:mm")))
                     .toString()
             } else {
                 selectedAppointment?.startTime ?: ""
             }
-        )
 
-        LaunchedEffect(Unit) {
-            if (isNewAppointment) viewModel.clearDate()
-            if (isNewAppointment) viewModel.selectedClient.value = null
             viewModel.selectedAppointmentDate.value = currentSelectedAppoinmentsDate
-
             viewModel.loadCustomersList(context = context)
         }
 

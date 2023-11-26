@@ -2,6 +2,8 @@ package com.strefagentelmena.uiComposable
 
 import android.app.TimePickerDialog
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -260,6 +262,7 @@ class TextFields {
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun TimeOutlinedTextField(
@@ -270,6 +273,7 @@ class TextFields {
         val context = LocalContext.current
         val focusRequester = remember { FocusRequester() }
         val interactionSource = remember { MutableInteractionSource() }
+
         Surface(
             shape = RoundedCornerShape(8.dp),  // Brak zaokrąglenia
             shadowElevation = 4.dp,
@@ -332,6 +336,7 @@ class TextFields {
         picker.show()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun showTimePickerDialog(context: Context, onTimeSet: (String) -> Unit) {
         val currentTime = LocalTime.now()
         val timePickerDialog = TimePickerDialog(

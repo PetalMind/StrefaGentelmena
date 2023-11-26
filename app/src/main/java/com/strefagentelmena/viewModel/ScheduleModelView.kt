@@ -10,10 +10,14 @@ import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
+import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -24,10 +28,10 @@ class ScheduleModelView : ViewModel() {
     val selectedClient = MutableLiveData<Customer?>(null)
     val isNewAppointment = MutableLiveData<Boolean>(false)
 
+
     private val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     private val currentDate: String = sdf.format(Date())
     val currentSelectedAppoinmentsDate = MutableLiveData<String>(currentDate)
-    val currentWeekDays = mutableStateOf<List<String>>(emptyList())
 
     val messages = MutableLiveData<String?>(null)
     val viewState = MutableLiveData<AppState>(AppState.Idle)
@@ -36,7 +40,7 @@ class ScheduleModelView : ViewModel() {
      *Dialogs states
      */
     val showAppointmentDialog = MutableLiveData(false)
-    val deleteDialog = MutableLiveData(false)
+    val deleteDialogState = MutableLiveData(false)
     val onNotificationClickState = MutableLiveData(false)
 
     /**
@@ -97,7 +101,7 @@ class ScheduleModelView : ViewModel() {
     }
 
     fun showDeleteDialog() {
-        deleteDialog.value = true
+        deleteDialogState.value = true
     }
 
     fun changeAppoinmentsDate(newValue: String) {
@@ -109,7 +113,7 @@ class ScheduleModelView : ViewModel() {
      *
      */
     fun hideDeleteDialog() {
-        deleteDialog.value = false
+        deleteDialogState.value = false
     }
 
     /**
@@ -255,30 +259,37 @@ class ScheduleModelView : ViewModel() {
      *
      * @param context
      */
-    fun editAppointment(context: Context, customerList: List<Customer>) {
+    fun editAppointment(
+        context: Context,
+        notificationIsSent: Boolean = false
+    ) {
         val currentAppointments = appointmentsList.value?.toMutableList() ?: return
-        val currentCustomerList = customerList.toMutableList()
-        val selectedClient = selectedClient.value ?: return
-
-        val clientIndex = customerList.indexOfFirst { it.id == selectedClient.id }
         val index = currentAppointments.indexOfFirst { it.id == selectedAppointment.value?.id }
-        val sendNotification =
-            if (selectedAppointmentDate.value != selectedAppointment.value?.date) false else selectedAppointment.value?.notificationSent
 
-        setSelectedAppoiment(sendNotification ?: return)
+        val selectedClient =
+            findCustomerByName(selectedAppointment.value?.customer?.fullName ?: "")
+
+        val clientIndex = customersList.value?.indexOf(selectedClient) ?: return
 
         if (index != -1 && clientIndex != -1) {
+            selectedAppointment.value?.notificationSent =
+                onNotificationClickState.value ?: notificationIsSent
+
             currentAppointments[index] = selectedAppointment.value ?: return
-            currentCustomerList[clientIndex] = selectedClient
+
+            selectedClient?.appointment = selectedAppointment.value ?: return
 
             appointmentsList.value = currentAppointments
 
-            setMessages("Wizyta ${selectedClient.fullName} właśnie przeszła metamorfozę w systemie.")
 
+            customersList.value?.get(clientIndex)?.appointment = selectedAppointment.value ?: return
+            fileFunctionsClients.saveCustomersToFile(context, customersList.value)
             filesFunctionsAppoiments.saveAppointmentToFile(context, currentAppointments)
-            filesFunctionsAppoiments.loadAppointmentFromFile(context)
-            fileFunctionsClients.saveCustomersToFile(context, currentCustomerList)
-            fileFunctionsClients.loadCustomersFromFile(context)
+
+
+            customersList.value = fileFunctionsClients.loadCustomersFromFile(context)
+            appointmentsList.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
+
         }
     }
 
@@ -298,4 +309,21 @@ class ScheduleModelView : ViewModel() {
         customersList.value = fileFunctionsClients.loadCustomersFromFile(context)
     }
 
+    fun closeAllDialog() {
+        showAppointmentDialog.value = false
+        deleteDialogState.value = false
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun sendNotificationForAppointment(
+        context: Context
+    ) {
+        if (selectedAppointment.value?.notificationSent == true) return
+
+        smsManager.sendNotification(selectedAppointment.value ?: return, true)
+        setMessages("Powiadomienie wysłane do ${selectedAppointment.value?.customer?.fullName}")
+
+        editAppointment(context, true)
+    }
 }
+

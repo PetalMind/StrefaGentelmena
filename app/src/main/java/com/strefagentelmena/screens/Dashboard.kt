@@ -259,10 +259,12 @@ class Dashboard {
 
                                 viewModel.editAppointment(context, it, true)
                             }
+                            viewModel.appointmentsToNotify.value = emptyList()
                             viewModel.hideNotifyDialog()
 
                         },
                         onDismissRequest = {
+                            viewModel.appointmentsToNotify.value = emptyList()
                             viewModel.hideNotifyDialog()
                         },
                         clientCountString = clientsToNotify.size.toString(),

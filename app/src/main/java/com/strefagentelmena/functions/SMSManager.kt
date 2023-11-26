@@ -22,6 +22,7 @@ class SMSManager {
      */
     fun sendNotification(
         appointment: Appointment,
+        sendNotification: Boolean = false,
     ) {
         val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
         val currentDate = Calendar.getInstance()
@@ -63,7 +64,13 @@ class SMSManager {
                 appointment.customer.phoneNumber,
                 "Przypominamy o wizycie w dniu ${appointment.date} o godzinie ${appointment.startTime} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola."
             )
-
+        } else {
+            if (sendNotification) {
+                sendSMS(
+                    appointment.customer.phoneNumber,
+                    "Przypominamy o wizycie w dniu ${appointment.date} o godzinie ${appointment.startTime} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola."
+                )
+            }
         }
     }
 

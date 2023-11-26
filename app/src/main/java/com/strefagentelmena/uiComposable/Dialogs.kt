@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.AlertDialog
@@ -241,17 +242,28 @@ class Dialogs {
     fun OnAddOrEditSchedule(
         viewModel: ScheduleModelView,
     ) {
-
         val isNewState by viewModel.isNewAppointment.observeAsState(false)
-        val deleteDialogState by viewModel.deleteDialog.observeAsState(false)
+        val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
         val customersList by viewModel.customersList.observeAsState(emptyList())
         val selectedClient by viewModel.selectedClient.observeAsState(null)
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState(if (isNewState) selectedAppointment?.date else "")
         val selectedTime by viewModel.selectedAppointmentTime.observeAsState(if (isNewState) selectedAppointment?.startTime else "")
 
-        val title = if (isNewState) "Dodaj" else "Edytujv"
+        val sendNotification = remember {
+            mutableStateOf(false)
+        }
+
+        val title = if (isNewState) "Dodaj klienta" else "Edytuj"
         val context = LocalContext.current
+
+        LaunchedEffect(selectedAppointment) {
+            if (selectedAppointment != null) {
+                if (selectedDate != selectedAppointment?.date || selectedTime != selectedAppointment?.startTime) {
+                    sendNotification.value = true
+                }
+            }
+        }
 
         Dialog(
             onDismissRequest = { viewModel.hideApoimentDialog() },
@@ -272,21 +284,23 @@ class Dialogs {
                             onBackPressed = { viewModel.hideApoimentDialog() },
                             compose = {
                                 if (selectedAppointment != null) {
-                                        buttonsUI.HeaderIconButton(
-                                            icon = R.drawable.ic_delete,
-                                            onClick = {
-                                                viewModel.showDeleteDialog()
-                                            },
-                                            containerColor = colorsUI.carmine
-                                        )
+                                    buttonsUI.HeaderIconButton(
+                                        icon = R.drawable.ic_delete,
+                                        onClick = {
+                                            viewModel.showDeleteDialog()
+                                        },
+                                        containerColor = colorsUI.carmine
+                                    )
 
+                                    if (!selectedAppointment!!.notificationSent) {
                                         buttonsUI.HeaderIconButton(
                                             icon = R.drawable.ic_notification,
                                             onClick = {
-
+                                                viewModel.showNotificationState()
                                             },
                                             containerColor = colorsUI.sunset
                                         )
+                                    }
                                 }
                             })
                     }
@@ -308,8 +322,7 @@ class Dialogs {
                                     } else {
                                         viewModel.editAppointment(
                                             context,
-                                            customersList
-                                                ?: return@AppointmentForm,
+                                            sendNotification.value
                                         )
 
                                         viewModel.hideApoimentDialog()
@@ -323,13 +336,19 @@ class Dialogs {
             }
         }
         if (deleteDialogState) {
-            ConfirmDeleteDialog(
+            DeleteDialog(
+                objectName = "${selectedAppointment?.customer?.fullName ?: ""}\n${selectedAppointment?.date}",
+                onConfirm = {
+                    viewModel.removeAppointment(
+                        id = selectedAppointment?.id ?: 0,
+                        context = context
+                    )
+
+                    viewModel.closeAllDialog()
+                },
                 onDismiss = { viewModel.hideDeleteDialog() },
-                text = "Czy na pewno chcesz usunąć wizytę"
-            ) {
-                viewModel.removeAppointment(selectedAppointment?.id ?: 0, context)
-                viewModel.hideApoimentDialog()
-            }
+                labelName = "Czy chcesz usunąć wizytę "
+            )
         }
     }
 
@@ -674,6 +693,7 @@ class Dialogs {
     @Composable
     fun DeleteDialog(
         objectName: String,
+        labelName: String = "Czy chcesz usunąć",
         onConfirm: () -> Unit,
         onDismiss: () -> Unit,
     ) {
@@ -699,7 +719,7 @@ class Dialogs {
                     }
 
                     Text(
-                        text = "Czy chcesz usunąć",
+                        text = labelName,
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.align(alignment = Alignment.CenterHorizontally),
                     )
@@ -729,6 +749,72 @@ class Dialogs {
                         onDismiss = { onDismiss() },
                         confirmText = "Tak",
                         cancelText = "Nie"
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun SendNotificationDialog(
+        objectName: String,
+        labelName: String = "Czy chcesz wyslac SMS?",
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        Dialog(onDismissRequest = { onDismiss() }) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(alignment = Alignment.CenterHorizontally)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(65.dp)
+                                .align(alignment = Alignment.Center)
+                        )
+                    }
+
+                    Text(
+                        text = labelName,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.align(alignment = Alignment.CenterHorizontally),
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp)
+                            .align(alignment = Alignment.CenterHorizontally)
+                    ) {
+                        Text(
+                            text = objectName,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(alignment = Alignment.Center),
+                            softWrap = true,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    buttonsUI.ButtonsRow(
+                        onClick = { onConfirm() },
+                        onDismiss = { onDismiss() },
+                        confirmText = "Tak",
+                        cancelText = "Nie",
+                        containerColor = colorsUI.green
                     )
                 }
             }
