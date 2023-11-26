@@ -22,7 +22,7 @@ class ScheduleModelView : ViewModel() {
     val appointmentsList = MutableLiveData<List<Appointment>>(emptyList())
 
     val selectedClient = MutableLiveData<Customer?>(null)
-
+    val isNewAppointment = MutableLiveData<Boolean>(false)
 
     private val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     private val currentDate: String = sdf.format(Date())
@@ -37,6 +37,7 @@ class ScheduleModelView : ViewModel() {
      */
     val showAppointmentDialog = MutableLiveData(false)
     val deleteDialog = MutableLiveData(false)
+    val onNotificationClickState = MutableLiveData(false)
 
     /**
      * Appoiments Data
@@ -45,6 +46,19 @@ class ScheduleModelView : ViewModel() {
     val selectedAppointmentDate = MutableLiveData("")
     val selectedAppointmentTime = MutableLiveData("")
     val selectedAppointment = MutableLiveData<Appointment?>()
+
+
+    fun setAppoimentState(newValue: Boolean) {
+        isNewAppointment.value = newValue
+    }
+
+    fun showNotificationState() {
+        onNotificationClickState.value = true
+    }
+
+    fun hideNotificationState() {
+        onNotificationClickState.value = false
+    }
 
 
     fun clearMessages() {
@@ -194,10 +208,9 @@ class ScheduleModelView : ViewModel() {
             notificationSent = false
         )
 
-        hideApoimentDialog()
-
         selectedAppointment.value = new
         addAppointment(context)
+        hideApoimentDialog()
     }
 
     /**

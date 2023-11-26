@@ -214,21 +214,6 @@ class Dialogs {
                                 },
                                 autoFocus = false
                             )
-
-                            if (selectedCustomer != null) {
-                                Text(
-                                    "Ostatnia wizyta:",
-                                    modifier = Modifier.padding(top = 16.dp),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = selectedCustomer?.appointment?.date
-                                        ?: "Brak ostatniej wizyty",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
                         }
                     }
                 }
@@ -241,17 +226,18 @@ class Dialogs {
     @Composable
     fun OnAddOrEditSchedule(
         viewModel: ScheduleModelView,
-        isNew: Boolean,
     ) {
-        val title = if (isNew) "Dodaj wizytę" else "Edytuj wizytę"
-        val context = LocalContext.current
 
+        val isNewState by viewModel.isNewAppointment.observeAsState(false)
         val deleteDialogState by viewModel.deleteDialog.observeAsState(false)
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
         val customersList by viewModel.customersList.observeAsState(emptyList())
         val selectedClient by viewModel.selectedClient.observeAsState(null)
-        val selectedDate by viewModel.selectedAppointmentDate.observeAsState(if (!isNew) selectedAppointment?.date else "")
-        val selectedTime by viewModel.selectedAppointmentTime.observeAsState(if (!isNew) selectedAppointment?.startTime else "")
+        val selectedDate by viewModel.selectedAppointmentDate.observeAsState(if (isNewState) selectedAppointment?.date else "")
+        val selectedTime by viewModel.selectedAppointmentTime.observeAsState(if (isNewState) selectedAppointment?.startTime else "")
+
+        val title = if (isNewState) "Dodaj wizytę" else "Edytuj wizytę"
+        val context = LocalContext.current
 
         Dialog(
             onDismissRequest = { viewModel.hideApoimentDialog() },
@@ -287,9 +273,9 @@ class Dialogs {
                                     fontSize = 16.sp,
                                     onClick = {
                                         if (selectedClient != null && selectedDate?.isNotEmpty() == true && selectedTime?.isNotEmpty() == true) {
-                                            if (isNew) {
+                                            if (isNewState) {
                                                 viewModel.createNewApointment(
-                                                    isNew = isNew,
+                                                    isNew = isNewState,
                                                     selectedClient = selectedClient,
                                                     date = selectedDate ?: return@CustomTextButton,
                                                     startTime = selectedTime
@@ -302,6 +288,7 @@ class Dialogs {
                                                     customersList
                                                         ?: return@CustomTextButton,
                                                 )
+
                                                 viewModel.hideApoimentDialog()
                                             }
                                         }
@@ -315,7 +302,6 @@ class Dialogs {
                     Column(modifier = Modifier.padding(16.dp)) {
                         formUI.AppointmentForm(
                             viewModel = viewModel,
-                            isNew = isNew,
                         )
                     }
                 }
@@ -372,6 +358,7 @@ class Dialogs {
         itemOnClick: (T) -> Unit,
         labelText: String,
         itemText: (T) -> String,
+        openDialog: Boolean
     ) {
         val inputText = remember { mutableStateOf("") }
         var filteredItemList by remember { mutableStateOf(itemList) }
@@ -385,99 +372,106 @@ class Dialogs {
             onDispose { }
         }
 
-        Dialog(
-            onDismissRequest = onDismissRequest,
-            properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        TextField(
-                            textStyle = TextStyle(
-                                fontSize = 18.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            readOnly = false,
-                            value = inputText.value,
-                            onValueChange = {
-                                inputText.value = it
-                            },
+        if (openDialog) {
+            Dialog(
+                onDismissRequest = onDismissRequest,
+                properties = DialogProperties(
+                    dismissOnClickOutside = false,
+                    dismissOnBackPress = false
+                )
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            TextField(
+                                textStyle = TextStyle(
+                                    fontSize = 18.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                readOnly = false,
+                                value = inputText.value,
+                                onValueChange = {
+                                    inputText.value = it
+                                },
 
-                            label = {
-                                Text(
-                                    labelText,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Search Icon"
-                                )
-                            },
-                            trailingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear button",
-                                    modifier = Modifier.clickable {
-                                        onDismissRequest()
-                                    }
-                                )
-                            },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                disabledContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            isError = false,
-                            singleLine = true, // Dodane singleLine
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    keyboardController?.hide()
-                                }
-                            ),
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Done
-                            ) // Dodane KeyboardOptions
-                        )
-
-                        LazyColumn(modifier = Modifier.heightIn(min = 0.dp, max = 500.dp)) {
-                            items(filteredItemList.size) { index ->
-                                val item = filteredItemList[index]
-                                val isSelected = selectedItem.value == item
-                                AnimatedContent(
-                                    targetState = isSelected,
-                                    transitionSpec = {
-                                        fadeIn() togetherWith fadeOut()
-                                    }, label = ""
-                                ) { targetState ->
-                                    val visibility = if (targetState) {
-                                        Modifier.alpha(1f)
-                                    } else {
-                                        Modifier.alpha(0.5f)
-                                    }
+                                label = {
                                     Text(
-                                        text = itemText(item),
+                                        labelText,
                                         color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                selectedItem.value = item
-                                                itemOnClick(item)
-                                                onDismissRequest()
-                                            }
-                                            .padding(vertical = 10.dp, horizontal = 16.dp)
-                                            .then(visibility)
+                                        fontSize = 18.sp,
                                     )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search Icon"
+                                    )
+                                },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Clear button",
+                                        modifier = Modifier.clickable {
+                                            onDismissRequest()
+                                        }
+                                    )
+                                },
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                isError = false,
+                                singleLine = true, // Dodane singleLine
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        keyboardController?.hide()
+                                    }
+                                ),
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Done
+                                ) // Dodane KeyboardOptions
+                            )
+
+                            LazyColumn(modifier = Modifier.heightIn(min = 0.dp, max = 500.dp)) {
+                                items(filteredItemList.size) { index ->
+                                    val item = filteredItemList[index]
+                                    val isSelected = selectedItem.value == item
+                                    AnimatedContent(
+                                        targetState = isSelected,
+                                        transitionSpec = {
+                                            fadeIn() togetherWith fadeOut()
+                                        }, label = ""
+                                    ) { targetState ->
+                                        val visibility = if (targetState) {
+                                            Modifier.alpha(1f)
+                                        } else {
+                                            Modifier.alpha(0.5f)
+                                        }
+                                        Text(
+                                            text = itemText(item),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 18.sp,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedItem.value = item
+                                                    itemOnClick(item)
+                                                    onDismissRequest()
+                                                }
+                                                .padding(vertical = 10.dp, horizontal = 16.dp)
+                                                .then(visibility)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -509,7 +503,8 @@ class Dialogs {
                     item!!.contains(query, ignoreCase = true)
                 },
                 labelText = "",
-                itemText = { item -> item!! }
+                itemText = { item -> item },
+                openDialog = showDialog.value
             )
         }
     }
@@ -631,7 +626,8 @@ class Dialogs {
                 },
                 itemFilter = itemFilter,
                 labelText = labelText.toString(),
-                itemText = { item -> item }
+                itemText = { item -> item },
+                openDialog = dialogShouldOpen.value
             )
         }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -31,14 +32,19 @@ class Form {
     @Composable
     fun AppointmentForm(
         viewModel: ScheduleModelView,
-        isNew: Boolean = true,
     ) {
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState()
         val currentSelectedAppoinmentsDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
+        val isNewAppointment by viewModel.isNewAppointment.observeAsState(false)
 
+        val context = LocalContext.current
+
+        val customerIdError by remember { mutableStateOf(false) }
+        val dateError by remember { mutableStateOf(false) }
+        val startTimeError by remember { mutableStateOf(false) }
         val startTime by viewModel.selectedAppointmentTime.observeAsState(
-            if (isNew) {
+            if (isNewAppointment) {
                 val currentTime = LocalTime.now()
                 viewModel.setNewTime(currentTime.format(DateTimeFormatter.ofPattern("HH:mm")))
                     .toString()
@@ -47,15 +53,9 @@ class Form {
             }
         )
 
-        val context = LocalContext.current
-
-        val customerIdError by remember { mutableStateOf(false) }
-        val dateError by remember { mutableStateOf(false) }
-        val startTimeError by remember { mutableStateOf(false) }
-
         LaunchedEffect(Unit) {
-            if (isNew) viewModel.clearDate()
-            if (isNew) viewModel.selectedClient.value = null
+            if (isNewAppointment) viewModel.clearDate()
+            if (isNewAppointment) viewModel.selectedClient.value = null
             viewModel.selectedAppointmentDate.value = currentSelectedAppoinmentsDate
 
             viewModel.loadCustomersList(context = context)

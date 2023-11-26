@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -66,30 +67,27 @@ class AppFunctions {
 
         val daysList = mutableListOf<Int>()
 
-        // Sprawdź, czy to początek miesiąca
-        val isStartOfMonth = calendar.get(Calendar.DAY_OF_MONTH) == 1
-
-        // Ustawianie kalendarza na poniedziałek tego tygodnia
-        val difference = calendar.get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY
+        // Ustawianie kalendarza na początek tygodnia (poniedziałek)
+        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+        val difference = if (dayOfWeek == Calendar.SUNDAY) 6 else dayOfWeek - Calendar.MONDAY
         calendar.add(Calendar.DAY_OF_MONTH, -difference)
-
-        // Jeśli to początek miesiąca, ustaw kalendarz na ostatni dzień poprzedniego miesiąca
-        if (isStartOfMonth) {
-            val lastDayOfPreviousMonth =
-                calendar.clone() as Calendar // Tworzymy kopię kalendarza, aby nie modyfikować oryginalnego
-            lastDayOfPreviousMonth.add(Calendar.DAY_OF_MONTH, -1) // Przechodzimy na dzień przed 1. dniem bieżącego miesiąca
-            val lastDay = lastDayOfPreviousMonth.get(Calendar.DAY_OF_MONTH)
-            calendar.set(Calendar.DAY_OF_MONTH, lastDay)
-        }
 
         // Pobieranie dni dla tego tygodnia
         repeat(7) {
             daysList.add(calendar.get(Calendar.DAY_OF_MONTH))
-            calendar.add(Calendar.DAY_OF_MONTH, 1)
+            if (calendar.get(Calendar.DAY_OF_MONTH) == calendar.getActualMaximum(Calendar.DAY_OF_MONTH)) {
+                // Jeśli osiągnięto ostatni dzień miesiąca, ustaw na 1. dzień następnego miesiąca
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.add(Calendar.MONTH, 1)
+            } else {
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
         }
 
         return daysList
     }
+
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun getPreviousWeek(currentFormattedDate: String): String {
         val currentDate = LocalDate.parse(currentFormattedDate, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
@@ -108,12 +106,16 @@ class AppFunctions {
     @RequiresApi(Build.VERSION_CODES.O)
     fun getNextWeek(currentFormattedDate: String): String {
         val currentDate = LocalDate.parse(currentFormattedDate, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-        val nextWeekDate = currentDate.plusWeeks(1)
-
+        val nextSunday = currentDate.plusDays(7 - currentDate.dayOfWeek.value.toLong())
+        val nextWeekDate = nextSunday.plusWeeks(1)
         // Sprawdź, czy miesiąc zmienił się po dodaniu tygodnia
         if (currentDate.month != nextWeekDate.month) {
             // Jeśli tak, zwróć pierwszy dzień nowego miesiąca
             return nextWeekDate.withDayOfMonth(1).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+        }
+
+        if (currentDate.dayOfWeek == DayOfWeek.SUNDAY) {
+            return currentFormattedDate
         }
 
         return nextWeekDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))

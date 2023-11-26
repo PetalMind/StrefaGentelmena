@@ -1,5 +1,7 @@
 package com.strefagentelmena.uiComposable
 
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -60,23 +62,13 @@ import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
+import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 val cardUI = Cards()
 
 class Cards {
-    @Composable
-    fun CustomerCard(customer: Customer) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-        ) {
-            Text("Imię: ${customer.firstName}")
-            Text("Nazwisko: ${customer.lastName}")
-            Text("Data wizyty: ${customer.appointment}")
-            Text("Telefon: ${customer.phoneNumber}")
-        }
-    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -126,7 +118,7 @@ class Cards {
                 }
 
                 Text(
-                    text = "${appointment.customer.fullName}",
+                    text = appointment.customer.fullName,
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -239,7 +231,6 @@ class Cards {
                             .clip(RoundedCornerShape(16.dp))
                             .background(color)
                     ) {
-
                         if (direction == DismissDirection.StartToEnd) {
                             Box(
                                 modifier = Modifier
@@ -362,17 +353,20 @@ class Cards {
                 ) {
                     Text(
                         text = customer.fullName ?: "Brak imienia",
-                        style = MaterialTheme.typography.headlineSmall
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "Tel: ${customer.phoneNumber}",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
                     )
 
                     if (customer.appointment != null) {
                         Text(
                             text = "Ostatnia wizyta: ${customer.appointment?.date ?: ""}",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -384,6 +378,8 @@ class Cards {
     fun CustomerAppoimentListCard(
         appointment: Appointment,
         onClick: () -> Unit,
+        onNotificationClick: () -> Unit,
+        viewModel: ScheduleModelView
     ) {
         Card(
             colors = CardDefaults.cardColors(
@@ -419,10 +415,11 @@ class Cards {
 
                     Spacer(modifier = Modifier.width(10.dp))  // Dodatkowy odstęp
 
-                    Icon(
-                        imageVector = if (appointment.notificationSent) Icons.Default.Notifications else Icons.Outlined.Notifications,
-                        contentDescription = if (appointment.notificationSent) "Notification Sent" else "Notification Not Sent",
-                        modifier = Modifier.align(Alignment.CenterVertically)
+                    animationElements.NotificationIcon(
+                        notificationSent = appointment.notificationSent,
+                        onClick = {
+                            if (!appointment.notificationSent) onNotificationClick()
+                        }
                     )
                 }
             }

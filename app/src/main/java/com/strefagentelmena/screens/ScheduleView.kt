@@ -1,6 +1,7 @@
 package com.strefagentelmena.screens
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -47,6 +48,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.strefagentelmena.dataSource.pernamentFormats
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.SMSManager
+import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.cardUI
@@ -145,14 +148,6 @@ class Schedule {
         val snackbarHostState = remember { SnackbarHostState() }
 
 
-        val isNew = remember {
-            mutableStateOf(false)
-        }
-
-        val typeOfView = remember {
-            mutableStateOf("list")
-        }
-
         // Efekt wyzwalany, gdy wartość 'message' się zmienia
         LaunchedEffect(message) {
             if (message?.isNotEmpty() == true && message != "") {
@@ -195,7 +190,7 @@ class Schedule {
             },
             floatingActionButton = {
                 buttonsUI.ExtendedFab(text = "Dodaj wizytę", icon = Icons.Default.Add) {
-                    isNew.value = true
+                    viewModel.setAppoimentState(true)
                     viewModel.selectedClient.value = null
                     viewModel.showApoimentDialog()
                 }
@@ -211,11 +206,9 @@ class Schedule {
                     currentDayFormatter = currentSelectedAppoinmentsDate,
                     currentDay = currentSelectedDay.intValue,
                 )
-
-
                 AppointmentsList(viewModel) { selectedAppointment ->
                     viewModel.selectAppointmentAndClient(selectedAppointment)
-                    isNew.value = false
+                    viewModel.setAppoimentState(false)
 
                     viewModel.showApoimentDialog()
                 }
@@ -225,7 +218,6 @@ class Schedule {
         if (showApoimentDialog) {
             dialogsUI.OnAddOrEditSchedule(
                 viewModel = viewModel,
-                isNew = isNew.value,
             )
         }
     }
@@ -242,7 +234,9 @@ class Schedule {
     fun TimeLineWithAppointments(
         appointments: List<Appointment>,
         onClick: (Appointment) -> Unit,
+        viewModel: ScheduleModelView
     ) {
+        val notificationDialogState by viewModel.onNotificationClickState.observeAsState(false)
         // Helper function to generate time intervals
         LazyColumn {
             itemsIndexed(appointments) { index, appointment ->
@@ -368,10 +362,19 @@ class Schedule {
                         modifier = Modifier
                             .fillMaxWidth()
                     ) {
-                        cardUI.CustomerAppoimentListCard(appointment) {
-                            onClick(appointment)
-                        }
+                        cardUI.CustomerAppoimentListCard(
+                            appointment,
+                            onClick = { onClick(appointment) },
+                            viewModel = viewModel,
+                            onNotificationClick = {
+                                viewModel.showNotificationState()
+                            }
+                        )
                     }
+                }
+                if (notificationDialogState) {
+                    //   smsManager.sendNotification(appointment = appointment)
+                    Log.e("notification", "notification sent ${appointment.customer.fullName}")
                 }
             }
         }
@@ -412,7 +415,8 @@ class Schedule {
         } else {
             TimeLineWithAppointments(
                 appointments = filteredAppointments,
-                onClick = onClick
+                onClick = onClick,
+                viewModel = viewModel
             )
         }
     }

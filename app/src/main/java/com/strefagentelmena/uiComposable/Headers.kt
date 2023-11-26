@@ -212,12 +212,14 @@ class Headers {
         onDaySelected: (String) -> Unit,
     ) {
         val selectedDay = remember { mutableIntStateOf(currentDay) }
+
         val selectedDayFormatter = remember { mutableStateOf(currentDayFormatter) }
+
         val daysInCurrentWeek = remember {
             mutableStateOf(appFunctions.getCurrentWeekDays(selectedDayFormatter.value))
         }
 
-        LaunchedEffect(currentDay, onDaySelected) {
+        LaunchedEffect(currentDay) {
             selectedDay.intValue = currentDay
             selectedDayFormatter.value = currentDayFormatter
             daysInCurrentWeek.value = appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
@@ -256,17 +258,20 @@ class Headers {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Przycisk do przewijania do tyłu
-                        IconButton(
-                            onClick = {
-                                selectedDayFormatter.value =
-                                    appFunctions.getPreviousWeek(selectedDayFormatter.value)
-                                daysInCurrentWeek.value =
-                                    appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
-                            }
+                        Box(
+                            modifier = Modifier
+                                .clickable {
+                                    selectedDayFormatter.value =
+                                        appFunctions.getPreviousWeek(selectedDayFormatter.value)
+
+                                    daysInCurrentWeek.value =
+                                        appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
+                                }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Previous Week"
+                            Text(
+                                text = "❮",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.Black,
                             )
                         }
 
@@ -279,17 +284,20 @@ class Headers {
                         }
 
                         // Przycisk do przewijania do przodu
-                        IconButton(
-                            onClick = {
-                                selectedDayFormatter.value =
-                                    appFunctions.getNextWeek(selectedDayFormatter.value)
-                                daysInCurrentWeek.value =
-                                    appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
-                            }
+                        Box(
+                            modifier = Modifier
+                                .clickable {
+                                    selectedDayFormatter.value =
+                                        appFunctions.getNextWeek(selectedDayFormatter.value)
+
+                                    daysInCurrentWeek.value =
+                                        appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
+                                }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = "Next Week"
+                            Text(
+                                text = "❯",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.Black,
                             )
                         }
                     }
@@ -312,7 +320,6 @@ class Headers {
                                     )
                                     .padding(4.dp)
                                     .clickable {
-                                        if (dayNumber != 7) {
                                             selectedDay.intValue = dayNumber
 
                                             val formattedDate = String.format(
@@ -325,7 +332,6 @@ class Headers {
                                             selectedDayFormatter.value = formattedDate
                                             onDaySelected(formattedDate)
                                         }
-                                    }
                             ) {
                                 Text(
                                     text = dayNumber.toString(),

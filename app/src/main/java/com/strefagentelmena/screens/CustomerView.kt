@@ -72,6 +72,7 @@ class CustomerView {
 
         LaunchedEffect(Unit) {
             viewModel.clearMessage()
+            viewModel.closeAllDialogs()
             viewModel.loadClients(context)
         }
 
