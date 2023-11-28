@@ -369,7 +369,7 @@ class Schedule {
                             appointment,
                             onClick = { onClick(appointment) },
                             onNotificationClick = {
-                                viewModel.showNotificationState()
+                               // viewModel.showNotificationState()
                             }
                         )
                     }

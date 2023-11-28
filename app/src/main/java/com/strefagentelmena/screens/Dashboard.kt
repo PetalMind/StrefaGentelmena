@@ -116,17 +116,6 @@ class Dashboard {
                 appViewStates.LoadingView()
             }
         }
-
-
-//        try {
-//            scheduleViewModel.loadAppointmentFromFile(context)
-//            viewModel.loadCustomersFromFile(context = context)
-//            dashboardViewModel.clearMessage()
-//        } catch (e: Exception) {
-//            dashboardViewModel.newMessage("Błąd podczas wczytywania plików!")
-//        }
-
-        // Efekt wyzwalany, gdy wartość 'messages' się zmienia
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -164,6 +153,7 @@ class Dashboard {
                 LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM", Locale.getDefault()))
             )
         }
+
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -241,7 +231,7 @@ class Dashboard {
                             cardUI.DashboardSmallCard(
                                 iconId = R.drawable.ic_events, labelText = "", onClick = {
                                     navController.navigate("schedule")
-                                }, nameText = "Plan Dnia"
+                                }, nameText = "Harmonogram"
                             )
                         }
                         Spacer(modifier = Modifier.weight(1f))

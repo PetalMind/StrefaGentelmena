@@ -257,45 +257,9 @@ class Headers {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Przycisk do przewijania do tyłu
-                        Box(
-                            modifier = Modifier
-                                .clickable {
-                                    selectedDayFormatter.value =
-                                        appFunctions.getPreviousWeek(selectedDayFormatter.value)
-
-                                    daysInCurrentWeek.value =
-                                        appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
-                                }
-                        ) {
-                            Text(
-                                text = "❮",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.Black,
-                            )
-                        }
-
                         daysOfWeek.forEach { day ->
                             Text(
                                 text = day,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.Black,
-                            )
-                        }
-
-                        // Przycisk do przewijania do przodu
-                        Box(
-                            modifier = Modifier
-                                .clickable {
-                                    selectedDayFormatter.value =
-                                        appFunctions.getNextWeek(selectedDayFormatter.value)
-
-                                    daysInCurrentWeek.value =
-                                        appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
-                                }
-                        ) {
-                            Text(
-                                text = "❯",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color.Black,
                             )
@@ -305,33 +269,48 @@ class Headers {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp),
+                            .padding(4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        daysInCurrentWeek.value.forEach { dayNumber ->
-                            val isSelectedDay = dayNumber.toInt() == selectedDay.intValue
+                        daysInCurrentWeek.value.forEach { (dayNumber, isFirstDayOfMonth) ->
+                            val isSelectedDay = dayNumber == selectedDay.intValue
 
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        if (isSelectedDay) colorsUI.yellow else Color.Transparent,
+                                        when {
+                                            isSelectedDay -> colorsUI.papaya
+                                            else -> Color.Transparent
+                                        },
                                         shape = CircleShape
                                     )
-                                    .padding(4.dp)
                                     .clickable {
-                                            selectedDay.intValue = dayNumber
+                                        selectedDay.intValue = dayNumber
 
-                                            val formattedDate = String.format(
-                                                "%02d.%02d.%04d",
+                                        val formattedDate = String.format(
+                                            "%02d.%02d.%04d",
+                                            dayNumber,
+                                            selectedDayFormatter.value.split(".")[1].toInt(),
+                                            selectedDayFormatter.value.split(".")[2].toInt()
+                                        )
+
+                                        selectedDayFormatter.value = formattedDate
+
+                                        if (appFunctions.isFirstDayOfNewMonth(
                                                 dayNumber,
                                                 selectedDayFormatter.value.split(".")[1].toInt(),
                                                 selectedDayFormatter.value.split(".")[2].toInt()
                                             )
-
-                                            selectedDayFormatter.value = formattedDate
-                                            onDaySelected(formattedDate)
+                                        ) {
+                                            daysInCurrentWeek.value =
+                                                appFunctions.getCurrentWeekDays(
+                                                    selectedDayFormatter.value
+                                                )
                                         }
+
+                                        onDaySelected(formattedDate)
+                                    }
                             ) {
                                 Text(
                                     text = dayNumber.toString(),
@@ -339,7 +318,7 @@ class Headers {
                                         fontWeight = FontWeight.Bold
                                     ) else MaterialTheme.typography.bodyLarge,
                                     color = if (isSelectedDay) Color.Black else colorsUI.darkGrey,
-                                    modifier = Modifier.padding(4.dp)
+                                    modifier = Modifier.padding(8.dp)
                                 )
                             }
                         }
@@ -385,3 +364,4 @@ class Headers {
         )
     }
 }
+
