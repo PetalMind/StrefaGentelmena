@@ -368,7 +368,6 @@ class Schedule {
                         cardUI.CustomerAppoimentListCard(
                             appointment,
                             onClick = { onClick(appointment) },
-                            viewModel = viewModel,
                             onNotificationClick = {
                                 viewModel.showNotificationState()
                             }

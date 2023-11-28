@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.models.Appointment
@@ -187,7 +188,10 @@ class Cards {
 
                 Text(
                     text = labelText,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 25.sp
+                    ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 8.dp)
                 )
@@ -363,11 +367,18 @@ class Cards {
                     )
 
                     if (customer.appointment != null) {
-                        Text(
-                            text = "Ostatnia wizyta: ${customer.appointment?.date ?: ""}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row {
+                            Text(
+                                text = "Ostatnia wizyta: ",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+
+                            Text(
+                                text = customer.appointment?.date ?: "",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }
@@ -379,7 +390,6 @@ class Cards {
         appointment: Appointment,
         onClick: () -> Unit,
         onNotificationClick: () -> Unit,
-        viewModel: ScheduleModelView
     ) {
         Card(
             colors = CardDefaults.cardColors(

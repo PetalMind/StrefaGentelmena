@@ -275,6 +275,9 @@ class ScheduleModelView : ViewModel() {
             selectedAppointment.value?.notificationSent =
                 onNotificationClickState.value ?: notificationIsSent
 
+            selectedAppointment.value?.date = selectedAppointmentDate.value ?: return
+            selectedAppointment.value?.startTime = selectedAppointmentTime.value ?: return
+
             currentAppointments[index] = selectedAppointment.value ?: return
 
             selectedClient?.appointment = selectedAppointment.value ?: return
@@ -289,7 +292,6 @@ class ScheduleModelView : ViewModel() {
 
             customersList.value = fileFunctionsClients.loadCustomersFromFile(context)
             appointmentsList.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
-
         }
     }
 
