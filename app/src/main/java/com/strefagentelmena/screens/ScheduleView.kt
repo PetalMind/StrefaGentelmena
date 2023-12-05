@@ -52,6 +52,7 @@ import com.strefagentelmena.functions.SMSManager
 import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.uiComposable.buttonsUI
+import com.strefagentelmena.uiComposable.calendarHeader.callendarHeaderUI
 import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
@@ -198,15 +199,17 @@ class Schedule {
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
                 headersUI.CalendarHeaderView(viewModel)
+                callendarHeaderUI.CalendarApp()
 
-                headersUI.CalendarHeader(
-                    onDaySelected = {
-                        viewModel.setNewAppoimentsDate(it)
-                    },
-                    currentDayFormatter = currentSelectedAppoinmentsDate,
-                    currentDay = currentSelectedDay.intValue,
-                )
-
+                /*
+                                headersUI.CalendarHeader(
+                                    onDaySelected = {
+                                        viewModel.setNewAppoimentsDate(it)
+                                    },
+                                    currentDayFormatter = currentSelectedAppoinmentsDate,
+                                    currentDay = currentSelectedDay.intValue,
+                                )
+                */
                 AppointmentsList(viewModel) { selectedAppointment ->
                     viewModel.selectAppointmentAndClient(selectedAppointment)
                     viewModel.setAppoimentState(false)
@@ -369,7 +372,7 @@ class Schedule {
                             appointment,
                             onClick = { onClick(appointment) },
                             onNotificationClick = {
-                               // viewModel.showNotificationState()
+                                // viewModel.showNotificationState()
                             }
                         )
                     }

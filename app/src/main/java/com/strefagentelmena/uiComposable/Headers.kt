@@ -270,7 +270,7 @@ class Headers {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = if (daysInCurrentWeek.value.size <= 3) Arrangement.SpaceAround else Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         daysInCurrentWeek.value.forEach { (dayNumber, isFirstDayOfMonth) ->
@@ -317,7 +317,9 @@ class Headers {
                                     style = if (isSelectedDay) MaterialTheme.typography.headlineMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ) else MaterialTheme.typography.bodyLarge,
-                                    color = if (isSelectedDay) Color.Black else colorsUI.darkGrey,
+                                    color = if (isSelectedDay) Color.Black else colorsUI.sunset.copy(
+                                        alpha = 0.7f
+                                    ),
                                     modifier = Modifier.padding(8.dp)
                                 )
                             }
