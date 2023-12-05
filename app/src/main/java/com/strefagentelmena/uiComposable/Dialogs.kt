@@ -254,7 +254,7 @@ class Dialogs {
             mutableStateOf(false)
         }
 
-        val title = if (isNewState) "Dodaj klienta" else "Edytuj"
+        val title = if (isNewState) "Dodaj" else "Edytuj"
         val context = LocalContext.current
 
         LaunchedEffect(selectedAppointment) {

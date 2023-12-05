@@ -21,15 +21,22 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.strefagentelmena.functions.calendarUiFunctions.CalendarDataSource
 import com.strefagentelmena.models.calendarUiModel.CalendarUiModel
+import com.strefagentelmena.uiComposable.colorsUI
+import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -41,6 +48,7 @@ class CalendarHeaderUI {
     @Composable
     fun ContentItem(date: CalendarUiModel.Date, onClickListener: (CalendarUiModel.Date) -> Unit) {
         Card(
+            elevation = CardDefaults.cardElevation(defaultElevation = if (date.isSelected) 4.dp else 0.dp),
             modifier = Modifier
                 .clickable {
                     onClickListener(date)
@@ -50,9 +58,9 @@ class CalendarHeaderUI {
                 // background colors of the selected date
                 // and the non-selected date are different
                 containerColor = if (date.isSelected) {
-                    MaterialTheme.colorScheme.primary
+                    colorsUI.papaya
                 } else {
-                    MaterialTheme.colorScheme.secondary
+                    colorsUI.cardGrey
                 }
             ),
         ) {
@@ -65,12 +73,15 @@ class CalendarHeaderUI {
                 Text(
                     text = date.day, // day "Mon", "Tue"
                     modifier = Modifier.align(Alignment.CenterHorizontally),
+                    fontWeight = if (date.isSelected) FontWeight.Bold else FontWeight.Normal,
                     style = MaterialTheme.typography.bodySmall
                 )
+
                 Text(
                     text = date.date.dayOfMonth.toString(), // date "15", "16"
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (date.isSelected) FontWeight.Bold else FontWeight.Normal,
+                    style = if (date.isSelected) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge,
                 )
             }
         }
@@ -90,12 +101,37 @@ class CalendarHeaderUI {
 
     @SuppressLint("NewApi")
     @Composable
-    fun CalendarApp(modifier: Modifier = Modifier) {
+    fun CalendarApp(modifier: Modifier = Modifier, viewModel: ScheduleModelView) {
         val dataSource = CalendarDataSource()
         // we use `mutableStateOf` and `remember` inside composable function to schedules recomposition
         var calendarUiModel by remember { mutableStateOf(dataSource.getData(lastSelectedDate = dataSource.today)) }
+        val selectedDate by viewModel.currentSelectedAppoinmentsDate.observeAsState(
+            dataSource.getData(
+                lastSelectedDate = dataSource.today
+            )
+        )
 
-        Column(modifier = modifier.fillMaxSize()) {
+        LaunchedEffect(selectedDate) {
+            if (selectedDate is LocalDate) {
+                calendarUiModel = dataSource.getData(lastSelectedDate = selectedDate as LocalDate)
+            } else if (selectedDate is String) {
+                // Assuming that the selectedDate is in "dd.MM.yyyy" format
+                val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                val parsedDate = LocalDate.parse(selectedDate as String, formatter)
+                calendarUiModel = dataSource.getData(lastSelectedDate = parsedDate)
+            } else if (selectedDate is LocalDate?) {
+                // Handle the case where selectedDate is a nullable LocalDate
+                //calendarUiModel = (selectedDate as LocalDate?)?.let { dataSource.getData(lastSelectedDate = it) }
+            } else {
+                // Handle the case where the selected date is neither LocalDate nor String nor nullable LocalDate
+                // You might want to provide a default value or handle this case accordingly
+            }
+        }
+
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+        ) {
             Header(
                 data = calendarUiModel,
                 onPrevClickListener = { startDate ->
@@ -117,9 +153,17 @@ class CalendarHeaderUI {
                     )
                 }
             )
+
             Content(data = calendarUiModel, onDateClickListener = { date ->
                 // refresh the CalendarUiModel with new data
                 // by changing only the `selectedDate` with the date selected by User
+                val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+
+                val parsedDate = LocalDate.parse(date.date.toString())
+                val formattedDate = parsedDate.format(formatter)
+
+                viewModel.setNewAppoimentsDate(formattedDate)
+
                 calendarUiModel = calendarUiModel.copy(
                     selectedDate = date,
                     visibleDates = calendarUiModel.visibleDates.map {
@@ -139,9 +183,9 @@ class CalendarHeaderUI {
         onPrevClickListener: (LocalDate) -> Unit,
         onNextClickListener: (LocalDate) -> Unit,
     ) {
-        Row {
+        Row(modifier = Modifier.padding(horizontal = 8.dp)) {
             Text(
-                // show "Today" if user selects today's date
+                // show "Dzisiaj" if user selects today's date
                 // else, show the full format of the date
                 text = if (data.selectedDate.isToday) {
                     "Dzisiaj"
@@ -150,6 +194,9 @@ class CalendarHeaderUI {
                         DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
                     )
                 },
+                color = Color.Black,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .weight(1f)
                     .align(Alignment.CenterVertically)
@@ -163,6 +210,7 @@ class CalendarHeaderUI {
                     contentDescription = "Back"
                 )
             }
+
             IconButton(onClick = {
                 onNextClickListener(data.endDate.date)
             }) {

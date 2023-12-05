@@ -26,4 +26,5 @@ class ColorsUI {
     val carmine = Color(0xFF9B1D20)
     val raisinBlack = Color(0xFF272932)
     val bittersweet = Color(0xFFF05D5E)
+    val babyBlue = Color(0xFF6DAEDB)
 }

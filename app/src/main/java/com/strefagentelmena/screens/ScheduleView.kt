@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -172,7 +173,7 @@ class Schedule {
             },
             topBar = {
                 headersUI.AppBarWithBackArrow(
-                    title = "Plan Dnia",
+                    title = "Harmonogram",
                     onBackPressed = {
                         navController.navigate("dashboard")
                     },
@@ -190,16 +191,24 @@ class Schedule {
                 )
             },
             floatingActionButton = {
-                buttonsUI.ExtendedFab(text = "Dodaj wizytę", icon = Icons.Default.Add) {
+                buttonsUI.ExtendedFab(text = "Dodaj", icon = Icons.Default.Add) {
                     viewModel.setAppoimentState(true)
                     viewModel.selectedClient.value = null
                     viewModel.showApoimentDialog()
                 }
             },
         ) { innerPadding ->
-            Column(modifier = Modifier.padding(innerPadding)) {
-                headersUI.CalendarHeaderView(viewModel)
-                callendarHeaderUI.CalendarApp()
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+            ) {
+                callendarHeaderUI.CalendarApp(
+                    modifier = Modifier
+                        .background(color = colorsUI.babyBlue.copy(0.7f))
+                        .fillMaxWidth()
+                        .height(130.dp),
+                    viewModel = viewModel
+                )
 
                 /*
                                 headersUI.CalendarHeader(
