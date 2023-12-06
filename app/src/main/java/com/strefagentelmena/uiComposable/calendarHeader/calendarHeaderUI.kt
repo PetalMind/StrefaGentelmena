@@ -1,6 +1,7 @@
 package com.strefagentelmena.uiComposable.calendarHeader
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,7 +49,8 @@ class CalendarHeaderUI {
     @Composable
     fun ContentItem(date: CalendarUiModel.Date, onClickListener: (CalendarUiModel.Date) -> Unit) {
         Card(
-            elevation = CardDefaults.cardElevation(defaultElevation = if (date.isSelected) 4.dp else 0.dp),
+            border = BorderStroke(width = 1.dp, color = colorsUI.cardGrey),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (date.isSelected) 8.dp else 4.dp),
             modifier = Modifier
                 .clickable {
                     onClickListener(date)
@@ -58,10 +60,10 @@ class CalendarHeaderUI {
                 // background colors of the selected date
                 // and the non-selected date are different
                 containerColor = if (date.isSelected) {
-                    colorsUI.papaya
+                    colorsUI.cream
                 } else {
                     colorsUI.cardGrey
-                }
+                },
             ),
         ) {
             Column(
@@ -116,8 +118,11 @@ class CalendarHeaderUI {
                     date = dates
                 )
 
-                val finalStartDate = date.date.minusDays(1)
-                val newData = dataSource.getData(startDate = finalStartDate, lastSelectedDate = calendarUiModel.selectedDate.date)
+                val finalStartDate = date.date.minusDays(0)
+                val newData = dataSource.getData(
+                    startDate = finalStartDate,
+                    lastSelectedDate = calendarUiModel.selectedDate.date
+                )
 
                 if (!newData.visibleDates.contains(date)) {
                     // Jeżeli wybrana data nie znajduje się w widocznych datach, zmień widoczne daty
@@ -129,12 +134,11 @@ class CalendarHeaderUI {
                             isSelected = it.date.atStartOfDay() == date.date.atStartOfDay()
                         )
                     }
-
                     calendarUiModel = newData.copy(
                         selectedDate = date,
                         visibleDates = updatedVisibleDates
                     )
-                    
+
                 }
             }
         }

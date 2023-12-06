@@ -1,5 +1,6 @@
 package com.strefagentelmena.uiComposable
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -114,6 +115,7 @@ class ButtonsUI {
 
     }
 
+
     @Composable
     fun ExtendedFab(
         text: String,
@@ -124,7 +126,7 @@ class ButtonsUI {
             text = { Text(text) },
             icon = { Icon(icon, contentDescription = null) },
             onClick = onClick,
-            containerColor = colorsUI.buttonsGreen,
+            containerColor = colorsUI.jade,
             contentColor = MaterialTheme.colorScheme.onSecondary
         )
     }
@@ -135,21 +137,25 @@ class ButtonsUI {
         onClick: () -> Unit,
         modifier: Modifier = Modifier,
         containerColor: Color = colorsUI.buttonsGreen,
-        iconSize: Dp = 24.dp
+        iconSize: Dp = 24.dp,
+        iconColor: Color = Color.Black
     ) {
         Button(
             onClick = onClick,
             colors = ButtonDefaults.buttonColors(
                 containerColor = containerColor
             ),
-            modifier = modifier.padding(8.dp)
+            modifier = modifier
+                .padding(8.dp)
+                .animateContentSize()
+
         ) {
             // Jeśli ikona jest obrazkiem
             if (icon != 0) {
                 Icon(
                     painter = painterResource(id = icon),
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = iconColor,
                     modifier = Modifier.size(iconSize)
                 )
             } else {

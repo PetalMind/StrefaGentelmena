@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
@@ -145,6 +146,7 @@ class Dialogs {
                                     onClick = {
                                         onDeleteCustomer()
                                     },
+                                    iconColor = Color.White,
                                     containerColor = colorsUI.carmine
                                 )
                             }
@@ -289,7 +291,8 @@ class Dialogs {
                                         onClick = {
                                             viewModel.showDeleteDialog()
                                         },
-                                        containerColor = colorsUI.carmine
+                                        containerColor = colorsUI.amaranthPurple,
+                                        iconColor = Color.White
                                     )
 
                                     if (!selectedAppointment!!.notificationSent) {
@@ -350,32 +353,6 @@ class Dialogs {
                 labelName = "Czy chcesz usunąć wizytę "
             )
         }
-    }
-
-    @Composable
-    fun ConfirmDeleteDialog(
-        onDismiss: () -> Unit,
-        text: String,
-        onConfirm: () -> Unit,
-    ) {
-        AlertDialog(
-            title = { Text("Potwierdzenie") },
-            text = { Text(text) },
-            onDismissRequest = onDismiss,
-            confirmButton = {
-                TextButton(onClick = {
-                    onConfirm()
-                    onDismiss()
-                }) {
-                    Text("Tak")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Nie")
-                }
-            }
-        )
     }
 
 
@@ -673,7 +650,6 @@ class Dialogs {
     fun showDatePickerDialog(
         context: Context,
         dateSetListener: (String) -> Unit,
-        viewModel: ScheduleModelView,
     ) {
         val current = LocalDate.now()
         val datePickerDialog = android.app.DatePickerDialog(context, { _, year, month, dayOfMonth ->

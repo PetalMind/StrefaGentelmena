@@ -1,5 +1,7 @@
 package com.strefagentelmena.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Search
@@ -29,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -36,6 +40,7 @@ import androidx.navigation.NavController
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.cardUI
+import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
@@ -91,7 +96,7 @@ class CustomerView {
                 SnackbarHost(hostState = snackbarHostState)
             },
             floatingActionButton = {
-                buttonsUI.ExtendedFab(text = "Dodaj klienta", icon = Icons.Default.Add, onClick = {
+                buttonsUI.ExtendedFab(text = "Dodaj", icon = Icons.Default.Add, onClick = {
                     viewModel.selectedCustomer.value = null
                     viewModel.showAddCustomerDialog()
                 })
@@ -101,9 +106,15 @@ class CustomerView {
                 headersUI.AppBarWithBackArrow(title = "Klienci salonu", onBackPressed = {
                     navController.navigate("dashboard")
                 }, compose = {
-                    IconButton(onClick = {
-                        viewModel.setShowSearchState(!searchState)
-                    }) {
+                    Box(
+                        modifier = Modifier
+                            .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                            .clip(RoundedCornerShape(15.dp))
+                            .padding(10.dp)
+                            .clickable {
+                                viewModel.setShowSearchState(!searchState)
+                            }
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = "Search",
@@ -114,6 +125,7 @@ class CustomerView {
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
                 if (searchState) {
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

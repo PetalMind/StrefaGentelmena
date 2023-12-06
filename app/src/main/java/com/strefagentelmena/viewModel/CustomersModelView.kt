@@ -30,14 +30,16 @@ class CustomersModelView : ViewModel() {
     private val customerLastName = MutableLiveData<String>("")
     private val customerPhoneNumber = MutableLiveData<String>("")
 
-    fun closeAllDialogs(){
+    fun closeAllDialogs() {
         clientDialogState.value = false
         deleteDialogState.value = false
         searchState.value = false
         selectedCustomer.value = null
     }
+
     fun loadClients(context: Context) {
         customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
+        searchedCustomersLists.value = customersLists.value
     }
 
     fun searchCustomers(query: String) {

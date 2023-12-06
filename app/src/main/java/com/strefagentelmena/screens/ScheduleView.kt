@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
@@ -39,6 +41,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -179,16 +183,25 @@ class Schedule {
                         navController.navigate("dashboard")
                     },
                     compose = {
-                        IconButton(onClick = {
-                            dialogsUI.showDatePickerDialog(
-                                context = context,
-                                dateSetListener = {
-                                    viewModel.setNewAppoimentsDate(it)
-                                },
-                                viewModel = viewModel
+                        Box(
+                            modifier = Modifier
+                                .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                                .clip(RoundedCornerShape(15.dp))
+                                .padding(10.dp)
+                                .clickable {
+                                    dialogsUI.showDatePickerDialog(
+                                        context = context,
+                                        dateSetListener = {
+                                            viewModel.setNewAppoimentsDate(it)
+                                        },
+                                    )
+                                }
+                        ) {
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
-                        }) {
-                            Icon(Icons.Default.DateRange, contentDescription = null)
                         }
                     },
                     onClick = {
@@ -224,6 +237,7 @@ class Schedule {
                                     currentDay = currentSelectedDay.intValue,
                                 )
                 */
+
                 AppointmentsList(viewModel) { selectedAppointment ->
                     viewModel.selectAppointmentAndClient(selectedAppointment)
                     viewModel.setAppoimentState(false)
