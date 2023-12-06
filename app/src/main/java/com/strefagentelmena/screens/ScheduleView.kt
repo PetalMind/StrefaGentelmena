@@ -58,6 +58,7 @@ import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
+import com.strefagentelmena.uiComposable.reusableScreen
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -179,9 +180,13 @@ class Schedule {
                     },
                     compose = {
                         IconButton(onClick = {
-                            dialogsUI.showDatePickerDialog(context, dateSetListener = {
-                                viewModel.setNewAppoimentsDate(it)
-                            }, viewModel = viewModel)
+                            dialogsUI.showDatePickerDialog(
+                                context = context,
+                                dateSetListener = {
+                                    viewModel.setNewAppoimentsDate(it)
+                                },
+                                viewModel = viewModel
+                            )
                         }) {
                             Icon(Icons.Default.DateRange, contentDescription = null)
                         }
@@ -261,6 +266,7 @@ class Schedule {
                             pernamentFormats.TIME_FORMAT_PATTERN
                         )
                     )
+
                 val endTime = startTime.plusHours(1) // Dodaj 1 godzinę do czasu rozpoczęcia
 
                 Row(
@@ -431,7 +437,7 @@ class Schedule {
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.fillMaxSize()
             ) {
-                Text("Brak umówionych wizyt na ten dzień", fontSize = 24.sp)
+                reusableScreen.EmptyScreen()
             }
         } else {
             TimeLineWithAppointments(
