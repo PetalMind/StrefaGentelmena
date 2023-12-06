@@ -283,6 +283,7 @@ class Schedule {
 
                 val endTime = startTime.plusHours(1) // Dodaj 1 godzinę do czasu rozpoczęcia
 
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

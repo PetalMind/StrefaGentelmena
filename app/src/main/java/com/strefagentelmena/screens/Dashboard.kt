@@ -102,6 +102,7 @@ class Dashboard {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     appViewStates.LoadingView()
                 }
+
             }
 
             AppState.Error -> {
@@ -109,6 +110,8 @@ class Dashboard {
             }
 
             AppState.Success -> {
+                viewModel.loadAllData(context = context)
+
                 DashboardSuccessView(navController, viewModel)
             }
 
@@ -236,7 +239,7 @@ class Dashboard {
                         }
                         Spacer(modifier = Modifier.weight(1f))
 
-                        footerUI.AppFooter(context = context)
+                        //footerUI.AppFooter(context = context)
                     }
                 }
                 if (showNotifyDialog) {

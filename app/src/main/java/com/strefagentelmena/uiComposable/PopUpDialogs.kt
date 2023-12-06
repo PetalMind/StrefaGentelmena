@@ -135,7 +135,10 @@ class PopUpDialogs {
                                 )
                             ) {
                                 appoiments.forEach { appointment ->
-                                    Row {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Start
+                                    ) {
                                         Text(
                                             text = appointment.customer.fullName,
                                             fontWeight = FontWeight.Bold,

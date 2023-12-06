@@ -336,9 +336,9 @@ class Cards {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(colorsUI.murrey)
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(colorsUI.jade)
                 ) {
                     Icon(
                         Icons.Default.Person,

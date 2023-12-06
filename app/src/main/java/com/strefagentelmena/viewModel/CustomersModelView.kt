@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
+import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
 
@@ -154,14 +155,26 @@ class CustomersModelView : ViewModel() {
     }
 
     fun deleteCustomer(context: Context, customer: Customer) {
-        val currentList = customersLists.value?.toMutableList() ?: return
+        val currentList = customersLists.value.orEmpty().toMutableList()
         val index = currentList.indexOfFirst { it.id == customer.id }
+        var scheduledAppointments = filesFunctionsAppoiments.loadAppointmentFromFile(context)
+
         if (index != -1) {
             currentList.removeAt(index)
+
+            val appointmentsToBeDeleted = scheduledAppointments.filter { it.customer.id == customer.id }
+
+            val mutableAppointments = scheduledAppointments.toMutableList()
+            mutableAppointments.removeAll(appointmentsToBeDeleted)
+
+            filesFunctionsAppoiments.saveAppointmentToFile(context, mutableAppointments)
+
             customersLists.value = currentList.toList()
-            searchedCustomersLists.value = customersLists.value
+            // searchedCustomersLists.value = customersLists.value // Sprawdź, czy ta linia jest konieczna
+
             // Aktualizuj listę klientów
             setMessage("Klient ${customer.fullName} został usunięty")
+
             fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
         }
     }
