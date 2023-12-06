@@ -16,7 +16,6 @@ Jeśli masz pytania, zapraszamy do sekcji Issues albo napisz do nas na email: do
 MIT
 
 Jeżeli ci się podoba ten projekt, daj mu gwiazdkę na GitHubie! ⭐
-![Screenshot_20231203_185935_com strefagentelmena](https://github.com/PetalMind/StrefaGentelmena/assets/95944551/63c5c895-dcbd-47f9-8f23-dced4ea36737)
-![Screenshot_20231203_185903_com strefagentelmena](https://github.com/PetalMind/StrefaGentelmena/assets/95944551/708e9ae7-8722-4623-83ef-fc5a4e6f24b6)
-![Screenshot_20231203_185854_com strefagentelmena](https://github.com/PetalMind/StrefaGentelmena/assets/95944551/9aa10c8f-a364-4156-940a-f586066b3676)
-![Screenshot_20231203_185848_com strefagentelmena](https://github.com/PetalMind/StrefaGentelmena/assets/95944551/60baec4c-6edd-4354-986a-e846b993a887)
+![Screenshot_20231206_225358_com strefagentelmena](https://github.com/PetalMind/StrefaGentelmena/assets/95944551/7ab7304b-ec61-4be2-b67c-39e6aca4039c)
+![Screenshot_20231206_225528_com strefagentelmena](https://github.com/PetalMind/StrefaGentelmena/assets/95944551/d66a9898-3573-4ec8-9cce-218746592342)
+![Screenshot_20231206_225654_com strefagentelmena](https://github.com/PetalMind/StrefaGentelmena/assets/95944551/fb7ae308-affb-4413-880f-b7faf3fa6ea3)
