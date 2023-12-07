@@ -12,6 +12,11 @@ owaniu sprzedaży produktów fryzjerskich.
 * #### Wsparcie i kontakt
 Jeśli masz pytania, zapraszamy do sekcji Issues albo napisz do nas na email: dominikjaros@tuta.io
 
+* #### Instrukcja
+[instrukcja.pdf](https://github.com/PetalMind/StrefaGentelmena/files/13597569/instrukcja.pdf)
+
+
+
 #### Licencja
 MIT
 
