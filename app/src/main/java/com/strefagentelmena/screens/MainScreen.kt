@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,9 +54,8 @@ import com.strefagentelmena.uiComposable.PopUpDialogs
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
-import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
-import com.strefagentelmena.viewModel.DashboardModelView
+import com.strefagentelmena.viewModel.MainScreenModelView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -94,7 +91,7 @@ class MainScreen {
     @Composable
     fun DashboardView(
         navController: NavController,
-        viewModel: DashboardModelView,
+        viewModel: MainScreenModelView,
     ) {
         val context = LocalContext.current
         val viewState by viewModel.viewState.observeAsState(AppState.Idle)
@@ -117,8 +114,6 @@ class MainScreen {
             }
 
             AppState.Success -> {
-                viewModel.loadAllData(context = context)
-
                 DashboardSuccessView(navController, viewModel)
             }
 
@@ -132,13 +127,14 @@ class MainScreen {
     @Composable
     fun DashboardSuccessView(
         navController: NavController,
-        viewModel: DashboardModelView,
+        viewModel: MainScreenModelView,
     ) {
         val messages by viewModel.messages.observeAsState("")
         val showNotifyDialog by viewModel.showNotifyDialog.observeAsState(false)
         val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
         val greetingRandom by viewModel.displayGreetings.observeAsState("")
         val upcomingAppointment by viewModel.upcomingAppointment.observeAsState()
+        val profilePreference by viewModel.profilePreferences.observeAsState("")
         val currentDay = remember {
             mutableStateOf(
                 LocalDate.now()
@@ -177,9 +173,7 @@ class MainScreen {
             }
         }
 
-        LaunchedEffect(clientsToNotify, Unit) {
-            viewModel.loadAllData(context = context)
-
+        LaunchedEffect(clientsToNotify, profilePreference) {
             if (clientsToNotify.isNotEmpty()) {
                 viewModel.showNotifyDialog.value = true
             }
@@ -289,6 +283,10 @@ class MainScreen {
         onSettingsClick: () -> Unit,
     ) {
         val randomGreeting = remember { mutableStateOf(greeting) }
+
+        LaunchedEffect(greeting) {
+            randomGreeting.value = greeting
+        }
 
         Box(
             modifier = Modifier

@@ -17,7 +17,7 @@ class SettingsFilesFunctions {
 
         val loadedPreferences: Preferences = if (file.exists()) {
             FileReader(file).use {
-                val type = object : TypeToken<List<Customer>>() {}.type
+                val type = object : TypeToken<Preferences>() {}.type
                 Gson().fromJson(it, type)
             }
         } else {

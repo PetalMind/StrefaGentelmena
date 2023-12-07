@@ -7,10 +7,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
+import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.greetingsManager
 import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
+import com.strefagentelmena.models.SettngsModel.Preferences
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.time.LocalDate
@@ -19,18 +21,23 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 
-class DashboardModelView : ViewModel() {
+class MainScreenModelView : ViewModel() {
     val messages = MutableLiveData<String>("")
     val viewState = MutableLiveData<AppState>(AppState.Idle)
     val customersLists = MutableLiveData<List<Customer>>(emptyList())
-    val appointmentsLists = MutableLiveData<List<Appointment>>(emptyList())
+    private val appointmentsLists = MutableLiveData<List<Appointment>>(emptyList())
     val isDataLoaded = MutableLiveData<Boolean>(false)
     val appointmentsToNotify = MutableLiveData<List<Appointment>>(emptyList())
     val showNotifyDialog = MutableLiveData<Boolean>(false)
-    val upcomingAppointment: MutableLiveData<Appointment> = MutableLiveData()
+    val upcomingAppointment: MutableLiveData<Appointment?> = MutableLiveData()
+    val profilePreferences = MutableLiveData<Preferences?>(null)
 
+    private val _displayGreetings = MutableLiveData(
+        (if (profilePreferences.value?.userName != null) profilePreferences.value?.userName else "")?.let {
+            greetingsManager.randomGreeting()
+        }
+    )
 
-    private val _displayGreetings = MutableLiveData(greetingsManager.randomGreeting())
     val displayGreetings: MutableLiveData<String> = _displayGreetings
 
 //    fun createNotification(customerList: List<Appointment>, data: String) {
@@ -45,6 +52,12 @@ class DashboardModelView : ViewModel() {
 //        val updatedList = notificationList.value.orEmpty() + notification
 //        notificationList.postValue(updatedList)
 //    }
+
+    fun randomGreeting(context: Context) {
+        _displayGreetings.value = greetingsManager.randomGreeting()
+
+        displayGreetings.value = _displayGreetings.value
+    }
 
     fun setViewState(viewState: AppState) {
         this.viewState.value = viewState
@@ -70,12 +83,21 @@ class DashboardModelView : ViewModel() {
         try {
             loadCustomersList(context)
             loadApointmentsList(context)
+            loadProfile(context)
             findNearestAppointmentToday()
 
             setViewState(AppState.Success)
         } catch (e: Exception) {
             setViewState(AppState.Error)
         }
+    }
+
+    fun loadProfile(context: Context) {
+        val loadedProfile = fileFunctionsSettings.loadSettingsFromFile(context)
+
+        profilePreferences.value = loadedProfile
+        greetingsManager.name = loadedProfile.userName
+        displayGreetings.value = greetingsManager.randomGreeting()
     }
 
     /**
@@ -196,6 +218,7 @@ class DashboardModelView : ViewModel() {
                         minTimeDifference = timeDifference
                         nearestAppointment = appointment
                     }
+
                     upcomingAppointment.value = nearestAppointment
                 }
             } catch (e: Exception) {
