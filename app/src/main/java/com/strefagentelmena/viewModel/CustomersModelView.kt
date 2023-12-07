@@ -5,7 +5,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
-import com.strefagentelmena.models.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
 

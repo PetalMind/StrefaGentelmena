@@ -4,20 +4,16 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.smsManager
-import com.strefagentelmena.models.Appointment
+import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
 import java.text.SimpleDateFormat
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 

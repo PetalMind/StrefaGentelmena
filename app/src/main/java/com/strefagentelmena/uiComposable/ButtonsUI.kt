@@ -3,7 +3,6 @@ package com.strefagentelmena.uiComposable
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,7 +14,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,7 +36,7 @@ class ButtonsUI {
     @Composable
     fun DashboardButtons(navController: NavController) {
         val buttons = listOf(
-            "Dodaj klienta" to { navController.navigate(Screen.AddCustomer.route) },
+            "Dodaj klienta" to { navController.navigate(Screen.CustomersScreen.route) },
             "Zobacz listę klientów" to { /* Akcja */ },
             "Ustawienia" to { /* Akcja */ }
         )
@@ -145,10 +143,9 @@ class ButtonsUI {
             colors = ButtonDefaults.buttonColors(
                 containerColor = containerColor
             ),
+            shape = RoundedCornerShape(16.dp),
             modifier = modifier
                 .padding(8.dp)
-                .animateContentSize()
-
         ) {
             // Jeśli ikona jest obrazkiem
             if (icon != 0) {

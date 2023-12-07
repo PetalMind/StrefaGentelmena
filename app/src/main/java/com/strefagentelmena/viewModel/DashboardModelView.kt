@@ -2,30 +2,21 @@ package com.strefagentelmena.viewModel
 
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.functions.fileFuctions.ClientsFilesFuctions
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.greetingsManager
-import com.strefagentelmena.models.Appointment
+import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
 import java.text.SimpleDateFormat
+import java.time.Duration
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 
 class DashboardModelView : ViewModel() {
@@ -36,6 +27,8 @@ class DashboardModelView : ViewModel() {
     val isDataLoaded = MutableLiveData<Boolean>(false)
     val appointmentsToNotify = MutableLiveData<List<Appointment>>(emptyList())
     val showNotifyDialog = MutableLiveData<Boolean>(false)
+    val upcomingAppointment: MutableLiveData<Appointment> = MutableLiveData()
+
 
     private val _displayGreetings = MutableLiveData(greetingsManager.randomGreeting())
     val displayGreetings: MutableLiveData<String> = _displayGreetings
@@ -77,6 +70,7 @@ class DashboardModelView : ViewModel() {
         try {
             loadCustomersList(context)
             loadApointmentsList(context)
+            findNearestAppointmentToday()
 
             setViewState(AppState.Success)
         } catch (e: Exception) {
@@ -170,6 +164,47 @@ class DashboardModelView : ViewModel() {
                 }
             }
         }
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun findNearestAppointmentToday(
+        currentDateTime: LocalDateTime = LocalDateTime.now()
+    ): Appointment? {
+        val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+        val currentDate = currentDateTime.format(dateFormatter)
+        val currentTime = currentDateTime.format(timeFormatter)
+
+        var nearestAppointment: Appointment? = null
+        var minTimeDifference: Long = Long.MAX_VALUE
+
+        for (appointment in appointmentsLists.value ?: emptyList()) {
+            try {
+                val appointmentDateTime = LocalDateTime.parse(
+                    "${appointment.date} ${appointment.startTime}",
+                    DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+                )
+
+                // Sprawdzamy, czy wizyta jest na dzisiaj i po aktualnej godzinie
+                if (appointment.date == currentDate && appointment.startTime > currentTime) {
+                    val timeDifference =
+                        Duration.between(currentDateTime, appointmentDateTime).toMillis()
+
+                    if (timeDifference < minTimeDifference) {
+                        minTimeDifference = timeDifference
+                        nearestAppointment = appointment
+                    }
+                    upcomingAppointment.value = nearestAppointment
+                }
+            } catch (e: Exception) {
+                // Obsłuż błąd odpowiednio, np. wyślij log do konsoli lub zaktualizuj stan widoku
+                viewState.value = AppState.Error
+            }
+        }
+
+        return nearestAppointment
     }
 
 

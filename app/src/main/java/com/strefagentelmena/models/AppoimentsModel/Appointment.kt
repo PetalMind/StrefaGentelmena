@@ -1,7 +1,8 @@
-package com.strefagentelmena.models
+package com.strefagentelmena.models.AppoimentsModel
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.strefagentelmena.models.Customer
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 

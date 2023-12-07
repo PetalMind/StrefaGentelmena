@@ -1,7 +1,6 @@
 package com.strefagentelmena.screens
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -36,13 +34,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -53,9 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.strefagentelmena.dataSource.pernamentFormats
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.functions.SMSManager
-import com.strefagentelmena.functions.smsManager
-import com.strefagentelmena.models.Appointment
+import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.calendarHeader.callendarHeaderUI
 import com.strefagentelmena.uiComposable.cardUI
@@ -180,7 +174,7 @@ class Schedule {
                 headersUI.AppBarWithBackArrow(
                     title = "Harmonogram",
                     onBackPressed = {
-                        navController.navigate("dashboard")
+                        navController.navigate("mainScreen")
                     },
                     compose = {
                         Box(

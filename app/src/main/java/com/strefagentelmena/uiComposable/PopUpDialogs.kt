@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -29,8 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.strefagentelmena.R
-import com.strefagentelmena.models.Appointment
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.strefagentelmena.models.AppoimentsModel.Appointment
 
 class PopUpDialogs {
 

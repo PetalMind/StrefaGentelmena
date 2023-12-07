@@ -7,11 +7,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.strefagentelmena.screens.screenCustomerView
-import com.strefagentelmena.screens.screenDashboard
+import com.strefagentelmena.screens.mainScreen
 import com.strefagentelmena.screens.screenSchedule
+import com.strefagentelmena.screens.settingsScreen
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.DashboardModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
+import com.strefagentelmena.viewModel.SettingsModelView
 
 val navigation = Navigation()
 
@@ -23,23 +25,31 @@ class Navigation {
         val customersModelView: CustomersModelView = CustomersModelView()
         val schuduleModelView: ScheduleModelView = ScheduleModelView()
         val dashboardModelView = DashboardModelView()
+        val settingsModelView = SettingsModelView()
 
-        NavHost(navController, startDestination = Screen.Dashboard.route) {
-            composable(Screen.Dashboard.route) {
-                screenDashboard.DashboardView(
+        NavHost(navController, startDestination = Screen.MainScreen.route) {
+            composable(Screen.MainScreen.route) {
+                mainScreen.DashboardView(
                     navController,
                     dashboardModelView
                 )
             }
-            composable(Screen.AddCustomer.route) {
+            composable(Screen.CustomersScreen.route) {
                 screenCustomerView.CustomerListView(
                     customersModelView, navController
                 )
             }
-            composable(Screen.Schedule.route) {
+            composable(Screen.ScheduleScreen.route) {
                 screenSchedule.ScheduleView(
                     viewModel = schuduleModelView,
                     navController = navController,
+                )
+            }
+
+            composable(Screen.SettingsScreen.route) {
+                settingsScreen.SettingsView(
+                    navController = navController,
+                    viewModel = settingsModelView
                 )
             }
         }

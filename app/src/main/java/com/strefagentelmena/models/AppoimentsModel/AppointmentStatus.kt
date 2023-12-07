@@ -1,4 +1,4 @@
-package com.strefagentelmena.models
+package com.strefagentelmena.models.AppoimentsModel
 
 enum class AppointmentStatus {
     PENDING,  // Oczekujący

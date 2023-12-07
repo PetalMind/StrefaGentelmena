@@ -3,7 +3,7 @@ package com.strefagentelmena.functions.fileFuctions
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.strefagentelmena.models.Appointment
+import com.strefagentelmena.models.AppoimentsModel.Appointment
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter

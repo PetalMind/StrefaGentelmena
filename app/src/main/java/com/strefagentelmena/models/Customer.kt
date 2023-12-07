@@ -1,5 +1,7 @@
 package com.strefagentelmena.models
 
+import com.strefagentelmena.models.AppoimentsModel.Appointment
+
 class CustomerIdGenerator {
     private val availableIds = (1..15000).toMutableSet()
 
@@ -22,8 +24,7 @@ class CustomerIdGenerator {
     }
 }
 
-class
-Customer(
+class Customer(
     var id: Int? = null,
     var firstName: String? = null,
     var lastName: String? = null,

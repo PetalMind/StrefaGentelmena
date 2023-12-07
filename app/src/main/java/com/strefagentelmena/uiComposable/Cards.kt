@@ -1,7 +1,5 @@
 package com.strefagentelmena.uiComposable
 
-import android.util.Log
-import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -18,17 +16,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DismissDirection
@@ -59,11 +52,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
-import com.strefagentelmena.models.Appointment
+import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
-import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -79,11 +70,14 @@ class Cards {
         val scope = rememberCoroutineScope()
 
         Card(
-            elevation = CardDefaults.cardElevation(4.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colorsUI.papaya,
+            ),
+            elevation = CardDefaults.cardElevation(4.dp),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -94,7 +88,7 @@ class Cards {
                 ) {
                     Text(
                         text = "Kto następny na twoim fotelu?",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )
 
@@ -121,7 +115,8 @@ class Cards {
                 Text(
                     text = appointment.customer.fullName,
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = colorsUI.fontGrey,
+                    fontWeight = FontWeight.Bold
                 )
 
                 Row(
@@ -129,7 +124,6 @@ class Cards {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(painterResource(id = R.drawable.ic_clock), contentDescription = "Czas")
                     Text(
                         text = "Godzina:", style = MaterialTheme.typography.titleLarge
                     )
@@ -150,7 +144,10 @@ class Cards {
                             )
                         },
                         text = "Nie zwlekaj, dzwoń!",
-                        modifier = Modifier.align(Alignment.Center)
+                        modifier = Modifier.align(Alignment.Center),
+                        containerColor = colorsUI.teaGreen,
+                        contentColor = Color.Black,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

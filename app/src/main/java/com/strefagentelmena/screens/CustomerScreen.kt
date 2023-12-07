@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -47,9 +46,9 @@ import com.strefagentelmena.uiComposable.textModernTextFieldUI
 import com.strefagentelmena.viewModel.CustomersModelView
 import kotlinx.coroutines.launch
 
-val screenCustomerView = CustomerView()
+val screenCustomerView = CustomerScreen()
 
-class CustomerView {
+class CustomerScreen {
 
     @Composable
     fun CustomerListView(
@@ -104,7 +103,7 @@ class CustomerView {
             floatingActionButtonPosition = FabPosition.End,
             topBar = {
                 headersUI.AppBarWithBackArrow(title = "Klienci salonu", onBackPressed = {
-                    navController.navigate("dashboard")
+                    navController.navigate("mainScreen")
                 }, compose = {
                     Box(
                         modifier = Modifier

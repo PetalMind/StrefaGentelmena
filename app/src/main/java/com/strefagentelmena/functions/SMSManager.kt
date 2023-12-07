@@ -1,10 +1,7 @@
 package com.strefagentelmena.functions
 
-import android.content.Context
 import android.telephony.SmsManager
-import com.strefagentelmena.models.Appointment
-import com.strefagentelmena.viewModel.DashboardModelView
-import com.strefagentelmena.viewModel.ScheduleModelView
+import com.strefagentelmena.models.AppoimentsModel.Appointment
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
