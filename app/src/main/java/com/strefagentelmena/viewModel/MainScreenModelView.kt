@@ -12,11 +12,13 @@ import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.greetingsManager
 import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
-import com.strefagentelmena.models.SettngsModel.Preferences
+import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.Period
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
@@ -29,7 +31,7 @@ class MainScreenModelView : ViewModel() {
     val appointmentsToNotify = MutableLiveData<List<Appointment>>(emptyList())
     val showNotifyDialog = MutableLiveData<Boolean>(false)
     val upcomingAppointment: MutableLiveData<Appointment?> = MutableLiveData()
-    val profilePreferences = MutableLiveData<Preferences?>(null)
+    val profilePreferences = MutableLiveData<ProfilePreferences>()
     val dataLoaded = MutableLiveData<Boolean>(false)
 
     private val _displayGreetings = MutableLiveData(
@@ -59,7 +61,7 @@ class MainScreenModelView : ViewModel() {
     }
 
 
-     fun setViewState(viewState: AppState) {
+    fun setViewState(viewState: AppState) {
         this.viewState.value = viewState
     }
 
@@ -139,47 +141,73 @@ class MainScreenModelView : ViewModel() {
     ) {
         val appointmentsToSend = mutableListOf<Appointment>()
         val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+        val currentTime = LocalDateTime.now()
+
 
         appointmentsLists.value?.let { appointments ->
             if (appointments.isNotEmpty()) {
                 for (appointment in appointments) {
                     if (appointment.notificationSent) continue
+                    val appointmentDateTime = LocalDateTime.parse(
+                        "${appointment.date} ${appointment.startTime}",
+                        DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+                    )
 
-                    try {
-                        val appointmentDate = dateFormatter.parse(appointment.date)
+                    val startTime = LocalTime.parse(
+                        profilePreferences.value!!.notificationSendStartTime,
+                        DateTimeFormatter.ofPattern("HH:mm")
+                    )
+                    val endTime = LocalTime.parse(
+                        profilePreferences.value!!.notificationSendEndTime,
+                        DateTimeFormatter.ofPattern("HH:mm")
+                    )
 
-                        val appointmentLocalDate = appointmentDate?.let {
-                            val calendar = Calendar.getInstance()
-                            calendar.time = it
-                            val year = calendar.get(Calendar.YEAR)
-                            val month =
-                                calendar.get(Calendar.MONTH) + 1 // Calendar.MONTH jest indeksowane od zera
-                            val day = calendar.get(Calendar.DAY_OF_MONTH)
+                    val daysDifference = Period.between(
+                        currentTime.toLocalDate(),
+                        appointmentDateTime.toLocalDate()
+                    ).days
 
-                            LocalDate.of(year, month, day)
-                        }
+                    if (daysDifference.toLong() == 1L && currentTime.toLocalTime()
+                            .isAfter(startTime) && currentTime.toLocalTime().isBefore(endTime)
+                    ) {
+                        try {
+                            val appointmentDate = dateFormatter.parse(appointment.date)
 
-                        val formattedDateLocalDate =
-                            LocalDate.parse(
-                                formattedDate,
-                                DateTimeFormatter.ofPattern("dd.MM.yyyy")
-                            )
+                            val appointmentLocalDate = appointmentDate?.let {
+                                val calendar = Calendar.getInstance()
+                                calendar.time = it
+                                val year = calendar.get(Calendar.YEAR)
+                                val month =
+                                    calendar.get(Calendar.MONTH) + 1 // Calendar.MONTH jest indeksowane od zera
+                                val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-                        appointmentLocalDate?.let {
-                            // Sprawdzamy, czy wizyta jest dokładnie jutro
-                            if (it == formattedDateLocalDate.plusDays(1)) {
-                                appointmentsToSend.add(appointment)
+                                LocalDate.of(year, month, day)
                             }
-                        }
-                        appointmentsToSend.let {
-                            if (it.isNotEmpty()) {
-                                appointmentsToNotify.value = appointmentsToSend
+
+                            val formattedDateLocalDate =
+                                LocalDate.parse(
+                                    formattedDate,
+                                    DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                                )
+
+                            appointmentLocalDate?.let {
+                                // Sprawdzamy, czy wizyta jest dokładnie jutro
+                                if (it == formattedDateLocalDate.plusDays(1)) {
+                                    appointmentsToSend.add(appointment)
+                                }
                             }
+                            appointmentsToSend.let {
+                                if (it.isNotEmpty()) {
+                                    appointmentsToNotify.value = appointmentsToSend
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Obsłuż błąd odpowiednio, np. wyślij log do konsoli lub zaktualizuj stan widoku
+                            viewState.value = AppState.Error
                         }
 
-                    } catch (e: Exception) {
-                        // Obsłuż błąd odpowiednio, np. wyślij log do konsoli lub zaktualizuj stan widoku
-                        viewState.value = AppState.Error
+                    } else {
+                        return
                     }
                 }
             }

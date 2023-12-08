@@ -146,7 +146,8 @@ class MainScreen {
         val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
         val greetingRandom by viewModel.displayGreetings.observeAsState("")
         val upcomingAppointment by viewModel.upcomingAppointment.observeAsState()
-        val profilePreference by viewModel.profilePreferences.observeAsState("")
+        val profilePreference by viewModel.profilePreferences.observeAsState()
+
         val currentDay = remember {
             mutableStateOf(
                 LocalDate.now()
@@ -191,10 +192,10 @@ class MainScreen {
             }
         }
 
-        // Aktualizacja aktualnego czasu co 30 sekund
+        // Aktualizacja aktualnego czasu co 5 sekund
         LaunchedEffect(currentTimeString) {
             while (true) {
-                delay(15000L)
+                delay(5000L)
 
                 currentTimeString.value =
                     LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
@@ -263,9 +264,11 @@ class MainScreen {
                     PopUpDialogs().NotifyDialog(
                         onClick = {
                             clientsToNotify.forEach {
-                                smsManager.sendNotification(
-                                    it,
-                                )
+                                profilePreference?.let { profile ->
+                                    smsManager.sendNotification(
+                                        it,profile = profile
+                                    )
+                                }
 
                                 viewModel.editAppointment(context, it, true)
                             }

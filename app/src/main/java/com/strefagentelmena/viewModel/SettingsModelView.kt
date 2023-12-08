@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
-import com.strefagentelmena.models.SettngsModel.Preferences
+import com.strefagentelmena.models.settngsModel.ProfilePreferences
 
 class SettingsModelView : ViewModel() {
     val viewState = MutableLiveData<AppState>(AppState.Idle)
@@ -88,7 +88,6 @@ class SettingsModelView : ViewModel() {
             notificationSendStartTime.value = it.notificationSendStartTime
             notificationSendEndTime.value = it.notificationSendEndTime
             greetingsLists.value = it.greetingsLists
-            notificationMessage.value = it.notificationMessage
         }
 
         setViewState(AppState.Success)
@@ -96,12 +95,11 @@ class SettingsModelView : ViewModel() {
 
     fun saveAllData(context: Context) {
         setViewState(AppState.Loading)
-        val preferences = Preferences(
+        val preferences = ProfilePreferences(
             userName = profileName.value ?: "",
             notificationSendStartTime = notificationSendStartTime.value ?: "",
             notificationSendEndTime = notificationSendEndTime.value ?: "",
             greetingsLists = greetingsLists.value ?: mutableListOf(),
-            notificationMessage = notificationMessage.value ?: ""
         )
 
         fileFunctionsSettings.saveSettingsToFile(context = context, preferences = preferences)

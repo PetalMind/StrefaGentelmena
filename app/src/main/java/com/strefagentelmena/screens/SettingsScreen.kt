@@ -33,8 +33,8 @@ import androidx.navigation.NavController
 import com.strefagentelmena.R
 import com.strefagentelmena.appViewStates
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.uiComposable.SettingsUI.settingsUiElements
-import com.strefagentelmena.uiComposable.SettingsUI.settingsViews
+import com.strefagentelmena.uiComposable.settingsUI.settingsUiElements
+import com.strefagentelmena.uiComposable.settingsUI.settingsViews
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
@@ -126,18 +126,6 @@ class SettingsScreen {
                                 settingsViews.NotificationView(viewModel = viewModel)
                         },
                         expandedState = notificationViewState
-                    )
-
-                    settingsUiElements.SettingsItem(
-                        icon = R.drawable.ic_forum,
-                        text = "Wiadomości powitalne",
-                        onClick = {
-                            viewModel.setGreetingsViewState()
-                        },
-                        expandedComposable = {
-                            settingsViews.GreetingsView(viewModel = viewModel)
-                        },
-                        expandedState = greetingsViewState
                     )
 
                     settingsUiElements.SettingsItem(

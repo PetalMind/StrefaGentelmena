@@ -1,8 +1,16 @@
 package com.strefagentelmena.functions
 
+import android.os.Build
 import android.telephony.SmsManager
+import androidx.annotation.RequiresApi
 import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import java.text.SimpleDateFormat
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.Period
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -17,57 +25,24 @@ class SMSManager {
      * @param viewModel
      * @param context
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     fun sendNotification(
         appointment: Appointment,
-        sendNotification: Boolean = false,
+        profile: ProfilePreferences
     ) {
-        val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-        val currentDate = Calendar.getInstance()
-        val currentHour = currentDate.get(Calendar.HOUR_OF_DAY)
-        val currentMinute = currentDate.get(Calendar.MINUTE)
+        val currentTime = LocalDateTime.now()
+        val appointmentDateTime = LocalDateTime.parse("${appointment.date} ${appointment.startTime}", DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
 
-        // Konwersja bieżącej godziny i minuty na minuty od północy
-        val currentTimeInMinutes = currentHour * 60 + currentMinute
+        val startTime = LocalTime.parse(profile.notificationSendStartTime, DateTimeFormatter.ofPattern("HH:mm"))
+        val endTime = LocalTime.parse(profile.notificationSendEndTime, DateTimeFormatter.ofPattern("HH:mm"))
 
-        val appointmentDateTimeStr = "${appointment.date} ${appointment.startTime}"
-        val appointmentDateTime = format.parse(appointmentDateTimeStr) ?: return@sendNotification
+        val daysDifference = Period.between(currentTime.toLocalDate(), appointmentDateTime.toLocalDate()).days
 
-        // Dodane w celu uniknięcia potencjalnych problemów z wartością null
-
-        val appointmentDateCal = Calendar.getInstance()
-        appointmentDateCal.time = appointmentDateTime
-
-        // Resetowanie godzin, minut i sekund na obu kalendarzach, aby porównać tylko daty
-        currentDate.set(Calendar.HOUR_OF_DAY, 0)
-        currentDate.set(Calendar.MINUTE, 0)
-        currentDate.set(Calendar.SECOND, 0)
-        currentDate.set(Calendar.MILLISECOND, 0)
-
-        appointmentDateCal.set(Calendar.HOUR_OF_DAY, 0)
-        appointmentDateCal.set(Calendar.MINUTE, 0)
-        appointmentDateCal.set(Calendar.SECOND, 0)
-        appointmentDateCal.set(Calendar.MILLISECOND, 0)
-
-        // Obliczenie różnicy w dniach
-        val diff = appointmentDateCal.timeInMillis - currentDate.timeInMillis
-        val daysDifference = TimeUnit.MILLISECONDS.toDays(diff)
-
-        // Definiowanie granic czasowych dla wysyłania SMS
-        val earliestTimeInMinutes = 7 * 60 + 30  // 7:30
-        val latestTimeInMinutes = 23 * 60 + 40    // 22:00
-
-        if (daysDifference == 1L && currentTimeInMinutes in earliestTimeInMinutes..latestTimeInMinutes) {
+        if (daysDifference.toLong() == 1L && currentTime.toLocalTime().isAfter(startTime) && currentTime.toLocalTime().isBefore(endTime)) {
             sendSMS(
                 appointment.customer.phoneNumber,
                 "Przypominamy o wizycie w dniu ${appointment.date} o godzinie ${appointment.startTime} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola."
             )
-        } else {
-            if (sendNotification) {
-                sendSMS(
-                    appointment.customer.phoneNumber,
-                    "Przypominamy o wizycie w dniu ${appointment.date} o godzinie ${appointment.startTime} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola."
-                )
-            }
         }
     }
 

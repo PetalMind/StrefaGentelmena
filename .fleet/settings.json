@@ -1,0 +1,4 @@
+{
+    "run.destination.stop.already.running": "Always",
+    "java.debugger.reloadClassesAfterCompilation": "Always"
+}

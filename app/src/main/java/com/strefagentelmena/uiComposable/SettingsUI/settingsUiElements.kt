@@ -1,12 +1,10 @@
-package com.strefagentelmena.uiComposable.SettingsUI
+package com.strefagentelmena.uiComposable.settingsUI
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -49,10 +47,6 @@ class SettingsUiElements {
         expandedComposable: @Composable () -> Unit,
         expandedState: Boolean
     ) {
-        val rotationState by animateFloatAsState(
-            targetValue = if (expandedState) 180f else 0f, label = ""
-        )
-
         Card(
             modifier = Modifier
                 .animateContentSize(
@@ -102,16 +96,15 @@ class SettingsUiElements {
                 )
             }
         }
-            AnimatedVisibility(
-                visible = expandedState,
-                modifier = Modifier.animateContentSize(
-                    animationSpec = spring(
-                        stiffness = Spring.StiffnessLow
-                    )
-                )
-            ) {
-                ExpandedContent(expandedComposable)
-            }
+
+        AnimatedVisibility(
+            visible = expandedState,
+            enter = expandIn(),
+            exit = shrinkOut()
+        ) {
+            ExpandedContent(expandedComposable)
+        }
+
     }
 
     @Composable

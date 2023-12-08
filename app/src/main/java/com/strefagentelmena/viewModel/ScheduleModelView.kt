@@ -8,11 +8,13 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
+import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
+import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -20,6 +22,7 @@ import java.util.Locale
 class ScheduleModelView : ViewModel() {
     val customersList = MutableLiveData<List<Customer>>(emptyList())
     val appointmentsList = MutableLiveData<List<Appointment>>(emptyList())
+    private val profile = MutableLiveData<ProfilePreferences>()
 
     val selectedClient = MutableLiveData<Customer?>(null)
     val isNewAppointment = MutableLiveData<Boolean>(false)
@@ -296,6 +299,7 @@ class ScheduleModelView : ViewModel() {
         try {
             appointmentsList.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
             customersList.value = fileFunctionsClients.loadCustomersFromFile(context)
+            profile.value = fileFunctionsSettings.loadSettingsFromFile(context)
         } catch (e: Exception) {
             viewState.value = AppState.Error
         }
@@ -305,6 +309,10 @@ class ScheduleModelView : ViewModel() {
 
     fun loadCustomersList(context: Context) {
         customersList.value = fileFunctionsClients.loadCustomersFromFile(context)
+    }
+
+    fun loadProfile(context: Context) {
+        profile.value = fileFunctionsSettings.loadSettingsFromFile(context)
     }
 
     fun closeAllDialog() {
@@ -318,7 +326,7 @@ class ScheduleModelView : ViewModel() {
     ) {
         if (selectedAppointment.value?.notificationSent == true) return
 
-        smsManager.sendNotification(selectedAppointment.value ?: return, true)
+        profile.value?.let { smsManager.sendNotification(selectedAppointment.value ?: return, profile = it) }
         setMessages("Powiadomienie wysłane do ${selectedAppointment.value?.customer?.fullName}")
 
         editAppointment(context, true)

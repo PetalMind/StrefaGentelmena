@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "android-app",
+            "name": "Android-app configuration",
+            "module": "Strefa_Gentelmena.app.main",
+            "destination": "HUAWEI ANA-NX9",
+        },
+        
+    ]
+}

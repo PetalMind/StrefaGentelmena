@@ -1,4 +1,4 @@
-package com.strefagentelmena.uiComposable.SettingsUI
+package com.strefagentelmena.uiComposable.settingsUI
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.strefagentelmena.R
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
@@ -57,16 +59,17 @@ class SettingsViews {
         val notificationSendStartTime by viewModel.notificationSendStartTime.observeAsState("")
         val notificationSendEndTime by viewModel.notificationSendEndTime.observeAsState("")
         val notificationMessage by viewModel.notificationMessage.observeAsState("")
+        val context = LocalContext.current
 
         Column(Modifier.fillMaxSize()) {
             textModernTextFieldUI.ModernTextField(
                 value = notificationSendStartTime,
                 onValueChange = { it -> viewModel.setNotificationSendStartTime(it) },
                 modifier = Modifier.padding(10.dp),
-                label = "Rozpoczęcie wysyłania komunikatów",
+                label = "Godzina rozpoczęcia wysyłania komunikatów",
                 leadingIcon = {
                     Icon(
-                        Icons.Default.DateRange,
+                        painter = painterResource(id = R.drawable.ic_clock),
                         contentDescription = null
                     )
                 },
@@ -76,30 +79,20 @@ class SettingsViews {
                 value = notificationSendEndTime,
                 onValueChange = { it -> viewModel.setNotificationSendEndTime(it) },
                 modifier = Modifier.padding(10.dp),
-                label = "Zakończenie wysyłania komunikatów",
+                label = "Godzina aakończenia wysyłania komunikatów",
                 leadingIcon = {
                     Icon(
-                        Icons.Default.DateRange,
+                        painter = painterResource(id = R.drawable.ic_clock),
                         contentDescription = null
                     )
                 }
-            )
-
-            textModernTextFieldUI.ModernTextField(
-                value = notificationMessage,
-                onValueChange = { it ->
-                    viewModel.setNotificationMessage(it)
-                },
-                label = "Wiadomość powiadomień",
-                modifier = Modifier
-                    .padding(10.dp)
-                    .height(200.dp)
             )
 
             buttonsUI.ButtonsRow(
                 onClick = {
                     viewModel.setNotificationSendEndTime(notificationSendEndTime)
                     viewModel.setNotificationSendStartTime(notificationSendStartTime)
+                    viewModel.saveAllData(context = context)
                     viewModel.setNotificationViewState()
                 },
                 onDismiss = { viewModel.setNotificationViewState() },
