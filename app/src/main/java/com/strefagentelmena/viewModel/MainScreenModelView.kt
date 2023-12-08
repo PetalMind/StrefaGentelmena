@@ -26,11 +26,11 @@ class MainScreenModelView : ViewModel() {
     val viewState = MutableLiveData<AppState>(AppState.Idle)
     val customersLists = MutableLiveData<List<Customer>>(emptyList())
     private val appointmentsLists = MutableLiveData<List<Appointment>>(emptyList())
-    val isDataLoaded = MutableLiveData<Boolean>(false)
     val appointmentsToNotify = MutableLiveData<List<Appointment>>(emptyList())
     val showNotifyDialog = MutableLiveData<Boolean>(false)
     val upcomingAppointment: MutableLiveData<Appointment?> = MutableLiveData()
     val profilePreferences = MutableLiveData<Preferences?>(null)
+    val dataLoaded = MutableLiveData<Boolean>(false)
 
     private val _displayGreetings = MutableLiveData(
         (if (profilePreferences.value?.userName != null) profilePreferences.value?.userName else "")?.let {
@@ -53,13 +53,13 @@ class MainScreenModelView : ViewModel() {
 //        notificationList.postValue(updatedList)
 //    }
 
-    fun randomGreeting(context: Context) {
-        _displayGreetings.value = greetingsManager.randomGreeting()
-
-        displayGreetings.value = _displayGreetings.value
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun loadData(context: Context) {
+        dataLoaded.value = loadAllData(context)
     }
 
-    fun setViewState(viewState: AppState) {
+
+     fun setViewState(viewState: AppState) {
         this.viewState.value = viewState
     }
 
@@ -77,18 +77,16 @@ class MainScreenModelView : ViewModel() {
 
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun loadAllData(context: Context) {
-        setViewState(AppState.Loading)
-
-        try {
+    fun loadAllData(context: Context): Boolean {
+        return try {
             loadCustomersList(context)
             loadApointmentsList(context)
             loadProfile(context)
             findNearestAppointmentToday()
-
-            setViewState(AppState.Success)
+            true // All operations succeeded
         } catch (e: Exception) {
             setViewState(AppState.Error)
+            false // An error occurred
         }
     }
 

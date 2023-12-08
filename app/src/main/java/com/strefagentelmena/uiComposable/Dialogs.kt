@@ -5,6 +5,8 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -92,7 +94,8 @@ class Dialogs {
         onClose: () -> Unit,
         onAddCustomer: () -> Unit,
         onEditCustomer: () -> Unit,
-        onDeleteCustomer: () -> Unit
+        onDeleteCustomer: () -> Unit,
+
     ) {
         val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
         val headerText =
@@ -109,6 +112,15 @@ class Dialogs {
 
         val focusRequester = remember { FocusRequester() }
         val keyboardController = LocalSoftwareKeyboardController.current
+
+        val pressed = remember { mutableStateOf(false) }
+        val buttonEnabled = firstNameError.isEmpty()
+                && lastNameError.isEmpty()
+                && phoneNumberError.isEmpty()
+                && phoneNumber.isNotBlank()
+                && firstName.isNotBlank()
+                && lastName.isNotBlank()
+
 
         LaunchedEffect(Unit) {
             focusRequester.requestFocus()
@@ -230,7 +242,8 @@ class Dialogs {
                                 onClose()
                             },
                             containerColor = colorsUI.green,
-                            modifier = Modifier.padding(top = 16.dp)
+                            modifier = Modifier.padding(top = 16.dp),
+                            buttonEnabled = buttonEnabled
                         )
                     }
                 }
