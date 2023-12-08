@@ -1,8 +1,11 @@
 package com.strefagentelmena.uiComposable.SettingsUI
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -99,9 +102,16 @@ class SettingsUiElements {
                 )
             }
         }
-        if (expandedState) {
-            ExpandedContent(expandedComposable)
-        }
+            AnimatedVisibility(
+                visible = expandedState,
+                modifier = Modifier.animateContentSize(
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+            ) {
+                ExpandedContent(expandedComposable)
+            }
     }
 
     @Composable

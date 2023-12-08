@@ -2,6 +2,14 @@ package com.strefagentelmena.screens
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -177,25 +185,27 @@ class Schedule {
                         navController.navigate("mainScreen")
                     },
                     compose = {
-                        Box(
-                            modifier = Modifier
-                                .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
-                                .clip(RoundedCornerShape(15.dp))
-                                .padding(10.dp)
-                                .clickable {
-                                    dialogsUI.showDatePickerDialog(
-                                        context = context,
-                                        dateSetListener = {
-                                            viewModel.setNewAppoimentsDate(it)
-                                        },
-                                    )
-                                }
-                        ) {
-                            Icon(
-                                Icons.Default.DateRange,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
+                        Box(modifier = Modifier.padding(end = 8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                                    .clip(RoundedCornerShape(15.dp))
+                                    .padding(10.dp)
+                                    .clickable {
+                                        dialogsUI.showDatePickerDialog(
+                                            context = context,
+                                            dateSetListener = {
+                                                viewModel.setNewAppoimentsDate(it)
+                                            },
+                                        )
+                                    }
+                            ) {
+                                Icon(
+                                    Icons.Default.DateRange,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     },
                     onClick = {
@@ -427,6 +437,7 @@ class Schedule {
         return intervals
     }
 
+    @OptIn(ExperimentalAnimationApi::class)
     @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentsList(viewModel: ScheduleModelView, onClick: (Appointment) -> Unit) {
@@ -440,20 +451,31 @@ class Schedule {
         }.sortedBy {
             LocalTime.parse(it.startTime, DateTimeFormatter.ofPattern("HH:mm"))
         }
-
-        if (filteredAppointments.isEmpty()) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                reusableScreen.EmptyScreen()
-            }
-        } else {
-            TimeLineWithAppointments(
-                appointments = filteredAppointments,
-                onClick = onClick,
-                viewModel = viewModel
+        AnimatedContent(targetState = filteredAppointments, label = "", transitionSpec = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                animationSpec = tween(300, easing = LinearEasing)
+            ).togetherWith(
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                    animationSpec = tween(300, easing = LinearEasing)
+                )
             )
+        }) {
+            if (filteredAppointments.isEmpty()) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    reusableScreen.EmptyScreen()
+                }
+            } else {
+                TimeLineWithAppointments(
+                    appointments = it,
+                    onClick = onClick,
+                    viewModel = viewModel
+                )
+            }
         }
     }
 

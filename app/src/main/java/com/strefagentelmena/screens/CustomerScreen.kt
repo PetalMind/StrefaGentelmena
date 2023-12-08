@@ -1,5 +1,14 @@
 package com.strefagentelmena.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -102,29 +111,32 @@ class CustomerScreen {
             },
             floatingActionButtonPosition = FabPosition.End,
             topBar = {
-                headersUI.AppBarWithBackArrow(title = "Klienci salonu", onBackPressed = {
-                    navController.navigate("mainScreen")
-                }, compose = {
-                    Box(
-                        modifier = Modifier
-                            .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
-                            .clip(RoundedCornerShape(15.dp))
-                            .padding(10.dp)
-                            .clickable {
-                                viewModel.setShowSearchState(!searchState)
+                headersUI.AppBarWithBackArrow(
+                    title = "Klienci salonu",
+                    onBackPressed = {
+                        navController.navigate("mainScreen")
+                    }, compose = {
+                        Box(modifier = Modifier.padding(end = 8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                                    .clip(RoundedCornerShape(15.dp))
+                                    .padding(10.dp)
+                                    .clickable {
+                                        viewModel.setShowSearchState(!searchState)
+                                    }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Search,
+                                    contentDescription = "Search",
+                                )
                             }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search",
-                        )
-                    }
-                })
+                        }
+                    })
             },
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
-                if (searchState) {
-
+                AnimatedVisibility(visible = searchState) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -170,7 +182,19 @@ class CustomerScreen {
             }
         }
 
-        if (clientDialogState == true) {
+        AnimatedVisibility(
+            visible = clientDialogState,
+            enter = slideInVertically(
+                animationSpec = tween(
+                    durationMillis = 700,
+                    easing = LinearEasing,
+                ),
+            ) + expandIn(),
+            exit = slideOutVertically( animationSpec = tween(
+                durationMillis = 700,
+                easing = LinearEasing,
+            ),) + shrinkOut()
+        ) {
             dialogsUI.OnAddOrEditCustomerDialog(
                 onClose = { viewModel.closeAddClientDialog() },
                 onAddCustomer = {
@@ -189,7 +213,11 @@ class CustomerScreen {
             )
         }
 
-        if (deleteDialogState == true) {
+        AnimatedVisibility(
+            visible = deleteDialogState,
+            enter = fadeIn() + expandIn(),
+            exit = fadeOut() + shrinkOut()
+        ) {
             dialogsUI.DeleteDialog(onDismiss = { viewModel.closeDeleteDialog() }, onConfirm = {
                 selectedClient?.let { viewModel.deleteCustomer(context = context, customer = it) }
                 viewModel.closeDeleteDialog()

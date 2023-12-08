@@ -1,6 +1,11 @@
 package com.strefagentelmena.uiComposable.calendarHeader
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -201,23 +206,42 @@ class CalendarHeaderUI {
         onNextClickListener: (LocalDate) -> Unit,
     ) {
         Row(modifier = Modifier.padding(horizontal = 8.dp)) {
-            Text(
-                // show "Dzisiaj" if user selects today's date
-                // else, show the full format of the date
-                text = if (data.selectedDate.isToday) {
-                    "Dzisiaj"
-                } else {
-                    data.selectedDate.date.format(
-                        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
-                    )
-                },
-                color = Color.Black,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
+            AnimatedContent(
+                targetState = data,
+                label = "",
                 modifier = Modifier
                     .weight(1f)
-                    .align(Alignment.CenterVertically)
-            )
+                    .align(Alignment.CenterVertically),
+                transitionSpec = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                        animationSpec = tween(300, easing = LinearEasing)
+                    ).togetherWith(
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                            animationSpec = tween(300, easing = LinearEasing)
+                        )
+                    )
+                }
+            ) {
+                Text(
+                    // show "Dzisiaj" if user selects today's date
+                    // else, show the full format of the date
+                    text = if (it.selectedDate.isToday) {
+                        "Dzisiaj"
+                    } else {
+                        it.selectedDate.date.format(
+                            DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+                        )
+                    },
+                    color = Color.Black,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .weight(1f)
+                        .align(Alignment.CenterVertically)
+                )
+            }
 
             IconButton(onClick = {
                 onPrevClickListener(data.startDate.date)

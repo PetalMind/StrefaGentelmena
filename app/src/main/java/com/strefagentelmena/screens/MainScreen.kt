@@ -3,6 +3,11 @@ package com.strefagentelmena.screens
 import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,10 +101,17 @@ class MainScreen {
         val context = LocalContext.current
         val viewState by viewModel.viewState.observeAsState(AppState.Idle)
         val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
+        val dataLoaded by viewModel.dataLoaded.observeAsState(false)
+
+        LaunchedEffect(key1 = dataLoaded) {
+            if (dataLoaded) {
+                viewModel.setViewState(AppState.Success)
+            }
+        }
 
         when (viewState) {
             AppState.Idle -> {
-                viewModel.loadAllData(context = context)
+                viewModel.loadData(context = context)
             }
 
             AppState.Loading -> {
@@ -118,7 +130,7 @@ class MainScreen {
             }
 
             else -> {
-                appViewStates.LoadingView()
+                //   DashboardSuccessView(navController, viewModel)
             }
         }
     }
@@ -306,14 +318,29 @@ class MainScreen {
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = currentTimeString.value,
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 32.sp
-                            ),
-                            color = colorsUI.fontGrey
-                        )
+                        AnimatedContent(
+                            targetState = currentTimeString.value,
+                            label = "",
+                            transitionSpec = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                                    animationSpec = tween(300, easing = LinearEasing)
+                                ).togetherWith(
+                                    slideOutOfContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                                        animationSpec = tween(300, easing = LinearEasing)
+                                    )
+                                )
+                            }) {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 32.sp
+                                ),
+                                color = colorsUI.fontGrey
+                            )
+                        }
 
                         Spacer(modifier = Modifier.width(5.dp))
 
@@ -331,12 +358,27 @@ class MainScreen {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = randomGreeting.value,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = colorsUI.fontGrey
-                    )
+                    AnimatedContent(
+                        targetState = randomGreeting.value,
+                        label = "",
+                        transitionSpec = {
+                            slideIntoContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                                animationSpec = tween(300, easing = LinearEasing)
+                            ).togetherWith(
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                                    animationSpec = tween(300, easing = LinearEasing)
+                                )
+                            )
+                        }) {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = colorsUI.fontGrey
+                        )
+                    }
                 }
                 Box(modifier = Modifier.padding(end = 16.dp)) {
                     Box(

@@ -1,6 +1,7 @@
 package com.strefagentelmena.uiComposable
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -309,6 +310,7 @@ class Cards {
     }
 
 
+
     @Composable
     fun CustomerListCard(
         customer: Customer,
@@ -393,7 +395,7 @@ class Cards {
                 containerColor = colorsUI.papaya
             ),
             shape = RoundedCornerShape(12.dp), // Zmieniłem kształt narożników na nieco mniej zaokrąglone
-            elevation = CardDefaults.cardElevation(6.dp), // Podniosłem nieco elewację, aby dodać karcie głębi
+            elevation = CardDefaults.cardElevation(2.dp), // Podniosłem nieco elewację, aby dodać karcie głębi
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp) // Zwiększyłem nieco wysokość karty

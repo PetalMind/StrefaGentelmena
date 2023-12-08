@@ -1,6 +1,7 @@
 package com.strefagentelmena.uiComposable
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.updateTransition
@@ -90,6 +91,8 @@ class AnimationElements {
         Surface(
             shape = CircleShape,
             color = backgroundColor,
+            modifier = Modifier
+                .animateContentSize()
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
