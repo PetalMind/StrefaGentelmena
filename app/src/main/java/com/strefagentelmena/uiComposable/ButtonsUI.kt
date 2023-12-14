@@ -81,12 +81,12 @@ class ButtonsUI {
 
         val elevation by animateDpAsState(
             targetValue = if (pressed.value) 8.dp else 0.dp,
-            animationSpec = tween(durationMillis = 300)
+            animationSpec = tween(durationMillis = 300), label = ""
         )
 
         val size by animateDpAsState(
             targetValue = if (pressed.value) 100.dp else 50.dp,
-            animationSpec = tween(durationMillis = 300)
+            animationSpec = tween(durationMillis = 300), label = ""
         )
 
         Button(

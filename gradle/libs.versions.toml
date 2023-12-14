@@ -39,7 +39,6 @@ ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 material3 = { group = "androidx.compose.material3", name = "material3" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation-compose" }
-runtime = { group = "androidx.activity", name = "activity-compose", version.ref = "runtime" }
 runtime-livedata = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "runtime-livedata" }
 livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "livedata" }
 viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "viewmodel" }

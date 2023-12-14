@@ -25,13 +25,13 @@ import com.strefagentelmena.viewModel.SettingsModelView
 val navigation = Navigation()
 
 class Navigation {
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppNavigation() {
         val navController = rememberNavController()
         val customersModelView: CustomersModelView = CustomersModelView()
-        val schuduleModelView: ScheduleModelView = ScheduleModelView()
         val settingsModelView = SettingsModelView()
+        val dashboardModelView = MainScreenModelView()
+val scheduleModelView = ScheduleModelView()
 
         NavHost(navController, startDestination = Screen.MainScreen.route) {
             composable(Screen.MainScreen.route,
@@ -48,8 +48,6 @@ class Navigation {
                     )
                 }
             ) {
-                val dashboardModelView = MainScreenModelView()
-
                 mainScreen.DashboardView(
                     navController,
                     dashboardModelView
@@ -96,7 +94,7 @@ class Navigation {
                 }
             ) {
                 screenSchedule.ScheduleView(
-                    viewModel = schuduleModelView,
+                    viewModel = scheduleModelView,
                     navController = navController,
                 )
             }

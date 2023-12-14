@@ -1,9 +1,7 @@
 package com.strefagentelmena.viewModel
 
 import android.content.Context
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
@@ -22,9 +20,9 @@ import java.util.Locale
 class ScheduleModelView : ViewModel() {
     val customersList = MutableLiveData<List<Customer>>(emptyList())
     val appointmentsList = MutableLiveData<List<Appointment>>(emptyList())
-    private val profile = MutableLiveData<ProfilePreferences>()
+    private val profile = MutableLiveData<ProfilePreferences>(ProfilePreferences())
 
-    val selectedClient = MutableLiveData<Customer?>(null)
+    val selectedClient = MutableLiveData<Customer?>(Customer())
     val isNewAppointment = MutableLiveData<Boolean>(false)
 
 
@@ -32,7 +30,7 @@ class ScheduleModelView : ViewModel() {
     private val currentDate: String = sdf.format(Date())
     val currentSelectedAppoinmentsDate = MutableLiveData<String>(currentDate)
 
-    val messages = MutableLiveData<String?>(null)
+    val messages = MutableLiveData<String?>("")
     val viewState = MutableLiveData<AppState>(AppState.Idle)
 
     /**
@@ -48,7 +46,7 @@ class ScheduleModelView : ViewModel() {
      */
     val selectedAppointmentDate = MutableLiveData("")
     val selectedAppointmentTime = MutableLiveData("")
-    val selectedAppointment = MutableLiveData<Appointment?>()
+    val selectedAppointment = MutableLiveData<Appointment?>(Appointment())
 
 
     fun setAppoimentState(newValue: Boolean) {
@@ -90,7 +88,6 @@ class ScheduleModelView : ViewModel() {
         selectedAppointment.value = null
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun setNewDataAppointment(newValue: String) {
         selectedAppointmentDate.value = newValue
     }
@@ -124,38 +121,8 @@ class ScheduleModelView : ViewModel() {
         selectedAppointment.value = appointment
         selectedAppointmentTime.value = appointment.startTime
         selectedAppointmentDate.value = appointment.date
-        selectedClient.value = appointment.customer
+        setSelectedClient(appointment.customer)
     }
-
-    /**
-     * Find Upcoming Appointment.
-     *
-     * @return [Appointment? or null]
-     */
-    fun findUpcomingAppointment(): Appointment? {
-        val currentAppointments = appointmentsList.value ?: return null
-        Log.d("findUpcoming", "Current appointments: $currentAppointments")
-
-        val currentTime = System.currentTimeMillis()
-
-        val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-
-        return currentAppointments
-            .filter { !it.notificationSent }
-            .also { Log.e("findUpcoming", "After filtering not sent: $it") }
-            .mapNotNull { appointment ->
-                val appointmentTimeStr = "${appointment.date} ${appointment.startTime}"
-                val appointmentTime =
-                    format.parse(appointmentTimeStr)?.time ?: return@mapNotNull null
-                Pair(appointment, appointmentTime)
-            }
-            .also { Log.e("findUpcoming", "After mapping to time: $it") }
-            .sortedBy { it.second }
-            .firstOrNull { it.second > currentTime }
-            ?.also { Log.e("findUpcoming", "Selected appointment: $it") }
-            ?.first
-    }
-
 
     /**
      * Show Apoiment Dialog.
@@ -192,7 +159,6 @@ class ScheduleModelView : ViewModel() {
      * @param startTime
      * @param context
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     fun createNewApointment(
         isNew: Boolean,
         selectedClient: Customer?,
@@ -227,7 +193,10 @@ class ScheduleModelView : ViewModel() {
         appointmentsList.value = currentAppointments
 
         // Tu kod do wysyłania powiadomienia
-        filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList.value)
+        filesFunctionsAppoiments.saveAppointmentToFile(
+            context,
+            appointmentsList.value ?: emptyList()
+        )
         setMessages("${selectedAppointment.value?.customer?.fullName} już niedługo na twoim fotelu")
     }
 
@@ -249,7 +218,10 @@ class ScheduleModelView : ViewModel() {
 
         appointmentsList.value = currentAppointments
 
-        filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList.value)
+        filesFunctionsAppoiments.saveAppointmentToFile(
+            context,
+            appointmentsList.value ?: emptyList()
+        )
         setMessages("Jedna wizyta mniej do zrobienia")
     }
 
@@ -266,33 +238,39 @@ class ScheduleModelView : ViewModel() {
         val index = currentAppointments.indexOfFirst { it.id == selectedAppointment.value?.id }
 
         val selectedClient =
-            findCustomerByName(selectedAppointment.value?.customer?.fullName ?: "")
+            findCustomerByName(selectedClient.value?.fullName ?: "") ?: findCustomerByName(
+                selectedAppointment.value?.customer?.fullName ?: ""
+            )
 
         val clientIndex = customersList.value?.indexOf(selectedClient) ?: return
 
         if (index != -1 && clientIndex != -1) {
-            selectedAppointment.value?.notificationSent =
-                onNotificationClickState.value ?: notificationIsSent
+            val updatedAppointment = selectedAppointment.value?.copy(
+                notificationSent = onNotificationClickState.value ?: notificationIsSent,
+                date = selectedAppointmentDate.value ?: return,
+                startTime = selectedAppointmentTime.value ?: return,
+                customer = selectedClient ?: return
+            ) ?: return
 
-            selectedAppointment.value?.date = selectedAppointmentDate.value ?: return
-            selectedAppointment.value?.startTime = selectedAppointmentTime.value ?: return
+            currentAppointments[index] = updatedAppointment
 
-            currentAppointments[index] = selectedAppointment.value ?: return
+            val updatedClient = selectedClient?.copy(appointment = updatedAppointment)
 
-            selectedClient?.appointment = selectedAppointment.value ?: return
+            customersList.value = customersList.value?.toMutableList()
+            if (updatedClient != null) {
+                (customersList.value as MutableList<Customer>?)?.set(clientIndex, updatedClient)
+            }
 
             appointmentsList.value = currentAppointments
 
-
-            customersList.value?.get(clientIndex)?.appointment = selectedAppointment.value ?: return
-            fileFunctionsClients.saveCustomersToFile(context, customersList.value)
+            fileFunctionsClients.saveCustomersToFile(context, customersList.value ?: return)
             filesFunctionsAppoiments.saveAppointmentToFile(context, currentAppointments)
-
 
             customersList.value = fileFunctionsClients.loadCustomersFromFile(context)
             appointmentsList.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
         }
     }
+
 
     fun loadAllData(context: Context) {
         viewState.value = AppState.Loading
@@ -320,13 +298,17 @@ class ScheduleModelView : ViewModel() {
         deleteDialogState.value = false
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun sendNotificationForAppointment(
         context: Context
     ) {
         if (selectedAppointment.value?.notificationSent == true) return
 
-        profile.value?.let { smsManager.sendNotification(selectedAppointment.value ?: return, profile = it) }
+        profile.value?.let {
+            smsManager.sendNotification(
+                selectedAppointment.value ?: return,
+                profile = it
+            )
+        }
         setMessages("Powiadomienie wysłane do ${selectedAppointment.value?.customer?.fullName}")
 
         editAppointment(context, true)

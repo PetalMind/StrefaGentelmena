@@ -24,9 +24,9 @@ class ClientsFilesFuctions {
 
         return loadedCustomers
     }
-    fun saveCustomersToFile(context: Context, customersLists: List<Customer>?) {
+    fun saveCustomersToFile(context: Context, customers: List<Customer>) {
         val gson = Gson()
-        val jsonString = gson.toJson(customersLists)
+        val jsonString = gson.toJson(customers)
         val file = File(context.filesDir, "customers.json")
 
         FileWriter(file).use {

@@ -58,7 +58,6 @@ class AppFunctions {
         return day == lastDayOfMonth
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun isFirstDayOfNewMonth(day: Int, month: Int, year: Int): Boolean {
         val currentDate = LocalDate.of(year, month, day)
         val nextDay = currentDate.plusDays(1)
@@ -121,7 +120,6 @@ class AppFunctions {
 
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getPreviousWeek(currentFormattedDate: String): String {
         val currentDate = LocalDate.parse(currentFormattedDate, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
         val previousWeekDate = currentDate.minusWeeks(1)
@@ -135,7 +133,6 @@ class AppFunctions {
 
         return previousWeekDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
     }
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getNextWeek(currentFormattedDate: String): String {
         val currentDate = LocalDate.parse(currentFormattedDate, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
         val nextSunday = currentDate.plusDays(7 - currentDate.dayOfWeek.value.toLong())

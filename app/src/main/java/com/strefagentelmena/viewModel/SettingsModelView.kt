@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.functions.fileFuctions.BackupFilesFunctions
 import com.strefagentelmena.functions.fileFuctions.backupFilesFunctions
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
 import com.strefagentelmena.models.settngsModel.BackupPreferences
@@ -41,13 +40,13 @@ class SettingsModelView : ViewModel() {
         profileViewState.value = !profileViewState.value!!
     }
 
-    fun setProfilePreferences(): ProfilePreferences {
+    private fun setProfilePreferences(): ProfilePreferences {
         // Sprawdź, czy wartości nie są null, zanim utworzysz obiekt ProfilePreferences
-        val userName = profileName.value ?: ""
+        val userName = profileName.value ?: "Kinga"
         val startTime = notificationSendStartTime.value
-            ?: ""
+            ?: "7:30"
         val endTime = notificationSendEndTime.value
-            ?: ""
+            ?: "21:00"
         val greetings = greetingsLists.value ?: mutableListOf()
         val sendAutomatic = notificationSendAutomatic.value
             ?: false
@@ -55,7 +54,7 @@ class SettingsModelView : ViewModel() {
             ?: BackupPreferences()
 
         // Utwórz i zwróć obiekt ProfilePreferences z wartościami
-        val LoadedprofilePreferences = ProfilePreferences(
+        val loadedProfilePreferences = ProfilePreferences(
             userName = userName,
             notificationSendStartTime = startTime,
             notificationSendEndTime = endTime,
@@ -65,9 +64,9 @@ class SettingsModelView : ViewModel() {
         )
 
         // Zaktualizuj MutableState, jeśli to konieczne
-        profilePreferences.value = LoadedprofilePreferences
+        profilePreferences.value = loadedProfilePreferences
 
-        return LoadedprofilePreferences
+        return loadedProfilePreferences
     }
 
 

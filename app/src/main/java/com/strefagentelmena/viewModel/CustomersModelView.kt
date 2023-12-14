@@ -14,6 +14,7 @@ class CustomersModelView : ViewModel() {
     var selectedCustomer = MutableLiveData<Customer?>(null)
     val messages = MutableLiveData<String>("")
     val searchState = MutableLiveData<Boolean>(false)
+    val selectedCustomerNote = MutableLiveData<String>("")
 
     //form Errors
     val firstNameError = MutableLiveData<String>()
@@ -35,6 +36,10 @@ class CustomersModelView : ViewModel() {
         deleteDialogState.value = false
         searchState.value = false
         selectedCustomer.value = null
+    }
+
+    fun setSelectedCustomerNote(note: String) {
+        selectedCustomerNote.value = note
     }
 
     fun loadClients(context: Context) {
@@ -109,18 +114,20 @@ class CustomersModelView : ViewModel() {
     private fun createNewCustomer(): Customer {
         return Customer(
             id = idGenerator.generateId(),
-            firstName = customerName.value,
-            lastName = customerLastName.value,
-            phoneNumber = customerPhoneNumber.value
+            firstName = customerName.value ?: "",
+            lastName = customerLastName.value ?: "",
+            phoneNumber = customerPhoneNumber.value ?: "",
+            noted = selectedCustomerNote.value ?: ""
         )
     }
 
 
     private fun clearSelectedClientAndData() {
-        selectedCustomer.value = null
+        selectedCustomer.value = Customer()
         customerPhoneNumber.value = ""
         customerLastName.value = ""
         customerName.value = ""
+        selectedCustomerNote.value = ""
     }
 
     /**
@@ -130,6 +137,7 @@ class CustomersModelView : ViewModel() {
         customerName.value = selectedCustomer.value?.firstName ?: ""
         customerLastName.value = selectedCustomer.value?.lastName ?: ""
         customerPhoneNumber.value = selectedCustomer.value?.phoneNumber ?: ""
+        selectedCustomerNote.value = selectedCustomer.value?.noted ?: ""
     }
 
     /**
@@ -147,7 +155,7 @@ class CustomersModelView : ViewModel() {
 
         // Aktualizuj listę klientów
         setMessage("Klient ${newClient.fullName} został dodany")
-        fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
+        fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: emptyList())
 
         closeAddClientDialog()
         clearSelectedClientAndData()
@@ -161,7 +169,8 @@ class CustomersModelView : ViewModel() {
         if (index != -1) {
             currentList.removeAt(index)
 
-            val appointmentsToBeDeleted = scheduledAppointments.filter { it.customer.id == customer.id }
+            val appointmentsToBeDeleted =
+                scheduledAppointments.filter { it.customer.id == customer.id }
 
             val mutableAppointments = scheduledAppointments.toMutableList()
             mutableAppointments.removeAll(appointmentsToBeDeleted)
@@ -169,32 +178,16 @@ class CustomersModelView : ViewModel() {
             filesFunctionsAppoiments.saveAppointmentToFile(context, mutableAppointments)
 
             customersLists.value = currentList.toList()
-            // searchedCustomersLists.value = customersLists.value // Sprawdź, czy ta linia jest konieczna
+            searchedCustomersLists.value = customersLists.value
 
             // Aktualizuj listę klientów
             setMessage("Klient ${customer.fullName} został usunięty")
 
-            fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
+            fileFunctionsClients.saveCustomersToFile(context, currentList ?: emptyList())
+            customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
+            closeAllDialogs()
         }
     }
-
-    fun generateCustomers(context: Context, numberOfCustomers: Int) {
-        val currentList = customersLists.value?.toMutableList() ?: mutableListOf()
-
-        repeat(numberOfCustomers) {
-            val newClient = createNewCustomer()
-
-            currentList.add(newClient)
-
-            customersLists.value = currentList.toList()
-            searchedCustomersLists.value = customersLists.value
-
-            // Aktualizuj listę klientów
-            setMessage("Klient ${newClient.fullName} został dodany")
-            fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
-        }
-    }
-
 
     fun validateFirstName(firstName: String) {
         if (firstName.isEmpty()) {
@@ -213,12 +206,14 @@ class CustomersModelView : ViewModel() {
     }
 
     fun validatePhoneNumber(phoneNumber: String) {
-        if (phoneNumber.length != 9) {
-            phoneNumberError.value = "Numer telefonu musi mieć 9 cyfr"
+        val phoneNumberPattern = "^[0-9]{9}$".toRegex()
+        if (!phoneNumberPattern.matches(phoneNumber)) {
+            phoneNumberError.value = "Numer telefonu musi składać się tylko z 9 cyfr"
         } else {
             phoneNumberError.value = ""
         }
     }
+
 
     fun validateAllFields(
     ): Boolean {
@@ -272,7 +267,7 @@ class CustomersModelView : ViewModel() {
     fun editCustomer(
         context: Context,
     ) {
-        // Pobierz listę klientów (zakładam, że masz listę klientów w ViewModel)
+//
         val customersList = customersLists.value ?: return
 
         // Znajdź i edytuj klienta o danym ID
@@ -280,9 +275,10 @@ class CustomersModelView : ViewModel() {
         if (customerToEditIndex == -1) return
 
         val updatedCustomer = customersList[customerToEditIndex].copy(
-            firstName = customerName.value,
-            lastName = customerLastName.value,
-            phoneNumber = customerPhoneNumber.value,
+            firstName = customerName.value ?: return,
+            lastName = customerLastName.value ?: return,
+            phoneNumber = customerPhoneNumber.value ?: return,
+            noted = selectedCustomerNote.value ?: return
         )
 
         val updatedCustomersList = customersList.toMutableList().apply {
@@ -296,7 +292,23 @@ class CustomersModelView : ViewModel() {
         setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
 
         // Zapisz zmiany
-        fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
+        fileFunctionsClients.saveCustomersToFile(context, updatedCustomersList)
         closeAddClientDialog()
+    }
+
+    fun sortClientsByName() {
+        customersLists.value = customersLists.value?.sortedBy { it.fullName }
+    }
+
+    fun sortClientsByDate() {
+        customersLists.value = customersLists.value?.sortedByDescending { it.appointment?.date }
+    }
+
+    fun sortClientsNormal(context: Context) {
+        customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
+    }
+
+    fun sortClientsByDateDesc() {
+        customersLists.value = customersLists.value?.sortedBy { it.appointment?.date }
     }
 }

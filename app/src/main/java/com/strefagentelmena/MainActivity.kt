@@ -8,7 +8,6 @@ import androidx.annotation.RequiresApi
 import com.strefagentelmena.navigation.navigation
 
 class MainActivity : ComponentActivity() {
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

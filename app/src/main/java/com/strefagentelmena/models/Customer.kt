@@ -25,25 +25,27 @@ class CustomerIdGenerator {
 }
 
 class Customer(
-    var id: Int? = null,
-    var firstName: String? = null,
-    var lastName: String? = null,
+    var id: Int = 0,
+    var firstName: String = "",
+    var lastName: String = "",
     var appointment: Appointment? = null,
-    var lastAppointmentDate: String? = null,
-    var phoneNumber: String? = null,
+    var lastAppointmentDate: String = "",
+    var phoneNumber: String = "",
     var agreedToBeNotify: Boolean = false,
+    var noted: String = "",
 ) {
     val fullName: String
         get() = "$firstName $lastName"
 
     fun copy(
-        id: Int? = this.id,
-        firstName: String? = this.firstName,
-        lastName: String? = this.lastName,
-        appointment: Appointment? = this.appointment,
-        lastAppointmentDate: String? = this.lastAppointmentDate,
-        phoneNumber: String? = this.phoneNumber,
-        agreedToBeNotify: Boolean = this.agreedToBeNotify
+        id: Int = this.id,
+        firstName: String = this.firstName,
+        lastName: String = this.lastName,
+        appointment: Appointment = this.appointment ?: Appointment(),
+        lastAppointmentDate: String = this.lastAppointmentDate,
+        phoneNumber: String = this.phoneNumber,
+        agreedToBeNotify: Boolean = this.agreedToBeNotify,
+        noted: String = this.noted
     ): Customer {
         return Customer(
             id,
@@ -52,7 +54,8 @@ class Customer(
             appointment,
             lastAppointmentDate,
             phoneNumber,
-            agreedToBeNotify
+            agreedToBeNotify,
+            noted
         )
     }
 }

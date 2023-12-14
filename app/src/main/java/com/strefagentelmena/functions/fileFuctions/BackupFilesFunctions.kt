@@ -1,5 +1,6 @@
 package com.strefagentelmena.functions.fileFuctions
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
@@ -14,6 +15,7 @@ import java.io.FileReader
 import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.prefs.Preferences
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -101,7 +103,7 @@ class BackupFilesFunctions {
         val buffer = ByteArray(1024)
 
         // Get the current date and format it as "dd.mm.yyyy"
-        val dateFormat = SimpleDateFormat("dd.MM.yyyy")
+        val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
         val currentDate = dateFormat.format(Date())
 
         // Create a ZipOutputStream for the zip file

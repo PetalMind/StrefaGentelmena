@@ -1,12 +1,8 @@
 package com.strefagentelmena.uiComposable
 
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -33,17 +29,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -96,7 +91,7 @@ class Dialogs {
         onEditCustomer: () -> Unit,
         onDeleteCustomer: () -> Unit,
 
-    ) {
+        ) {
         val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
         val headerText =
             if (selectedCustomer == null) "Nowy klient" else "Edytuj klienta"
@@ -104,7 +99,7 @@ class Dialogs {
         var firstName by remember { mutableStateOf(selectedCustomer?.firstName ?: "") }
         var lastName by remember { mutableStateOf(selectedCustomer?.lastName ?: "") }
         var phoneNumber by remember { mutableStateOf(selectedCustomer?.phoneNumber ?: "") }
-
+        var note by remember { mutableStateOf(selectedCustomer?.noted ?: "") }
         //errors fromViewModel
         val firstNameError by viewModel.firstNameError.observeAsState("")
         val lastNameError by viewModel.lastNameError.observeAsState("")
@@ -227,6 +222,24 @@ class Dialogs {
                             },
                             autoFocus = false
                         )
+                        textModernTextFieldUI.ModernTextField(
+                            value = note,
+                            onValueChange = {
+                                note = it
+                                viewModel.setSelectedCustomerNote(it)
+                            },
+                            label = "Notatka",
+                            isError = false,
+                            supportText = null,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.AccountBox,
+                                    contentDescription = "Person",
+                                )
+                            },
+                            autoFocus = false,
+                            modifier = Modifier.height(150.dp)
+                        )
 
                         buttonsUI.ButtonsRow(
                             cancelText = "Anuluj",
@@ -252,7 +265,6 @@ class Dialogs {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun OnAddOrEditSchedule(
         viewModel: ScheduleModelView,
@@ -658,7 +670,6 @@ class Dialogs {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
     fun showDatePickerDialog(
         context: Context,

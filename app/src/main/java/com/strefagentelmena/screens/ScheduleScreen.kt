@@ -78,7 +78,6 @@ val screenSchedule = Schedule()
 
 class Schedule {
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun ScheduleView(
         navController: NavController,
@@ -125,7 +124,6 @@ class Schedule {
      * @param viewModel
      * @param dashboardModelView
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentSuccesConent(
         navController: NavController,
@@ -215,7 +213,6 @@ class Schedule {
             floatingActionButton = {
                 buttonsUI.ExtendedFab(text = "Dodaj", icon = Icons.Default.Add) {
                     viewModel.setAppoimentState(true)
-                    viewModel.selectedClient.value = null
                     viewModel.showApoimentDialog()
                 }
             },
@@ -265,7 +262,6 @@ class Schedule {
      * @param onClick
      * @receiver
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun TimeLineWithAppointments(
         appointments: List<Appointment>,
@@ -426,7 +422,6 @@ class Schedule {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun generateTimeIntervals(start: LocalTime, end: LocalTime): List<LocalTime> {
         val intervals = mutableListOf<LocalTime>()
         var current = start.plusMinutes(15)  // Start at the first 30 minute interval
@@ -438,7 +433,6 @@ class Schedule {
     }
 
     @OptIn(ExperimentalAnimationApi::class)
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentsList(viewModel: ScheduleModelView, onClick: (Appointment) -> Unit) {
         val appointmentsList by viewModel.appointmentsList.observeAsState(emptyList())
@@ -479,7 +473,6 @@ class Schedule {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun TimeSlotsView(viewModel: ScheduleModelView) {
         val appointmentsList by viewModel.appointmentsList.observeAsState(emptyList())

@@ -1,8 +1,6 @@
 package com.strefagentelmena.viewModel
 
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
@@ -20,25 +18,26 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Period
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.Locale
 
 class MainScreenModelView : ViewModel() {
-    val messages = MutableLiveData<String>("")
-    val viewState = MutableLiveData<AppState>(AppState.Idle)
+    val messages = MutableLiveData("")
+    val viewState = MutableLiveData(AppState.Idle)
     val customersLists = MutableLiveData<List<Customer>>(emptyList())
-    private val appointmentsLists = MutableLiveData<List<Appointment>>(emptyList())
+    val appointmentsLists = MutableLiveData<List<Appointment>>(emptyList())
     val appointmentsToNotify = MutableLiveData<List<Appointment>>(emptyList())
-    val showNotifyDialog = MutableLiveData<Boolean>(false)
-    val upcomingAppointment: MutableLiveData<Appointment?> = MutableLiveData()
-    val profilePreferences = MutableLiveData<ProfilePreferences>()
-    val dataLoaded = MutableLiveData<Boolean>(false)
+    val showNotifyDialog = MutableLiveData(false)
+    val upcomingAppointment: MutableLiveData<Appointment> = MutableLiveData()
+    val profilePreferences = MutableLiveData(ProfilePreferences())
+    val dataLoaded = MutableLiveData(false)
 
-    val _displayGreetings = MutableLiveData(
+    val randomGreetings = MutableLiveData(
         greetingsManager.randomGreeting(profilePreferences.value?.userName ?: "")
     )
 
-    val displayGreetings: MutableLiveData<String> = _displayGreetings
+    val displayGreetings: MutableLiveData<String> = randomGreetings
 
 //    fun createNotification(customerList: List<Appointment>, data: String) {
 //        val notification = Notification(
@@ -74,6 +73,10 @@ class MainScreenModelView : ViewModel() {
         showNotifyDialog.value = false
     }
 
+    fun showNotifyDialog() {
+        showNotifyDialog.value = true
+    }
+
     fun loadAllData(context: Context): Boolean {
         return try {
             loadProfile(context)
@@ -93,10 +96,10 @@ class MainScreenModelView : ViewModel() {
      * @param context
      */
     private fun loadProfile(context: Context) {
-        val loadedProfile = fileFunctionsSettings.loadSettingsFromFile(context)
+        profilePreferences.value = fileFunctionsSettings.loadSettingsFromFile(context)
 
-        profilePreferences.value = loadedProfile
-        _displayGreetings.value = greetingsManager.randomGreeting(loadedProfile.userName)
+        randomGreetings.value =
+            greetingsManager.randomGreeting(profilePreferences.value?.userName ?: "")
     }
 
     /**
@@ -109,11 +112,7 @@ class MainScreenModelView : ViewModel() {
         // Sprawdź, czy funkcja loadCustomersFromFile zwraca poprawny typ
         val loadedCustomers = fileFunctionsClients.loadCustomersFromFile(context)
 
-        // Dodaj warunek, aby uniknąć zwracania pustej listy, jeśli coś poszło nie tak
-        if (loadedCustomers.isNotEmpty()) {
-            // Zaktualizuj customersLists.value, jeśli to jest wymagane
-            customersLists.value = loadedCustomers
-        }
+        customersLists.value = loadedCustomers
 
         // Zwróć załadowanych klientów
         return loadedCustomers
@@ -134,78 +133,74 @@ class MainScreenModelView : ViewModel() {
     }
 
 
-    fun sendNotificationsForUpcomingAppointments(
-        formattedDate: String,
-    ) {
+    fun sendNotificationsForUpcomingAppointments(formattedDate: String) {
         val appointmentsToSend = mutableListOf<Appointment>()
         val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
         val currentTime = LocalDateTime.now()
 
-
         appointmentsLists.value?.let { appointments ->
-            if (appointments.isNotEmpty()) {
-                for (appointment in appointments) {
-                    if (appointment.notificationSent) continue
-                    val appointmentDateTime = LocalDateTime.parse(
-                        "${appointment.date} ${appointment.startTime}",
-                        DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
-                    )
+            appointments.filterNot { it.notificationSent }.forEach { appointment ->
+                val appointmentDateTime = LocalDateTime.parse(
+                    "${appointment.date} ${appointment.startTime}",
+                    DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+                )
 
-                    val startTime = LocalTime.parse(
-                        profilePreferences.value!!.notificationSendStartTime,
-                        DateTimeFormatter.ofPattern("HH:mm")
-                    )
-                    val endTime = LocalTime.parse(
-                        profilePreferences.value!!.notificationSendEndTime,
-                        DateTimeFormatter.ofPattern("HH:mm")
-                    )
+                val startTimeString = profilePreferences.value?.notificationSendStartTime
+                val endTimeString = profilePreferences.value?.notificationSendEndTime
 
-                    val daysDifference = Period.between(
-                        currentTime.toLocalDate(),
-                        appointmentDateTime.toLocalDate()
-                    ).days
+                val startTime = try {
+                    LocalTime.parse(startTimeString, DateTimeFormatter.ofPattern("HH:mm"))
+                } catch (e: DateTimeParseException) {
+                    newMessage("Błąd parsowania czasu początkowego: $e")
+                    LocalTime.of(7, 30) // Default value
+                }
 
-                    if (daysDifference.toLong() == 1L && currentTime.toLocalTime()
-                            .isAfter(startTime) && currentTime.toLocalTime().isBefore(endTime)
-                    ) {
-                        try {
-                            val appointmentDate = dateFormatter.parse(appointment.date)
+                val endTime = try {
+                    LocalTime.parse(endTimeString, DateTimeFormatter.ofPattern("HH:mm"))
+                } catch (e: DateTimeParseException) {
+                    // Handle the error here. For example, you might want to log it, show a message to the user, or set a default value.
+                    newMessage("Błąd parsowania czasu koncowego: $e")
+                    LocalTime.of(20, 30) // Default value
+                }
 
-                            val appointmentLocalDate = appointmentDate?.let {
-                                val calendar = Calendar.getInstance()
-                                calendar.time = it
-                                val year = calendar.get(Calendar.YEAR)
-                                val month =
-                                    calendar.get(Calendar.MONTH) + 1 // Calendar.MONTH jest indeksowane od zera
-                                val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-                                LocalDate.of(year, month, day)
-                            }
+                val daysDifference = Period.between(
+                    currentTime.toLocalDate(),
+                    appointmentDateTime.toLocalDate()
+                ).days
 
-                            val formattedDateLocalDate =
-                                LocalDate.parse(
-                                    formattedDate,
-                                    DateTimeFormatter.ofPattern("dd.MM.yyyy")
-                                )
+                if (daysDifference.toLong() == 1L && currentTime.toLocalTime()
+                        .isAfter(startTime) && currentTime.toLocalTime().isBefore(endTime)
+                ) {
+                    try {
+                        val appointmentDate = dateFormatter.parse(appointment.date)
 
-                            appointmentLocalDate?.let {
-                                // Sprawdzamy, czy wizyta jest dokładnie jutro
-                                if (it == formattedDateLocalDate.plusDays(1)) {
-                                    appointmentsToSend.add(appointment)
-                                }
-                            }
-                            appointmentsToSend.let {
-                                if (it.isNotEmpty()) {
-                                    appointmentsToNotify.value = appointmentsToSend
-                                }
-                            }
-                        } catch (e: Exception) {
-                            // Obsłuż błąd odpowiednio, np. wyślij log do konsoli lub zaktualizuj stan widoku
-                            viewState.value = AppState.Error
+                        val appointmentLocalDate = appointmentDate?.let {
+                            val calendar = Calendar.getInstance()
+                            calendar.time = it
+                            val year = calendar.get(Calendar.YEAR)
+                            val month = calendar.get(Calendar.MONTH) + 1
+                            val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+                            LocalDate.of(year, month, day)
                         }
 
-                    } else {
-                        return
+                        val formattedDateLocalDate = LocalDate.parse(
+                            formattedDate,
+                            DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                        )
+
+                        appointmentLocalDate?.let {
+                            if (it == formattedDateLocalDate.plusDays(1)) {
+                                appointmentsToSend.add(appointment)
+                            }
+                        }
+
+                        if (appointmentsToSend.isNotEmpty()) {
+                            appointmentsToNotify.value = appointmentsToSend
+                        }
+                    } catch (e: Exception) {
+                        viewState.value = AppState.Error
                     }
                 }
             }
@@ -213,8 +208,7 @@ class MainScreenModelView : ViewModel() {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun findNearestAppointmentToday(
+     fun findNearestAppointmentToday(
         currentDateTime: LocalDateTime = LocalDateTime.now()
     ): Appointment? {
         val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
@@ -242,12 +236,11 @@ class MainScreenModelView : ViewModel() {
                         minTimeDifference = timeDifference
                         nearestAppointment = appointment
                     }
-
-                    upcomingAppointment.value = nearestAppointment
                 }
             } catch (e: Exception) {
                 // Obsłuż błąd odpowiednio, np. wyślij log do konsoli lub zaktualizuj stan widoku
-                viewState.value = AppState.Error
+                viewState.value = AppState.Idle
+
             }
         }
 
@@ -273,10 +266,13 @@ class MainScreenModelView : ViewModel() {
 
             appointmentsLists.value = currentAppointments
 
-            filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsLists.value)
+            filesFunctionsAppoiments.saveAppointmentToFile(
+                context,
+                appointmentsLists.value ?: emptyList()
+            )
 
             customersLists.value?.get(clientIndex)?.appointment = appointment
-            fileFunctionsClients.saveCustomersToFile(context, customersLists.value)
+            fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: emptyList())
 
             customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
             appointmentsLists.value = filesFunctionsAppoiments.loadAppointmentFromFile(context)
@@ -284,7 +280,11 @@ class MainScreenModelView : ViewModel() {
         }
     }
 
-    fun findCustomerByName(name: String): Customer? {
+    private fun findCustomerByName(name: String): Customer? {
         return customersLists.value?.firstOrNull { it.fullName == name }
+    }
+
+    fun setAppointmentsToNotify(emptyList: List<Appointment>) {
+        appointmentsToNotify.value = emptyList
     }
 }

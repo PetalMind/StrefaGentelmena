@@ -43,7 +43,6 @@ import com.strefagentelmena.viewModel.SettingsModelView
 val settingsScreen = SettingsScreen()
 
 class SettingsScreen {
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun SettingsView(viewModel: SettingsModelView, navController: NavController) {
         val viewState by viewModel.viewState.observeAsState(AppState.Idle)

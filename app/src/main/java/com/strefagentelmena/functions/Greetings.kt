@@ -24,7 +24,6 @@ class Greetings {
         )
     }
 
-
     fun randomGreeting(name: String): String {
         val greetings = generateGreeting(name)
         return greetings.random() ?: "Brak pozdrowień, coś poszło nie tak."

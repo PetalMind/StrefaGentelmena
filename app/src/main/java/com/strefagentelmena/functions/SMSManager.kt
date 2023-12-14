@@ -25,7 +25,6 @@ class SMSManager {
      * @param viewModel
      * @param context
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     fun sendNotification(
         appointment: Appointment,
         profile: ProfilePreferences

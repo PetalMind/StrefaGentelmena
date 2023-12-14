@@ -28,7 +28,7 @@ class FilesFunctionsAppoiments {
         }
     }
 
-    fun saveAppointmentToFile(context: Context, appointments: List<Appointment>?) {
+    fun saveAppointmentToFile(context: Context, appointments: List<Appointment?>) {
         val gson = Gson()
         val jsonString = gson.toJson(appointments)
         val file = File(context.filesDir, "appointment.json")

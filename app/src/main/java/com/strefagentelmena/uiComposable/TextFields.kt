@@ -338,7 +338,6 @@ class TextFields {
         picker.show()
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun showTimePickerDialog(context: Context, onTimeSet: (String) -> Unit) {
         val currentTime = LocalTime.now()
         val timePickerDialog = TimePickerDialog(

@@ -1,8 +1,7 @@
 package com.strefagentelmena.screens
 
 import android.Manifest
-import android.os.Build
-import androidx.annotation.RequiresApi
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.LinearEasing
@@ -53,6 +52,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.strefagentelmena.R
 import com.strefagentelmena.appViewStates
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
+import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
+import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.greetingsManager
 import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.models.AppoimentsModel.Appointment
@@ -109,6 +111,17 @@ class MainScreen {
             }
         }
 
+        LaunchedEffect(Unit) {
+            viewModel.setViewState(AppState.Idle)
+            viewModel.dataLoaded.value = false
+        }
+
+        LaunchedEffect(viewState) {
+            if (viewState == AppState.Error) {
+                viewModel.setViewState(AppState.Idle)
+            }
+        }
+
         when (viewState) {
             AppState.Idle -> {
                 viewModel.loadData(context = context)
@@ -145,12 +158,12 @@ class MainScreen {
         val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
         val upcomingAppointment by viewModel.upcomingAppointment.observeAsState(Appointment())
         val profilePreference by viewModel.profilePreferences.observeAsState(ProfilePreferences())
+        val customersList by viewModel.customersLists.observeAsState(emptyList())
         val greetingRandom by viewModel.displayGreetings.observeAsState(
             greetingsManager.randomGreeting(
                 profilePreference.userName
             )
         )
-
 
         val currentDay = remember {
             mutableStateOf(
@@ -190,14 +203,12 @@ class MainScreen {
             }
         }
 
-        LaunchedEffect(clientsToNotify, profilePreference) {
+        LaunchedEffect(clientsToNotify) {
             if (clientsToNotify.isNotEmpty()) {
-                viewModel.showNotifyDialog.value = true
+                viewModel.showNotifyDialog()
             }
-
-            viewModel._displayGreetings.value =
-                greetingsManager.randomGreeting(profilePreference.userName)
         }
+
 
         // Aktualizacja aktualnego czasu co 5 sekund
         LaunchedEffect(currentTimeString) {
@@ -210,6 +221,8 @@ class MainScreen {
                 viewModel.sendNotificationsForUpcomingAppointments(
                     currentDay.value
                 )
+
+                viewModel.upcomingAppointment.value = viewModel.findNearestAppointmentToday()
             }
         }
 
@@ -249,13 +262,13 @@ class MainScreen {
 
                         PermissionAwareComponent()
 
-                        if(upcomingAppointment?.id != 0) {
+                        if (upcomingAppointment?.id != 0) {
                             upcomingAppointment?.let { cardUI.UpcomingClientCard(appointment = it) }
                         }
 
                         Row {
                             cardUI.DashboardSmallCard(iconId = R.drawable.ic_clients,
-                                labelText = viewModel.customersLists.value?.size.toString(),
+                                labelText = customersList.size.toString(),
                                 nameText = "Klienci Salonu",
                                 onClick = { navController.navigate("customersScreen") })
 
@@ -270,29 +283,43 @@ class MainScreen {
                         //footerUI.AppFooter(context = context)
                     }
                 }
+
                 if (showNotifyDialog) {
-                    PopUpDialogs().NotifyDialog(
-                        onClick = {
-                            clientsToNotify.forEach {
-                                profilePreference?.let { profile ->
+                    if (profilePreference.notificationSendAutomatic) {
+                        clientsToNotify.forEach {
+                            smsManager.sendNotification(
+                                it, profile = profilePreference
+                            )
+
+                            viewModel.editAppointment(context, it, true)
+                        }
+                        viewModel.newMessage("Wysłano powiadomienia dla ${clientsToNotify.size} klientów")
+
+                        viewModel.setAppointmentsToNotify(emptyList())
+                        viewModel.hideNotifyDialog()
+                    } else {
+                        PopUpDialogs().NotifyDialog(
+                            onClick = {
+                                clientsToNotify.forEach {
+
                                     smsManager.sendNotification(
-                                        it, profile = profile
+                                        it, profile = profilePreference
                                     )
+
+                                    viewModel.editAppointment(context, it, true)
                                 }
 
-                                viewModel.editAppointment(context, it, true)
-                            }
-                            viewModel.appointmentsToNotify.value = emptyList()
-                            viewModel.hideNotifyDialog()
-
-                        },
-                        onDismissRequest = {
-                            viewModel.appointmentsToNotify.value = emptyList()
-                            viewModel.hideNotifyDialog()
-                        },
-                        clientCountString = clientsToNotify.size.toString(),
-                        appoiments = clientsToNotify
-                    )
+                                viewModel.setAppointmentsToNotify(emptyList())
+                                viewModel.hideNotifyDialog()
+                            },
+                            onDismissRequest = {
+                                viewModel.setAppointmentsToNotify(emptyList())
+                                viewModel.hideNotifyDialog()
+                            },
+                            clientCountString = clientsToNotify.size.toString(),
+                            appoiments = clientsToNotify
+                        )
+                    }
                 }
             }
         }

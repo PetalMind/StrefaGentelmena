@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.Customer
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -28,17 +31,17 @@ val formUI = Form()
 
 class Form {
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun AppointmentForm(
         viewModel: ScheduleModelView,
         onSave: () -> Unit,
         onCancel: () -> Unit,
     ) {
-        val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
+        val selectedAppointment by viewModel.selectedAppointment.observeAsState(Appointment())
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState()
         val currentSelectedAppoinmentsDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
         val isNewAppointment by viewModel.isNewAppointment.observeAsState(false)
+        val selectedClient by viewModel.selectedClient.observeAsState(Customer())
 
         val context = LocalContext.current
 
@@ -49,7 +52,6 @@ class Form {
 
         LaunchedEffect(Unit) {
             if (isNewAppointment) {
-                viewModel.selectedClient.value = null
                 viewModel.clearDate()
 
                 val currentTime = LocalTime.now()
@@ -57,7 +59,8 @@ class Form {
                 viewModel.setNewTime(currentTime.format(DateTimeFormatter.ofPattern("HH:mm")))
                     .toString()
             } else {
-                selectedAppointment?.startTime ?: ""
+                viewModel.selectedClient.value =
+                    viewModel.findCustomerByName(selectedAppointment?.customer?.fullName ?: "")
             }
 
             viewModel.selectedAppointmentDate.value = currentSelectedAppoinmentsDate
@@ -94,6 +97,15 @@ class Form {
 
             if (startTimeError) {
                 Text("Niepoprawna godzina rozpoczęcia", color = Color.Red)
+            }
+
+            if (selectedClient?.noted?.isNotEmpty() == true) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Notatka: ${selectedClient?.noted}",
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
 
             buttonsUI.ButtonsRow(

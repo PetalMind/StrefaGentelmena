@@ -41,6 +41,16 @@ class Selectors {
 
         LaunchedEffect(isNewAppointment) {
             isNew.value = isNewAppointment
+
+            if (!isNewAppointment) {
+                val findClient = viewModel.findCustomerByName(selectedClient?.fullName ?: "")
+
+                if (findClient != null) {
+                    viewModel.setSelectedClient(findClient)
+
+                    selectedClientName.value = findClient.fullName ?: "Wybierz klienta"
+                }
+            }
         }
 
         dialogsUI.FullScreenLogisticDialogSelector(

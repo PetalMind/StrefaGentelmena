@@ -127,7 +127,6 @@ class Headers {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getVisitTimes(appointments: List<Appointment>?, selectedDate: LocalDate): String {
         val filteredAppointments = appointments?.filterNot { it.date.isEmpty() }?.filter {
             LocalDate.parse(it.date, DateTimeFormatter.ofPattern("dd.MM.yyyy")) == selectedDate
@@ -144,14 +143,12 @@ class Headers {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getCustomerCount(appointments: List<Appointment>?, selectedDate: LocalDate): Int {
         return appointments?.filterNot { it.date.isEmpty() }?.filter {
             LocalDate.parse(it.date, DateTimeFormatter.ofPattern("dd.MM.yyyy")) == selectedDate
         }?.size ?: 0
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun CalendarHeaderView(viewModel: ScheduleModelView) {
         val selectedDateText by viewModel.currentSelectedAppoinmentsDate.observeAsState()
@@ -198,7 +195,6 @@ class Headers {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun CalendarHeader(
         currentDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH),

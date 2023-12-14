@@ -22,9 +22,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -38,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,9 +84,10 @@ class CustomerScreen {
         val context = LocalContext.current
         val searchText = remember { mutableStateOf("") }
 
-        val showedList by rememberUpdatedState(
+        val showedList = rememberUpdatedState(
             if (searchState) searchedCustomerList else customerList
         )
+
 
         // Inicjalizacja stanu Scaffold
         val scope = rememberCoroutineScope()
@@ -116,6 +126,7 @@ class CustomerScreen {
                     onBackPressed = {
                         navController.navigate("mainScreen")
                     }, compose = {
+                        SortMenu(viewModel)
                         Box(modifier = Modifier.padding(end = 8.dp)) {
                             Box(
                                 modifier = Modifier
@@ -149,10 +160,11 @@ class CustomerScreen {
                             },
                             searchText = searchText,
                         )
+
                     }
                 }
 
-                if (showedList.isEmpty()) {
+                if (showedList.value.isEmpty()) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Text(
                             text = "Lista klientów jest pusta",
@@ -163,7 +175,7 @@ class CustomerScreen {
                     }
                 } else {
                     ClientLazyColumn(
-                        customerList = showedList,
+                        customerList = showedList.value,
                         paddingValues = PaddingValues(8.dp, 4.dp),
                         onCustomerClick = { customer ->
                             viewModel.selectedCustomer.value = customer
@@ -190,10 +202,12 @@ class CustomerScreen {
                     easing = LinearEasing,
                 ),
             ) + expandIn(),
-            exit = slideOutVertically( animationSpec = tween(
-                durationMillis = 700,
-                easing = LinearEasing,
-            ),) + shrinkOut()
+            exit = slideOutVertically(
+                animationSpec = tween(
+                    durationMillis = 700,
+                    easing = LinearEasing,
+                ),
+            ) + shrinkOut()
         ) {
             dialogsUI.OnAddOrEditCustomerDialog(
                 onClose = { viewModel.closeAddClientDialog() },
@@ -219,10 +233,71 @@ class CustomerScreen {
             exit = fadeOut() + shrinkOut()
         ) {
             dialogsUI.DeleteDialog(onDismiss = { viewModel.closeDeleteDialog() }, onConfirm = {
-                selectedClient?.let { viewModel.deleteCustomer(context = context, customer = it) }
-                viewModel.closeDeleteDialog()
-                viewModel.closeAllDialogs()
+                selectedClient?.let {
+                    viewModel.deleteCustomer(context = context, customer = it)
+                }
             }, objectName = selectedClient?.fullName ?: "")
+        }
+    }
+
+    @Composable
+    fun SortMenu(viewModel: CustomersModelView) {
+        var expanded by remember { mutableStateOf(false) }
+        val context = LocalContext.current
+
+        Box(modifier = Modifier.padding(end = 8.dp)) {
+            Box(
+                modifier = Modifier
+                    .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                    .clip(RoundedCornerShape(15.dp))
+                    .padding(10.dp)
+                    .clickable {
+                        expanded = !expanded
+                    }
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = "Search",
+                )
+            }
+        }
+
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(onClick = {
+                viewModel.sortClientsByName()
+                expanded = false
+            }, text = { Text(text = "Sortuj alfabetycznie") },
+                leadingIcon = {
+                    Icon(Icons.Filled.Person, contentDescription = "Sort Options")
+                })
+
+            DropdownMenuItem(onClick = {
+                viewModel.sortClientsByDate()
+                expanded = false
+            }, text = { Text(text = "Sortuj po dacie od najnowszych") },
+                leadingIcon = {
+                    Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
+                })
+
+            DropdownMenuItem(onClick = {
+                viewModel.sortClientsByDateDesc()
+                expanded = false
+            }, text = { Text(text = "Sortuj po dacie od najstarszych") },
+                leadingIcon = {
+                    Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
+                })
+
+            DropdownMenuItem(onClick = {
+                viewModel.sortClientsNormal(context)
+                expanded = false
+            }, text = { Text(text = "Sortuj normalnie") },
+                leadingIcon = {
+                    Icon(Icons.Filled.Person, contentDescription = "Sort Options")
+                })
         }
     }
 
