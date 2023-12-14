@@ -53,7 +53,10 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.strefagentelmena.R
 import com.strefagentelmena.appViewStates
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.greetingsManager
 import com.strefagentelmena.functions.smsManager
+import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import com.strefagentelmena.ui.theme.StrefaGentelmenaTheme
 import com.strefagentelmena.uiComposable.PopUpDialogs
 import com.strefagentelmena.uiComposable.buttonsUI
@@ -91,8 +94,6 @@ class MainScreen {
         }
     }
 
-
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun DashboardView(
         navController: NavController,
@@ -100,10 +101,9 @@ class MainScreen {
     ) {
         val context = LocalContext.current
         val viewState by viewModel.viewState.observeAsState(AppState.Idle)
-        val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
         val dataLoaded by viewModel.dataLoaded.observeAsState(false)
 
-        LaunchedEffect(key1 = dataLoaded) {
+        LaunchedEffect(dataLoaded) {
             if (dataLoaded) {
                 viewModel.setViewState(AppState.Success)
             }
@@ -135,7 +135,6 @@ class MainScreen {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun DashboardSuccessView(
         navController: NavController,
@@ -144,9 +143,14 @@ class MainScreen {
         val messages by viewModel.messages.observeAsState("")
         val showNotifyDialog by viewModel.showNotifyDialog.observeAsState(false)
         val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
-        val greetingRandom by viewModel.displayGreetings.observeAsState("")
-        val upcomingAppointment by viewModel.upcomingAppointment.observeAsState()
-        val profilePreference by viewModel.profilePreferences.observeAsState()
+        val upcomingAppointment by viewModel.upcomingAppointment.observeAsState(Appointment())
+        val profilePreference by viewModel.profilePreferences.observeAsState(ProfilePreferences())
+        val greetingRandom by viewModel.displayGreetings.observeAsState(
+            greetingsManager.randomGreeting(
+                profilePreference.userName
+            )
+        )
+
 
         val currentDay = remember {
             mutableStateOf(
@@ -190,6 +194,9 @@ class MainScreen {
             if (clientsToNotify.isNotEmpty()) {
                 viewModel.showNotifyDialog.value = true
             }
+
+            viewModel._displayGreetings.value =
+                greetingsManager.randomGreeting(profilePreference.userName)
         }
 
         // Aktualizacja aktualnego czasu co 5 sekund
@@ -242,7 +249,10 @@ class MainScreen {
 
                         PermissionAwareComponent()
 
-                        upcomingAppointment?.let { cardUI.UpcomingClientCard(appointment = it) }
+                        if(upcomingAppointment?.id != 0) {
+                            upcomingAppointment?.let { cardUI.UpcomingClientCard(appointment = it) }
+                        }
+
                         Row {
                             cardUI.DashboardSmallCard(iconId = R.drawable.ic_clients,
                                 labelText = viewModel.customersLists.value?.size.toString(),
@@ -266,7 +276,7 @@ class MainScreen {
                             clientsToNotify.forEach {
                                 profilePreference?.let { profile ->
                                     smsManager.sendNotification(
-                                        it,profile = profile
+                                        it, profile = profile
                                     )
                                 }
 

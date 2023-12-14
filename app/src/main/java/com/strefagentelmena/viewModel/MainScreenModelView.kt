@@ -34,10 +34,8 @@ class MainScreenModelView : ViewModel() {
     val profilePreferences = MutableLiveData<ProfilePreferences>()
     val dataLoaded = MutableLiveData<Boolean>(false)
 
-    private val _displayGreetings = MutableLiveData(
-        (if (profilePreferences.value?.userName != null) profilePreferences.value?.userName else "")?.let {
-            greetingsManager.randomGreeting()
-        }
+    val _displayGreetings = MutableLiveData(
+        greetingsManager.randomGreeting(profilePreferences.value?.userName ?: "")
     )
 
     val displayGreetings: MutableLiveData<String> = _displayGreetings
@@ -55,7 +53,6 @@ class MainScreenModelView : ViewModel() {
 //        notificationList.postValue(updatedList)
 //    }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun loadData(context: Context) {
         dataLoaded.value = loadAllData(context)
     }
@@ -77,13 +74,11 @@ class MainScreenModelView : ViewModel() {
         showNotifyDialog.value = false
     }
 
-
-    @RequiresApi(Build.VERSION_CODES.O)
     fun loadAllData(context: Context): Boolean {
         return try {
+            loadProfile(context)
             loadCustomersList(context)
             loadApointmentsList(context)
-            loadProfile(context)
             findNearestAppointmentToday()
             true // All operations succeeded
         } catch (e: Exception) {
@@ -92,12 +87,16 @@ class MainScreenModelView : ViewModel() {
         }
     }
 
-    fun loadProfile(context: Context) {
+    /**
+     * Load profile
+     *
+     * @param context
+     */
+    private fun loadProfile(context: Context) {
         val loadedProfile = fileFunctionsSettings.loadSettingsFromFile(context)
 
         profilePreferences.value = loadedProfile
-        greetingsManager.name = loadedProfile.userName
-        displayGreetings.value = greetingsManager.randomGreeting()
+        _displayGreetings.value = greetingsManager.randomGreeting(loadedProfile.userName)
     }
 
     /**
@@ -135,7 +134,6 @@ class MainScreenModelView : ViewModel() {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun sendNotificationsForUpcomingAppointments(
         formattedDate: String,
     ) {

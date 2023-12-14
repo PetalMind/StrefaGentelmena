@@ -1,18 +1,16 @@
 package com.strefagentelmena.functions
+
 val greetingsManager = Greetings()
+
 class Greetings {
-    var name: String = ""
-        set(value) {
-            field = value
-            generateAndPrintGreetings()
-        }
+
 
     /**
      * Generate greeting
      *
      * @return
      */
-    private fun generateGreeting(): List<String> {
+    private fun generateGreeting(name: String): List<String> {
         return listOf(
             "Miło Cię widzieć $name",
             "Dzień dobry, $name!",
@@ -27,13 +25,8 @@ class Greetings {
     }
 
 
-    private fun generateAndPrintGreetings() {
-        val greetings = generateGreeting()
-        greetings.forEach { println(it) }
-    }
-
-    fun randomGreeting(): String {
-        val greetings = generateGreeting()
+    fun randomGreeting(name: String): String {
+        val greetings = generateGreeting(name)
         return greetings.random() ?: "Brak pozdrowień, coś poszło nie tak."
     }
 }

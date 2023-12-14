@@ -6,15 +6,14 @@ import com.strefagentelmena.models.Customer
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-class Appointment @RequiresApi(Build.VERSION_CODES.O) constructor(
-    var id: Int,
-    var customer: Customer,
-    var date: String,
-    var startTime: String,
-    var notificationSent: Boolean,
+class Appointment (
+    var id: Int = 0,
+    var customer: Customer = Customer(),
+    var date: String = "",
+    var startTime: String = "",
+    var notificationSent: Boolean = false,
 ) {
     companion object {
-        @RequiresApi(Build.VERSION_CODES.O)
         fun calculateEndTime(startTime: String): String {
             val start = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"))
             val end = start.plusHours(1)
