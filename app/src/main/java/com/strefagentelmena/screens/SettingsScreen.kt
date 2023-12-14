@@ -69,7 +69,6 @@ class SettingsScreen {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun SettingsSuccessView(viewModel: SettingsModelView, navController: NavController) {
         val snackbarHostState = SnackbarHostState()

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "641264768492",
+    "project_id": "strefagentlemena",
+    "storage_bucket": "strefagentlemena.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:641264768492:android:bb5db237ad1c93f4afdcc9",
+        "android_client_info": {
+          "package_name": "com.strefagentelmena"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_L-NMfC2erIAd1mngx4SMXlrOwv15LSM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

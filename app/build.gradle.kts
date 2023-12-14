@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.strefagentelmena"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.4"
@@ -28,6 +28,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -68,6 +69,10 @@ dependencies {
     implementation(libs.androidx.compose.livedata)
     implementation(libs.accompanist.permissions.get())
     implementation(libs.accompanist.permissions)
+    implementation(libs.google.services)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+
 
     //  implementation(libs.runtime)
     testImplementation(libs.junit)

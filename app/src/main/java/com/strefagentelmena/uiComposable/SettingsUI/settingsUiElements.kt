@@ -13,13 +13,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -33,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.strefagentelmena.uiComposable.colorsUI
 
 val settingsUiElements = SettingsUiElements()
 
@@ -61,7 +67,7 @@ class SettingsUiElements {
             onClick = {
                 onClick()
             },
-            shape = androidx.compose.material3.MaterialTheme.shapes.medium,
+            shape = MaterialTheme.shapes.medium,
             colors = androidx.compose.material3.CardDefaults.cardColors(
                 containerColor = Color.White
             ),
@@ -106,6 +112,50 @@ class SettingsUiElements {
         }
 
     }
+
+    @Composable
+    fun CustomSwitch(
+        checked: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
+        contentDescription: String = "Switch",
+        text: String,
+        modifier: Modifier = Modifier
+    ) {
+        Row(
+            modifier = modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = colorsUI.mintGreen,
+                    checkedTrackColor = colorsUI.teaGreen,
+                    uncheckedThumbColor = colorsUI.murrey,
+                    uncheckedTrackColor = colorsUI.grey
+                ),
+                thumbContent = if (checked) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = contentDescription,
+                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                        )
+                    }
+                } else {
+                    null
+                }
+            )
+
+            Text(
+                text = text,
+                modifier = Modifier.padding(start = 10.dp),
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+
 
     @Composable
     fun ExpandedContent(composable: @Composable () -> Unit) {

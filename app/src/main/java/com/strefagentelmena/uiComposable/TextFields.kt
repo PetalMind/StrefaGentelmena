@@ -262,13 +262,14 @@ class TextFields {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun TimeOutlinedTextField(
         value: String,
         onValueChange: (String) -> Unit,
         onFocusLost: (Boolean) -> Unit,
+        modifier: Modifier = Modifier,
+        label: String
     ) {
         val context = LocalContext.current
         val focusRequester = remember { FocusRequester() }
@@ -278,13 +279,14 @@ class TextFields {
             shape = RoundedCornerShape(8.dp),  // Brak zaokrąglenia
             shadowElevation = 4.dp,
             color = MaterialTheme.colorScheme.surface,
+            modifier = modifier
         ) {
             TextField(value = value,
                 onValueChange = { onValueChange(it) },
                 singleLine = true,
                 label = {
                     Text(
-                        "Godzina wizyty", color = MaterialTheme.colorScheme.primary
+                        label, color = MaterialTheme.colorScheme.primary
                     )
                 },
                 readOnly = true,

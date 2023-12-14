@@ -87,8 +87,10 @@ class Form {
 
             textModernTextFieldUI.TimeOutlinedTextField(
                 value = startTime,
-                onValueChange = { viewModel.setNewTime(it) }
-            ) {}
+                onValueChange = { viewModel.setNewTime(it) },
+                onFocusLost = {},
+                label = "Godzina rozpoczęcia"
+            )
 
             if (startTimeError) {
                 Text("Niepoprawna godzina rozpoczęcia", color = Color.Red)

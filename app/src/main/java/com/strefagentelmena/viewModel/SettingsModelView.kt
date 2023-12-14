@@ -4,27 +4,99 @@ import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.fileFuctions.BackupFilesFunctions
+import com.strefagentelmena.functions.fileFuctions.backupFilesFunctions
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
+import com.strefagentelmena.models.settngsModel.BackupPreferences
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
 
 class SettingsModelView : ViewModel() {
     val viewState = MutableLiveData<AppState>(AppState.Idle)
     val messages = MutableLiveData("")
+    val backupPrefecences = MutableLiveData(BackupPreferences())
+    val profilePreferences = MutableLiveData(ProfilePreferences())
     val profileName = MutableLiveData("")
     val notificationSendStartTime = MutableLiveData("")
     val notificationSendEndTime = MutableLiveData("")
-    val greetingsLists = MutableLiveData<MutableList<String>>(mutableListOf())
-    val notificationMessage =
+    val notificationSendAutomatic = MutableLiveData(false)
+    val isBackupCreated = MutableLiveData(false)
+    val backupCustom = MutableLiveData(false)
+    val backupAutomatic = MutableLiveData(false)
+    val backupCustomers = MutableLiveData(false)
+    val backupAppoiments = MutableLiveData(false)
+    val backupDate = MutableLiveData("")
+
+    private val greetingsLists = MutableLiveData<MutableList<String>>(mutableListOf())
+
+    private val notificationMessage =
         MutableLiveData("Przypominamy o wizycie w dniu {data wizyty} o godzinie {godzina ropozczęcia} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola.")
 
     val profileViewState = MutableLiveData<Boolean>(false)
     val notificationViewState = MutableLiveData<Boolean>(false)
-    val greetingsViewState = MutableLiveData<Boolean>(false)
+    val greetingsViewState = MutableLiveData(false)
     val backButtonViewState = MutableLiveData<Boolean>(false)
     val updateViewState = MutableLiveData<Boolean>(false)
 
     fun setProfileViewState() {
         profileViewState.value = !profileViewState.value!!
+    }
+
+    fun setProfilePreferences(): ProfilePreferences {
+        // Sprawdź, czy wartości nie są null, zanim utworzysz obiekt ProfilePreferences
+        val userName = profileName.value ?: ""
+        val startTime = notificationSendStartTime.value
+            ?: ""
+        val endTime = notificationSendEndTime.value
+            ?: ""
+        val greetings = greetingsLists.value ?: mutableListOf()
+        val sendAutomatic = notificationSendAutomatic.value
+            ?: false
+        val backupPreferences = backupPrefecences.value
+            ?: BackupPreferences()
+
+        // Utwórz i zwróć obiekt ProfilePreferences z wartościami
+        val LoadedprofilePreferences = ProfilePreferences(
+            userName = userName,
+            notificationSendStartTime = startTime,
+            notificationSendEndTime = endTime,
+            greetingsLists = greetings,
+            notificationSendAutomatic = sendAutomatic,
+            backupPreferences = backupPreferences
+        )
+
+        // Zaktualizuj MutableState, jeśli to konieczne
+        profilePreferences.value = LoadedprofilePreferences
+
+        return LoadedprofilePreferences
+    }
+
+
+    fun setCustomBackupViewState(value: Boolean) {
+        backupCustom.value = value
+    }
+
+    fun setBackupCreatedViewState(value: Boolean) {
+        isBackupCreated.value = value
+    }
+
+    fun setAutomaticBackupViewState(value: Boolean) {
+        backupAutomatic.value = value
+    }
+
+    fun setBackupDate(backupDate: String) {
+        this.backupDate.value = backupDate
+    }
+
+    fun setCustomersBackupViewState(value: Boolean) {
+        backupCustomers.value = value
+    }
+
+    fun setAppoimentsBackupViewState(value: Boolean) {
+        backupAppoiments.value = value
+    }
+
+    fun setAutomaticNotificationViewState(value: Boolean) {
+        notificationSendAutomatic.value = value
     }
 
     fun setNotificationViewState() {
@@ -43,7 +115,7 @@ class SettingsModelView : ViewModel() {
         updateViewState.value = !updateViewState.value!!
     }
 
-    fun setViewState(state: AppState) {
+    private fun setViewState(state: AppState) {
         viewState.value = state
     }
 
@@ -71,7 +143,7 @@ class SettingsModelView : ViewModel() {
         this.notificationMessage.value = notificationMessage
     }
 
-    fun closeAllStates(){
+    fun closeAllStates() {
         profileViewState.value = false
         notificationViewState.value = false
         greetingsViewState.value = false
@@ -88,18 +160,23 @@ class SettingsModelView : ViewModel() {
             notificationSendStartTime.value = it.notificationSendStartTime
             notificationSendEndTime.value = it.notificationSendEndTime
             greetingsLists.value = it.greetingsLists
+            notificationSendAutomatic.value = it.notificationSendAutomatic
+            backupPrefecences.value = it.backupPreferences
         }
-
+        profilePreferences.value = setProfilePreferences()
         setViewState(AppState.Success)
     }
 
     fun saveAllData(context: Context) {
         setViewState(AppState.Loading)
+
         val preferences = ProfilePreferences(
             userName = profileName.value ?: "",
             notificationSendStartTime = notificationSendStartTime.value ?: "",
             notificationSendEndTime = notificationSendEndTime.value ?: "",
             greetingsLists = greetingsLists.value ?: mutableListOf(),
+            notificationSendAutomatic = notificationSendAutomatic.value ?: false,
+            backupPreferences = backupPrefecences.value ?: BackupPreferences()
         )
 
         fileFunctionsSettings.saveSettingsToFile(context = context, preferences = preferences)
@@ -108,5 +185,30 @@ class SettingsModelView : ViewModel() {
         setViewState(AppState.Success)
     }
 
+    fun createBackup(context: Context) {
+        setViewState(AppState.Loading)
+
+        val preferences = BackupPreferences(
+            isBackupCreated = isBackupCreated.value ?: false,
+            backupCustom = backupCustom.value ?: false,
+            backupAutomatic = backupAutomatic.value ?: false,
+            backupCustomers = backupCustomers.value ?: false,
+            backupAppoiments = backupAppoiments.value ?: false
+        )
+
+        backupPrefecences.value = preferences
+        profilePreferences.value?.backupPreferences = preferences
+
+        backupFilesFunctions.createBackupFile(context = context)
+
+        setViewState(AppState.Idle)
+    }
+
+    fun loadBackup(context: Context) {
+        setViewState(AppState.Loading)
+        backupFilesFunctions.readBackupFile(context = context)
+
+        setViewState(AppState.Idle)
+    }
 
 }

@@ -1,21 +1,31 @@
 package com.strefagentelmena.uiComposable.settingsUI
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.strefagentelmena.R
+import com.strefagentelmena.models.settngsModel.BackupPreferences
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
@@ -58,40 +68,44 @@ class SettingsViews {
     fun NotificationView(viewModel: SettingsModelView) {
         val notificationSendStartTime by viewModel.notificationSendStartTime.observeAsState("")
         val notificationSendEndTime by viewModel.notificationSendEndTime.observeAsState("")
-        val notificationMessage by viewModel.notificationMessage.observeAsState("")
+        val notificationSendAutomatic by viewModel.notificationSendAutomatic.observeAsState(false)
+
         val context = LocalContext.current
 
-        Column(Modifier.fillMaxSize()) {
-            textModernTextFieldUI.ModernTextField(
+        Column(
+            Modifier
+                .fillMaxSize()
+        ) {
+            textModernTextFieldUI.TimeOutlinedTextField(
                 value = notificationSendStartTime,
                 onValueChange = { it -> viewModel.setNotificationSendStartTime(it) },
+                onFocusLost = {},
                 modifier = Modifier.padding(10.dp),
-                label = "Godzina rozpoczęcia wysyłania komunikatów",
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_clock),
-                        contentDescription = null
-                    )
-                },
+                label = "Godzina rozpoczęcia wysyłania powiadomienia",
             )
 
-            textModernTextFieldUI.ModernTextField(
+            textModernTextFieldUI.TimeOutlinedTextField(
                 value = notificationSendEndTime,
                 onValueChange = { it -> viewModel.setNotificationSendEndTime(it) },
+                onFocusLost = {},
                 modifier = Modifier.padding(10.dp),
-                label = "Godzina aakończenia wysyłania komunikatów",
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_clock),
-                        contentDescription = null
-                    )
-                }
+                label = "Godzina zakonczenia wysyłania powiadomienia",
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            settingsUiElements.CustomSwitch(
+                checked = notificationSendAutomatic,
+                onCheckedChange = {
+                    viewModel.setAutomaticNotificationViewState(it)
+                },
+                text = "Automatycznie wysyłaj powiadomienia",
+                modifier = Modifier.padding(10.dp),
+            )
+
 
             buttonsUI.ButtonsRow(
                 onClick = {
-                    viewModel.setNotificationSendEndTime(notificationSendEndTime)
-                    viewModel.setNotificationSendStartTime(notificationSendStartTime)
                     viewModel.saveAllData(context = context)
                     viewModel.setNotificationViewState()
                 },
@@ -102,15 +116,88 @@ class SettingsViews {
     }
 
     @Composable
-    fun GreetingsView(viewModel: SettingsModelView) {
-        val greetingsMessage by viewModel.greetingsLists.observeAsState("")
-        Column(Modifier.fillMaxSize()) {
-        }
-    }
-
-    @Composable
     fun BackupView(viewModel: SettingsModelView) {
-        Column(Modifier.fillMaxSize()) {
+        val context = LocalContext.current
+        val backupPreferences by viewModel.backupPrefecences.observeAsState(BackupPreferences())
+        val isBackupCreated by viewModel.isBackupCreated.observeAsState(false)
+        val customBackupPreferences by viewModel.backupCustom.observeAsState(false)
+        val backupCustomers by viewModel.backupCustomers.observeAsState(false)
+        val backupAppoiments by viewModel.backupAppoiments.observeAsState(false)
+        val backupAutomatic by viewModel.backupAutomatic.observeAsState(false)
+
+        Column(
+            Modifier
+                .fillMaxSize()
+        ) {
+            Column {
+                Text(
+                    "Utwórz kopie zapasową",
+                    modifier = Modifier.padding(10.dp),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                settingsUiElements.CustomSwitch(
+                    checked = isBackupCreated,
+                    onCheckedChange = {
+                        viewModel.setBackupCreatedViewState(it)
+                    },
+                    text = "Utwórz kopie zapasową automatycznie co 7 dni",
+                )
+
+                settingsUiElements.CustomSwitch(
+                    checked = customBackupPreferences,
+                    onCheckedChange = {
+                        viewModel.setCustomBackupViewState(it)
+                    },
+                    text = "Utwórz kopie zapasową z osobnymi ustawieniami",
+                )
+
+                if (customBackupPreferences) {
+
+                    settingsUiElements.CustomSwitch(
+                        checked = backupCustomers,
+                        onCheckedChange = {
+                            viewModel.setCustomersBackupViewState(it)
+                        },
+                        text = "Utwórz kopie zapasową klientów"
+                    )
+
+                    settingsUiElements.CustomSwitch(checked = backupAppoiments, onCheckedChange = {
+                        viewModel.setAppoimentsBackupViewState(it)
+                    }, text = " Utwórz kopie zapasową wizyt")
+                }
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    buttonsUI.PrimaryButton(
+                        text = "Utwórz kopie",
+                        onClick = {
+                            viewModel.createBackup(context = context)
+                        },
+                        containerColor =
+                        colorsUI.mintGreen,
+                    )
+                }
+            }
+
+            Column {
+                Text(
+                    "Odtwórz kopie",
+                    modifier = Modifier.padding(10.dp),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    buttonsUI.PrimaryButton(
+                        text = "Odtwórz kopie",
+                        onClick = { viewModel.loadBackup(context) },
+                        containerColor = colorsUI.headersBlue
+                    )
+                }
+            }
         }
     }
 
