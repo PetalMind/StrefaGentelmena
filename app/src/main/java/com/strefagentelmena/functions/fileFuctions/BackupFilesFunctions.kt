@@ -10,6 +10,7 @@ import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.settngsModel.Backup
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.FileReader
 import java.io.FileWriter
@@ -25,7 +26,7 @@ val backupFilesFunctions = BackupFilesFunctions()
 
 class BackupFilesFunctions {
     //crete backup file to store data
-    fun createBackupFile(context: Context) {
+    fun createBackupFile(context: Context): Boolean {
         val file = File(context.filesDir, "backup.json")
 
         // Load data from other files
@@ -48,34 +49,41 @@ class BackupFilesFunctions {
         val fileWriter = FileWriter(file)
         fileWriter.write(jsonString)
         fileWriter.close()
+
+        return file.exists()
     }
 
-    fun readBackupFile(context: Context) {
+    fun readBackupFile(context: Context): Boolean {
         val file = File(context.filesDir, "backup.json")
-        val fileReader = FileReader(file)
-        val gson = Gson()
 
-        val backupType = object : TypeToken<Backup>() {}.type
-        val backup = gson.fromJson<Backup>(fileReader, backupType)
+        if (file.exists()) {
+            val fileReader = FileReader(file)
+            val gson = Gson()
 
-        fileReader.close()
+            val backupType = object : TypeToken<Backup>() {}.type
+            val backup = gson.fromJson<Backup>(fileReader, backupType)
 
-        // Extract data from the Backup instance
-        val preferences = backup.profileCopy
-        val customersList = backup.customersCopy
-        val appointmentsList = backup.appoimentsCopy
+            fileReader.close()
 
-        //save no empty lists
-        if (customersList.isNotEmpty()) {
-            fileFunctionsClients.saveCustomersToFile(context, customersList)
+            // Extract data from the Backup instance
+            val preferences = backup.profileCopy
+            val customersList = backup.customersCopy
+            val appointmentsList = backup.appoimentsCopy
+
+            //save no empty lists
+            if (customersList.isNotEmpty()) {
+                fileFunctionsClients.saveCustomersToFile(context, customersList)
+            }
+            if (appointmentsList.isNotEmpty()) {
+                filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList)
+            }
+
+            if (!preferences.backupPreferences.isBackupCreated) {
+                fileFunctionsSettings.saveSettingsToFile(context, preferences)
+            }
         }
-        if (appointmentsList.isNotEmpty()) {
-            filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList)
-        }
 
-        if (!preferences.backupPreferences.isBackupCreated) {
-            fileFunctionsSettings.saveSettingsToFile(context, preferences)
-        }
+        return file.exists()
     }
 
     fun unzipFile(zipFilePath: String, destinationDir: String) {

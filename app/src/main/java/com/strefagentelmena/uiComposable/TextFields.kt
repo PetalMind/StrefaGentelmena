@@ -77,11 +77,9 @@ class TextFields {
         autoFocus: Boolean = false,
         modifier: Modifier = Modifier
     ) {
-        var isFocused by remember { mutableStateOf(false) }
         val interactionSource = remember { MutableInteractionSource() }
         val softwareKeyboardController = LocalSoftwareKeyboardController.current ?: return
         val focusRequester = remember { FocusRequester() }
-        val focusManager = LocalFocusManager.current
 
         LaunchedEffect(autoFocus) {
             if (autoFocus) {
@@ -97,7 +95,8 @@ class TextFields {
             modifier = modifier.padding(vertical = 4.dp)
         ) {
             Column {
-                TextField(value = value,
+                TextField(
+                    value = value,
                     onValueChange = { onValueChange(it) },
                     label = { Text(label) },
                     isError = isError,

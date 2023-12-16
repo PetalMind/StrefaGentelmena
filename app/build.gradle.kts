@@ -13,7 +13,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "1.4"
+        versionName = "1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.accompanist.permissions.get())
     implementation(libs.accompanist.permissions)
     implementation(libs.google.services)
+    implementation(libs.google.services.get())
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
 

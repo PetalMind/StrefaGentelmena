@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,21 +81,20 @@ class MainScreen {
     @Composable
     fun PermissionAwareComponent() {
         val smsPermissionState = rememberPermissionState(Manifest.permission.SEND_SMS)
+        val context = LocalContext.current
+        val lifecycleOwner = LocalLifecycleOwner.current
 
-        if (!smsPermissionState.hasPermission && !smsPermissionState.shouldShowRationale) {
-            // Wyświetl pytanie o uprawnienia, nawet jeśli wcześniej zostały one odmówione
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                buttonsUI.CustomTextButton(
-                    text = "Udziel uprawnień do SMS",
-                    onClick = { smsPermissionState.launchPermissionRequest() },
-                    width = 250.dp
-                )
+        LaunchedEffect(smsPermissionState) {
+            val lifecycle = lifecycleOwner.lifecycle
+            val permissionResult = smsPermissionState.hasPermission
+
+            if (!permissionResult) {
+                // Prośba o uprawnienia, nawet jeśli wcześniej zostały one odmówione
+                smsPermissionState.launchPermissionRequest()
             }
         }
     }
+
 
     @Composable
     fun DashboardView(
@@ -116,11 +116,7 @@ class MainScreen {
             viewModel.dataLoaded.value = false
         }
 
-        LaunchedEffect(viewState) {
-            if (viewState == AppState.Error) {
-                viewModel.setViewState(AppState.Idle)
-            }
-        }
+
 
         when (viewState) {
             AppState.Idle -> {
@@ -135,6 +131,7 @@ class MainScreen {
             }
 
             AppState.Error -> {
+                viewModel.setViewState(AppState.Idle)
 
             }
 
@@ -143,7 +140,7 @@ class MainScreen {
             }
 
             else -> {
-                //   DashboardSuccessView(navController, viewModel)
+                viewModel.setViewState(AppState.Idle)
             }
         }
     }
@@ -221,8 +218,6 @@ class MainScreen {
                 viewModel.sendNotificationsForUpcomingAppointments(
                     currentDay.value
                 )
-
-                viewModel.upcomingAppointment.value = viewModel.findNearestAppointmentToday()
             }
         }
 

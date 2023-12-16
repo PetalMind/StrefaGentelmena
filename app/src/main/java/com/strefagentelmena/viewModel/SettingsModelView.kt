@@ -102,10 +102,6 @@ class SettingsModelView : ViewModel() {
         notificationViewState.value = !notificationViewState.value!!
     }
 
-    fun setGreetingsViewState() {
-        greetingsViewState.value = !greetingsViewState.value!!
-    }
-
     fun setBackButtonViewState() {
         backButtonViewState.value = !backButtonViewState.value!!
     }
@@ -118,7 +114,7 @@ class SettingsModelView : ViewModel() {
         viewState.value = state
     }
 
-    fun setMessages(message: String) {
+    private fun setMessages(message: String) {
         messages.value = message
     }
 
@@ -134,13 +130,6 @@ class SettingsModelView : ViewModel() {
         this.notificationSendEndTime.value = notificationSendEndTime
     }
 
-    fun setGreetingsLists(greetingsLists: MutableList<String>) {
-        this.greetingsLists.value = greetingsLists
-    }
-
-    fun setNotificationMessage(notificationMessage: String) {
-        this.notificationMessage.value = notificationMessage
-    }
 
     fun closeAllStates() {
         profileViewState.value = false
@@ -179,8 +168,9 @@ class SettingsModelView : ViewModel() {
         )
 
         fileFunctionsSettings.saveSettingsToFile(context = context, preferences = preferences)
-        fileFunctionsSettings.loadSettingsFromFile(context = context)
+        profilePreferences.value = fileFunctionsSettings.loadSettingsFromFile(context = context)
 
+        setMessages("Zapisano zmiany")
         setViewState(AppState.Success)
     }
 
@@ -198,16 +188,28 @@ class SettingsModelView : ViewModel() {
         backupPrefecences.value = preferences
         profilePreferences.value?.backupPreferences = preferences
 
-        backupFilesFunctions.createBackupFile(context = context)
+        if (backupFilesFunctions.createBackupFile(context = context)) {
+            setMessages("Utworzono kopę zapasowa")
+        } else {
+            setMessages("Nie udało się utworzenie kopii zapasowej")
+        }
 
         setViewState(AppState.Idle)
     }
 
     fun loadBackup(context: Context) {
         setViewState(AppState.Loading)
-        backupFilesFunctions.readBackupFile(context = context)
+        if (backupFilesFunctions.readBackupFile(context = context)) {
+            setMessages("Przywrócono kopię zapasową")
+        } else {
+            setMessages("Nie znaleziono kopii zapasowej")
+        }
 
         setViewState(AppState.Idle)
+    }
+
+    fun clearMessages() {
+        messages.value = ""
     }
 
 }

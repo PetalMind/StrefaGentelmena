@@ -11,10 +11,10 @@ import com.strefagentelmena.models.CustomerIdGenerator
 class CustomersModelView : ViewModel() {
     val customersLists = MutableLiveData<List<Customer>>(emptyList())
     val searchedCustomersLists = MutableLiveData<List<Customer>>(emptyList())
-    var selectedCustomer = MutableLiveData<Customer?>(null)
+    var selectedCustomer = MutableLiveData<Customer?>(Customer())
     val messages = MutableLiveData<String>("")
     val searchState = MutableLiveData<Boolean>(false)
-    val selectedCustomerNote = MutableLiveData<String>("")
+    private val selectedCustomerNote = MutableLiveData<String>("")
 
     //form Errors
     val firstNameError = MutableLiveData<String>()
@@ -54,7 +54,7 @@ class CustomersModelView : ViewModel() {
                 customer.fullName.contains(
                     query,
                     ignoreCase = true
-                ) || customer.phoneNumber?.contains(query, ignoreCase = true) == true
+                ) || customer.phoneNumber.contains(query, ignoreCase = true)
             }
         } else {
             customersToSearch
@@ -71,15 +71,15 @@ class CustomersModelView : ViewModel() {
     }
 
     fun setCustomerName(name: String) {
-        customerName.value = name
+        customerName.value = name.filterNot { it.isWhitespace() }
     }
 
     fun setCustomerLastName(lastname: String) {
-        customerLastName.value = lastname
+        customerLastName.value = lastname.filterNot { it.isWhitespace() }
     }
 
     fun setCustomerPhoneNumber(phoneNumber: String) {
-        customerPhoneNumber.value = phoneNumber
+        customerPhoneNumber.value = phoneNumber.filterNot { it.isWhitespace() }
     }
 
     fun setShowSearchState(showSearchState: Boolean) {
@@ -190,16 +190,30 @@ class CustomersModelView : ViewModel() {
     }
 
     fun validateFirstName(firstName: String) {
+        val namePattern = Regex("^[a-zA-Z]+$")
+        val lengthPattern = Regex("^.{2,20}$")
+
         if (firstName.isEmpty()) {
             firstNameError.postValue("Imię nie może być puste")
+        } else if (!namePattern.matches(firstName)) {
+            firstNameError.postValue("Imię może zawierać tylko litery")
+        } else if (!lengthPattern.matches(firstName)) {
+            firstNameError.postValue("Imię nie może być dłuższe niż 20 znaków")
         } else {
             firstNameError.postValue("")
         }
     }
 
     fun validateLastName(lastName: String) {
+        val namePattern = Regex("^[a-zA-Z]+$")
+        val lengthPattern = Regex("^.{2,20}$")
+
         if (lastName.isEmpty()) {
             lastNameError.postValue("Nazwisko nie może być puste")
+        } else if (!namePattern.matches(lastName)) {
+            lastNameError.postValue("Nazwisko może zawierać tylko litery")
+        } else if (!lengthPattern.matches(lastName)) {
+            lastNameError.postValue("Nazwisko nie może być dłuższe niż 20 znaków")
         } else {
             lastNameError.postValue("")
         }
@@ -310,5 +324,9 @@ class CustomersModelView : ViewModel() {
 
     fun sortClientsByDateDesc() {
         customersLists.value = customersLists.value?.sortedBy { it.appointment?.date }
+    }
+
+    fun setSelectedCustomer(customer: Customer) {
+        selectedCustomer.value = customer
     }
 }

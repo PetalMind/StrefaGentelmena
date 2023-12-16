@@ -12,7 +12,6 @@ import com.strefagentelmena.models.AppoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import java.text.SimpleDateFormat
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -77,12 +76,13 @@ class MainScreenModelView : ViewModel() {
         showNotifyDialog.value = true
     }
 
-    fun loadAllData(context: Context): Boolean {
+    private fun loadAllData(context: Context): Boolean {
         return try {
             loadProfile(context)
-            loadCustomersList(context)
-            loadApointmentsList(context)
-            findNearestAppointmentToday()
+            customersLists.value = loadCustomersList(context)
+            appointmentsLists.value = loadApointmentsList(context)
+            upcomingAppointment.value = findNearestAppointmentToday() ?: Appointment()
+
             true // All operations succeeded
         } catch (e: Exception) {
             setViewState(AppState.Error)
@@ -109,27 +109,14 @@ class MainScreenModelView : ViewModel() {
      * @return
      */
     private fun loadCustomersList(context: Context): List<Customer> {
-        // Sprawdź, czy funkcja loadCustomersFromFile zwraca poprawny typ
-        val loadedCustomers = fileFunctionsClients.loadCustomersFromFile(context)
-
-        customersLists.value = loadedCustomers
 
         // Zwróć załadowanych klientów
-        return loadedCustomers
+        return fileFunctionsClients.loadCustomersFromFile(context)
     }
 
     private fun loadApointmentsList(context: Context): List<Appointment> {
-        // Sprawdź, czy funkcja loadCustomersFromFile zwraca poprawny typ
-        val loadedAppointments = filesFunctionsAppoiments.loadAppointmentFromFile(context)
-
-        // Dodaj warunek, aby uniknąć zwracania pustej listy, jeśli coś poszło nie tak
-        if (loadedAppointments.isNotEmpty()) {
-            // Zaktualizuj customersLists.value, jeśli to jest wymagane
-            appointmentsLists.value = loadedAppointments
-        }
-
         // Zwróć załadowanych klientów
-        return loadedAppointments
+        return filesFunctionsAppoiments.loadAppointmentFromFile(context)
     }
 
 
@@ -207,10 +194,17 @@ class MainScreenModelView : ViewModel() {
         }
     }
 
-
-     fun findNearestAppointmentToday(
+    /**
+     * Find nearest appointment today
+     *
+     * @param currentDateTime
+     * @return
+     */
+    fun findNearestAppointmentToday(
         currentDateTime: LocalDateTime = LocalDateTime.now()
     ): Appointment? {
+        val oneHourLater = currentDateTime.plusHours(1)
+
         val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
         val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -228,19 +222,15 @@ class MainScreenModelView : ViewModel() {
                 )
 
                 // Sprawdzamy, czy wizyta jest na dzisiaj i po aktualnej godzinie
-                if (appointment.date == currentDate && appointment.startTime > currentTime) {
-                    val timeDifference =
-                        Duration.between(currentDateTime, appointmentDateTime).toMillis()
-
-                    if (timeDifference < minTimeDifference) {
-                        minTimeDifference = timeDifference
-                        nearestAppointment = appointment
-                    }
+                if (appointmentDateTime.isAfter(currentDateTime) && appointmentDateTime.isBefore(
+                        oneHourLater
+                    )
+                ) {
+                    nearestAppointment = appointment
                 }
             } catch (e: Exception) {
                 // Obsłuż błąd odpowiednio, np. wyślij log do konsoli lub zaktualizuj stan widoku
                 viewState.value = AppState.Idle
-
             }
         }
 

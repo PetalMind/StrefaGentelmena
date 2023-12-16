@@ -115,7 +115,7 @@ class CustomerScreen {
             },
             floatingActionButton = {
                 buttonsUI.ExtendedFab(text = "Dodaj", icon = Icons.Default.Add, onClick = {
-                    viewModel.selectedCustomer.value = null
+                    viewModel.setSelectedCustomer(Customer())
                     viewModel.showAddCustomerDialog()
                 })
             },
@@ -275,10 +275,12 @@ class CustomerScreen {
                     Icon(Icons.Filled.Person, contentDescription = "Sort Options")
                 })
 
-            DropdownMenuItem(onClick = {
+            DropdownMenuItem(
+                onClick = {
                 viewModel.sortClientsByDate()
                 expanded = false
-            }, text = { Text(text = "Sortuj po dacie od najnowszych") },
+            },
+                text = { Text(text = "Sortuj po dacie od najnowszych") },
                 leadingIcon = {
                     Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
                 })
@@ -289,14 +291,6 @@ class CustomerScreen {
             }, text = { Text(text = "Sortuj po dacie od najstarszych") },
                 leadingIcon = {
                     Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
-                })
-
-            DropdownMenuItem(onClick = {
-                viewModel.sortClientsNormal(context)
-                expanded = false
-            }, text = { Text(text = "Sortuj normalnie") },
-                leadingIcon = {
-                    Icon(Icons.Filled.Person, contentDescription = "Sort Options")
                 })
         }
     }

@@ -23,8 +23,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +41,7 @@ import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
 import com.strefagentelmena.viewModel.SettingsModelView
+import kotlinx.coroutines.launch
 
 val settingsScreen = SettingsScreen()
 
@@ -76,7 +79,18 @@ class SettingsScreen {
         val greetingsViewState by viewModel.greetingsViewState.observeAsState(false)
         val backButtonViewState by viewModel.backButtonViewState.observeAsState(false)
         val updateViewState by viewModel.updateViewState.observeAsState(false)
+        val message by viewModel.messages.observeAsState("")
 
+        val scope = rememberCoroutineScope()
+
+        LaunchedEffect(message) {
+            if (message.isNotEmpty()) {
+                scope.launch {
+                    snackbarHostState.showSnackbar(message)
+                    viewModel.clearMessages()
+                }
+            }
+        }
 
         Scaffold(
             snackbarHost = {
@@ -121,7 +135,7 @@ class SettingsScreen {
                             viewModel.setNotificationViewState()
                         },
                         expandedComposable = {
-                                settingsViews.NotificationView(viewModel = viewModel)
+                            settingsViews.NotificationView(viewModel = viewModel)
                         },
                         expandedState = notificationViewState
                     )

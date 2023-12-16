@@ -97,7 +97,7 @@ class Cards {
 
                     PlainTooltipBox(
                         tooltip = {
-                            Text("Kto jest następny?\n Pokazuje klienta spotykającego się w ciągu godziny.")
+                            Text("Kto jest następny?\nPokazuje klienta spotykającego się w ciągu godziny.")
                         },
                         tooltipState = tooltipState
                     ) {
@@ -115,8 +115,7 @@ class Cards {
 
                 Text(
                     text = appointment.customer.fullName,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = colorsUI.fontGrey,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -141,7 +140,6 @@ class Cards {
                             appFunctions.dialPhoneNumber(
                                 context = context,
                                 phoneNumber = appointment.customer.phoneNumber
-                                    ?: return@PrimaryButton
                             )
                         },
                         text = "Nie zwlekaj, dzwoń!",

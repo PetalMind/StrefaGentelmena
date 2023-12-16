@@ -72,6 +72,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
+import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.Customer
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.channels.BufferOverflow
@@ -90,25 +92,23 @@ class Dialogs {
         onAddCustomer: () -> Unit,
         onEditCustomer: () -> Unit,
         onDeleteCustomer: () -> Unit,
-
-        ) {
-        val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
-        val headerText =
-            if (selectedCustomer == null) "Nowy klient" else "Edytuj klienta"
-
+    ) {
+        val selectedCustomer by viewModel.selectedCustomer.observeAsState(Customer())
         var firstName by remember { mutableStateOf(selectedCustomer?.firstName ?: "") }
         var lastName by remember { mutableStateOf(selectedCustomer?.lastName ?: "") }
         var phoneNumber by remember { mutableStateOf(selectedCustomer?.phoneNumber ?: "") }
         var note by remember { mutableStateOf(selectedCustomer?.noted ?: "") }
+
         //errors fromViewModel
         val firstNameError by viewModel.firstNameError.observeAsState("")
         val lastNameError by viewModel.lastNameError.observeAsState("")
         val phoneNumberError by viewModel.phoneNumberError.observeAsState("")
+        val headerText =
+            if (selectedCustomer?.id == 0) "Nowy klient" else "Edytuj klienta"
 
         val focusRequester = remember { FocusRequester() }
         val keyboardController = LocalSoftwareKeyboardController.current
 
-        val pressed = remember { mutableStateOf(false) }
         val buttonEnabled = firstNameError.isEmpty()
                 && lastNameError.isEmpty()
                 && phoneNumberError.isEmpty()
@@ -116,16 +116,11 @@ class Dialogs {
                 && firstName.isNotBlank()
                 && lastName.isNotBlank()
 
-
-        LaunchedEffect(Unit) {
-            focusRequester.requestFocus()
-            keyboardController?.show()
-        }
-
         LaunchedEffect(selectedCustomer) {
-            if (selectedCustomer != null) {
+            if (selectedCustomer?.id != 0) {
                 viewModel.setSelectedCustomerData()
             }
+
         }
 
         Dialog(
@@ -147,7 +142,7 @@ class Dialogs {
                         onClick = {},
                         onBackPressed = { onClose() },
                         compose = {
-                            if (selectedCustomer != null) {
+                            if (selectedCustomer?.id != 0) {
                                 buttonsUI.HeaderIconButton(
                                     icon = R.drawable.ic_delete,
                                     onClick = {
@@ -185,9 +180,9 @@ class Dialogs {
                         textModernTextFieldUI.ModernTextField(
                             value = lastName,
                             onValueChange = {
-                                lastName = it
-                                viewModel.validateLastName(it)
-                                viewModel.setCustomerLastName(it)
+                                lastName = it.filterNot { it.isWhitespace() }
+                                viewModel.validateLastName(it.filterNot { it.isWhitespace() })
+                                viewModel.setCustomerLastName(it.filterNot { it.isWhitespace() })
                             },
                             label = "Nazwisko",
                             isError = lastNameError.isNotEmpty(),
@@ -271,9 +266,8 @@ class Dialogs {
     ) {
         val isNewState by viewModel.isNewAppointment.observeAsState(false)
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
-        val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
-        val customersList by viewModel.customersList.observeAsState(emptyList())
-        val selectedClient by viewModel.selectedClient.observeAsState(null)
+        val selectedAppointment by viewModel.selectedAppointment.observeAsState(Appointment())
+        val selectedClient by viewModel.selectedClient.observeAsState(Customer())
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState(if (isNewState) selectedAppointment?.date else "")
         val selectedTime by viewModel.selectedAppointmentTime.observeAsState(if (isNewState) selectedAppointment?.startTime else "")
 
@@ -285,10 +279,17 @@ class Dialogs {
         val context = LocalContext.current
 
         LaunchedEffect(selectedAppointment) {
-            if (selectedAppointment != null) {
+            if (selectedAppointment?.id != 0) {
                 if (selectedDate != selectedAppointment?.date || selectedTime != selectedAppointment?.startTime) {
                     sendNotification.value = true
                 }
+            }
+        }
+
+        LaunchedEffect(isNewState) {
+            if (isNewState) {
+                viewModel.setSelectedClient(Customer())
+                viewModel.selectedAppointment.value = Appointment()
             }
         }
 
@@ -337,7 +338,7 @@ class Dialogs {
                         formUI.AppointmentForm(
                             viewModel = viewModel,
                             onSave = {
-                                if (selectedClient != null && selectedDate?.isNotEmpty() == true && selectedTime?.isNotEmpty() == true) {
+                                if (selectedClient?.id != 0 && selectedDate?.isNotEmpty() == true && selectedTime?.isNotEmpty() == true) {
                                     if (isNewState) {
                                         viewModel.createNewApointment(
                                             isNew = isNewState,
@@ -632,9 +633,7 @@ class Dialogs {
                     isError = showError,
                     interactionSource = interactionSource,
                     leadingIcon = {
-                        if (leadingIcon != null) {
-                            leadingIcon()
-                        }
+                        leadingIcon
                     },
                     modifier = Modifier
                         .fillMaxWidth(),
@@ -666,7 +665,6 @@ class Dialogs {
                 openDialog = dialogShouldOpen.value
             )
         }
-
     }
 
 
