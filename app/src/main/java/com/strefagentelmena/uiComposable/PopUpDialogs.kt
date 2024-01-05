@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.strefagentelmena.R
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 
 class PopUpDialogs {
 
@@ -100,8 +100,14 @@ class PopUpDialogs {
                             modifier = Modifier.padding(top = 16.dp)
                         )
 
+                        val clientText = if (clientCountString == "1") {
+                            "Niech 1 klient będzie przygotowany na jutro!"
+                        } else {
+                            "Niech każdy z $clientCountString klientów będzie przygotowany na jutro!"
+                        }
+
                         Text(
-                            text = "Niech każdy z $clientCountString klientów będzie przygotowany na jutro!",
+                            text = clientText,
                             fontSize = 16.sp,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -142,8 +148,13 @@ class PopUpDialogs {
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 16.sp
                                         )
+
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text(text = appointment.date, fontSize = 14.sp)
+
+                                        Text(
+                                            text = appointment.startTime.toString() + " - " + appointment.date.toString(),
+                                            fontSize = 14.sp
+                                        )
                                     }
                                 }
                             }

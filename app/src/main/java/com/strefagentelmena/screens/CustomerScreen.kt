@@ -5,7 +5,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -23,8 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
@@ -32,7 +29,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -79,7 +75,7 @@ class CustomerScreen {
         val searchState by viewModel.searchState.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
-        val selectedClient by viewModel.selectedCustomer.observeAsState(Customer())
+        val selectedClient by viewModel.selectedCustomer.observeAsState(null)
 
         val context = LocalContext.current
         val searchText = remember { mutableStateOf("") }
@@ -87,7 +83,6 @@ class CustomerScreen {
         val showedList = rememberUpdatedState(
             if (searchState) searchedCustomerList else customerList
         )
-
 
         // Inicjalizacja stanu Scaffold
         val scope = rememberCoroutineScope()
@@ -115,7 +110,7 @@ class CustomerScreen {
             },
             floatingActionButton = {
                 buttonsUI.ExtendedFab(text = "Dodaj", icon = Icons.Default.Add, onClick = {
-                    viewModel.setSelectedCustomer(Customer())
+                    viewModel.setSelectedCustomer(null)
                     viewModel.showAddCustomerDialog()
                 })
             },
@@ -126,7 +121,6 @@ class CustomerScreen {
                     onBackPressed = {
                         navController.navigate("mainScreen")
                     }, compose = {
-                        SortMenu(viewModel)
                         Box(modifier = Modifier.padding(end = 8.dp)) {
                             Box(
                                 modifier = Modifier
@@ -143,12 +137,16 @@ class CustomerScreen {
                                 )
                             }
                         }
+                        SortMenu(viewModel)
                     })
             },
         ) { paddingValues ->
-            Column(modifier = Modifier.padding(paddingValues)) {
+            Column(
+                modifier = Modifier.padding(paddingValues),
+            ) {
                 AnimatedVisibility(visible = searchState) {
                     Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 10.dp)
@@ -210,7 +208,7 @@ class CustomerScreen {
             ) + shrinkOut()
         ) {
             dialogsUI.OnAddOrEditCustomerDialog(
-                onClose = { viewModel.closeAddClientDialog() },
+                onClose = { viewModel.closeCustomerDialog() },
                 onAddCustomer = {
                     if (viewModel.validateAllFields()
                     ) {
@@ -230,13 +228,14 @@ class CustomerScreen {
         AnimatedVisibility(
             visible = deleteDialogState,
             enter = fadeIn() + expandIn(),
-            exit = fadeOut() + shrinkOut()
         ) {
             dialogsUI.DeleteDialog(onDismiss = { viewModel.closeDeleteDialog() }, onConfirm = {
                 selectedClient?.let {
                     viewModel.deleteCustomer(context = context, customer = it)
+                    viewModel.closeAllDialogs()
                 }
-            }, objectName = selectedClient?.fullName ?: "")
+            },
+                objectName = selectedClient?.fullName ?: "")
         }
     }
 
@@ -277,9 +276,9 @@ class CustomerScreen {
 
             DropdownMenuItem(
                 onClick = {
-                viewModel.sortClientsByDate()
-                expanded = false
-            },
+                    viewModel.sortClientsByDate()
+                    expanded = false
+                },
                 text = { Text(text = "Sortuj po dacie od najnowszych") },
                 leadingIcon = {
                     Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")

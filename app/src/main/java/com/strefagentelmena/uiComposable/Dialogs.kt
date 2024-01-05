@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -72,13 +73,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 val dialogsUI = Dialogs()
 
@@ -93,7 +96,7 @@ class Dialogs {
         onEditCustomer: () -> Unit,
         onDeleteCustomer: () -> Unit,
     ) {
-        val selectedCustomer by viewModel.selectedCustomer.observeAsState(Customer())
+        val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
         var firstName by remember { mutableStateOf(selectedCustomer?.firstName ?: "") }
         var lastName by remember { mutableStateOf(selectedCustomer?.lastName ?: "") }
         var phoneNumber by remember { mutableStateOf(selectedCustomer?.phoneNumber ?: "") }
@@ -104,10 +107,9 @@ class Dialogs {
         val lastNameError by viewModel.lastNameError.observeAsState("")
         val phoneNumberError by viewModel.phoneNumberError.observeAsState("")
         val headerText =
-            if (selectedCustomer?.id == 0) "Nowy klient" else "Edytuj klienta"
+            if (selectedCustomer == null) "Nowy klient" else "Edytuj klienta"
 
         val focusRequester = remember { FocusRequester() }
-        val keyboardController = LocalSoftwareKeyboardController.current
 
         val buttonEnabled = firstNameError.isEmpty()
                 && lastNameError.isEmpty()
@@ -120,7 +122,6 @@ class Dialogs {
             if (selectedCustomer?.id != 0) {
                 viewModel.setSelectedCustomerData()
             }
-
         }
 
         Dialog(
@@ -158,9 +159,10 @@ class Dialogs {
                         textModernTextFieldUI.ModernTextField(
                             value = firstName,
                             onValueChange = {
-                                firstName = it
-                                viewModel.validateFirstName(it)
-                                viewModel.setCustomerName(it)
+                                val newValue = it.replace(" ", "")
+                                firstName = newValue
+                                viewModel.validateFirstName(newValue)
+                                viewModel.setCustomerName(newValue)
                             },
                             label = "Imię",
                             modifier = Modifier
@@ -174,15 +176,15 @@ class Dialogs {
                                     contentDescription = "Person",
                                 )
                             },
-                            autoFocus = true,
                         )
 
                         textModernTextFieldUI.ModernTextField(
                             value = lastName,
                             onValueChange = {
-                                lastName = it.filterNot { it.isWhitespace() }
-                                viewModel.validateLastName(it.filterNot { it.isWhitespace() })
-                                viewModel.setCustomerLastName(it.filterNot { it.isWhitespace() })
+                                val newValue = it.replace(" ", "")
+                                lastName = newValue
+                                viewModel.validateLastName(newValue)
+                                viewModel.setCustomerLastName(newValue)
                             },
                             label = "Nazwisko",
                             isError = lastNameError.isNotEmpty(),
@@ -193,17 +195,17 @@ class Dialogs {
                                     contentDescription = "Person",
                                 )
                             },
-                            autoFocus = false
                         )
 
                         textModernTextFieldUI.ModernTextField(
                             value = phoneNumber,
                             onValueChange = {
-                                if (it.length <= 9) {
-                                    phoneNumber = it
+                                val newValue = it.replace(" ", "")
+                                if (newValue.length <= 9) {
+                                    phoneNumber = newValue
                                 }
-                                viewModel.validatePhoneNumber(it)
-                                viewModel.setCustomerPhoneNumber(it)
+                                viewModel.validatePhoneNumber(newValue)
+                                viewModel.setCustomerPhoneNumber(newValue)
                             },
                             label = "Numer Telefonu",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -215,7 +217,6 @@ class Dialogs {
                                     contentDescription = "Person",
                                 )
                             },
-                            autoFocus = false
                         )
                         textModernTextFieldUI.ModernTextField(
                             value = note,
@@ -232,7 +233,6 @@ class Dialogs {
                                     contentDescription = "Person",
                                 )
                             },
-                            autoFocus = false,
                             modifier = Modifier.height(150.dp)
                         )
 
@@ -268,8 +268,28 @@ class Dialogs {
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(Appointment())
         val selectedClient by viewModel.selectedClient.observeAsState(Customer())
-        val selectedDate by viewModel.selectedAppointmentDate.observeAsState(if (isNewState) selectedAppointment?.date else "")
-        val selectedTime by viewModel.selectedAppointmentTime.observeAsState(if (isNewState) selectedAppointment?.startTime else "")
+
+        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+        val selectedDate = if (selectedAppointment != null) {
+            LocalDate.parse(
+                if (isNewState) selectedAppointment.date else viewModel.currentDate, formatter
+            )
+        } else {
+            LocalDate.now()
+        }
+
+
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+        val selectedTime = if (selectedAppointment != null) {
+            LocalTime.parse(
+                (if (isNewState) selectedAppointment.startTime else viewModel.currentTime).toString(),
+                timeFormatter
+            )
+        } else {
+            LocalTime.now()
+        }
+
+        val appointmentError by viewModel.appointmentError.observeAsState("")
 
         val sendNotification = remember {
             mutableStateOf(false)
@@ -279,8 +299,15 @@ class Dialogs {
         val context = LocalContext.current
 
         LaunchedEffect(selectedAppointment) {
-            if (selectedAppointment?.id != 0) {
-                if (selectedDate != selectedAppointment?.date || selectedTime != selectedAppointment?.startTime) {
+            if (selectedAppointment?.id != 0 && selectedAppointment != null) {
+                if (selectedDate != LocalDate.parse(
+                        selectedAppointment.date.toString(),
+                        formatter
+                    ) || selectedTime != LocalTime.parse(
+                        selectedAppointment.startTime.toString(),
+                        timeFormatter
+                    )
+                ) {
                     sendNotification.value = true
                 }
             }
@@ -338,15 +365,11 @@ class Dialogs {
                         formUI.AppointmentForm(
                             viewModel = viewModel,
                             onSave = {
-                                if (selectedClient?.id != 0 && selectedDate?.isNotEmpty() == true && selectedTime?.isNotEmpty() == true) {
+                                if (selectedClient?.id != 0) {
                                     if (isNewState) {
-                                        viewModel.createNewApointment(
+                                        viewModel.createNewAppointment(
                                             isNew = isNewState,
-                                            selectedClient = selectedClient,
-                                            date = selectedDate ?: return@AppointmentForm,
-                                            startTime = selectedTime
-                                                ?: return@AppointmentForm,
-                                            context
+                                            context = context
                                         )
                                     } else {
                                         viewModel.editAppointment(
@@ -364,6 +387,7 @@ class Dialogs {
                 }
             }
         }
+
         if (deleteDialogState) {
             DeleteDialog(
                 objectName = "${selectedAppointment?.customer?.fullName ?: ""}\n${selectedAppointment?.date}",
@@ -565,90 +589,46 @@ class Dialogs {
         },
         showError: Boolean = false,
         modifier: Modifier = Modifier,
-        leadingIcon: @Composable (() -> Unit)? = null,  // nowy argument dla ikony
+        leadingIcon: @Composable (() -> Unit)? = null, // new argument for the icon
     ) {
         var selectedItemState by remember(selectedItem) { mutableStateOf(selectedItem) }
 
-        val interactionSource = remember {
-            object : MutableInteractionSource {
-                override val interactions = MutableSharedFlow<Interaction>(
-                    extraBufferCapacity = 16,
-                    onBufferOverflow = BufferOverflow.DROP_OLDEST,
-                )
-
-                override suspend fun emit(interaction: Interaction) {
-                    if (interaction is PressInteraction.Release) {
-                        if (isEditable) {
-                            dialogShouldOpen.value = !dialogShouldOpen.value
-                        }
-                    }
-
-                    interactions.emit(interaction)
-                }
-
-                override fun tryEmit(interaction: Interaction): Boolean {
-                    return interactions.tryEmit(interaction)
-                }
-            }
-        }
+        val interactionSource = remember { MutableInteractionSource() }
 
         LaunchedEffect(selectedItemState) {
             onItemChange(selectedItemState)
         }
 
-        Box(
-            modifier = modifier
+        OutlinedTextField(
+            value = selectedItemState,
+            onValueChange = onItemChange,
+            label = {
+                Text(
+                    labelText, color = MaterialTheme.colorScheme.primary
+                )
+            },
+            readOnly = true,
+            enabled = false,
+            textStyle = TextStyle(
+                fontSize = 20.sp,
+                color = if (isEditable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (isEditable) FontWeight.Bold else FontWeight.Normal
+            ),
+            isError = showError,
+            interactionSource = interactionSource,
+            leadingIcon = {
+                if (leadingIcon != null) {
+                    leadingIcon()
+                }
+            },
+            modifier = Modifier
                 .fillMaxWidth()
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = {
-                        if (isEditable) {
-                            dialogShouldOpen.value = !dialogShouldOpen.value
-                        }
-                    }
-                )
-        ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),  // Brak zaokrąglenia
-                shadowElevation = 4.dp,
-                color = MaterialTheme.colorScheme.surface,
-            ) {
-                TextField(
-                    value = selectedItemState,
-                    onValueChange = onItemChange,
-                    label = {
-                        Text(
-                            labelText,
-                            color = if (isEditable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    },
-                    readOnly = true,
-                    enabled = isEditable,
-                    textStyle = TextStyle(
-                        fontSize = 20.sp,
-                        color = if (isEditable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isEditable) FontWeight.Bold else FontWeight.Normal
-                    ),
-                    isError = showError,
-                    interactionSource = interactionSource,
-                    leadingIcon = {
-                        leadingIcon
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        disabledContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.surface,
-                        unfocusedIndicatorColor = MaterialTheme.colorScheme.surface,
-                        disabledIndicatorColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    shape = RoundedCornerShape(0.dp)  // Brak zaokrąglenia
-                )
-            }
-        }
+                .clickable {
+                    dialogShouldOpen.value = true
+                },
+            shape = RoundedCornerShape(8.dp)
+        )
+
 
         if (dialogShouldOpen.value) {
             FullScreenDialog(

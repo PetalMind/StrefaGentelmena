@@ -1,8 +1,7 @@
 package com.strefagentelmena.uiComposable
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,18 +10,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.viewModel.ScheduleModelView
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -39,16 +38,16 @@ class Form {
     ) {
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(Appointment())
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState()
-        val currentSelectedAppoinmentsDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
+        val currentSelectedAppoinmentsDate by viewModel.selectedAppointmentDate.observeAsState()
         val isNewAppointment by viewModel.isNewAppointment.observeAsState(false)
         val selectedClient by viewModel.selectedClient.observeAsState(Customer())
-
-        val context = LocalContext.current
+        val appointmentError by viewModel.appointmentError.observeAsState("")
+        val startTime by viewModel.selectedAppointmentStartTime.observeAsState("")
+        val endTime by viewModel.selectedAppointmentEndTime.observeAsState("")
 
         val customerIdError by remember { mutableStateOf(false) }
         val dateError by remember { mutableStateOf(false) }
         val startTimeError by remember { mutableStateOf(false) }
-        val startTime by viewModel.selectedAppointmentTime.observeAsState("")
 
         LaunchedEffect(Unit) {
             if (isNewAppointment) {
@@ -56,15 +55,32 @@ class Form {
 
                 val currentTime = LocalTime.now()
 
-                viewModel.setNewTime(currentTime.format(DateTimeFormatter.ofPattern("HH:mm")))
-                    .toString()
+                viewModel.setNewTime(
+                    currentTime
+                )
+
+                viewModel.setAppointmentEndTime(
+                    currentTime.plusHours(1)
+                )
+
             } else {
                 viewModel.selectedClient.value =
                     viewModel.findCustomerByName(selectedAppointment?.customer?.fullName ?: "")
             }
 
             viewModel.selectedAppointmentDate.value = currentSelectedAppoinmentsDate
-            viewModel.loadCustomersList(context = context)
+            viewModel.setAppoimentError("")
+            viewModel.selectedAppointmentStartTime.value = startTime
+            viewModel.selectedAppointmentEndTime.value = endTime
+        }
+
+        LaunchedEffect(startTime) {
+            if (startTime != "") {
+                val startTimeLocal =
+                    LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"))
+                val endTimeLocal = startTimeLocal.plusHours(1)
+                viewModel.setAppointmentEndTime(endTimeLocal)
+            }
         }
 
         Column {
@@ -78,8 +94,12 @@ class Form {
 
             textModernTextFieldUI.DateOutlinedTextField(
                 value = selectedDate.toString(),
-                onValueChange = { viewModel.setNewDataAppointment(it) },
-                onFocusLost = {}
+                onValueChange = {
+                    val date = LocalDate.parse(it, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+
+                    viewModel.setNewDataAppointment(date)
+                    viewModel.checkAppointmentsList()
+                },
             )
 
             if (dateError) {
@@ -90,22 +110,58 @@ class Form {
 
             textModernTextFieldUI.TimeOutlinedTextField(
                 value = startTime,
-                onValueChange = { viewModel.setNewTime(it) },
-                onFocusLost = {},
-                label = "Godzina rozpoczęcia"
+                onValueChange = {
+                    val startTimeLocal = LocalTime.parse(it, DateTimeFormatter.ofPattern("HH:mm"))
+                    viewModel.setNewTime(startTimeLocal)
+
+                    viewModel.checkAppointmentsList()
+                },
+                label = "Godzina rozpoczęcia",
+                modifier = Modifier.fillMaxWidth()
             )
 
             if (startTimeError) {
                 Text("Niepoprawna godzina rozpoczęcia", color = Color.Red)
             }
 
-            if (selectedClient?.noted?.isNotEmpty() == true) {
-                Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                Text(
-                    text = "Notatka: ${selectedClient?.noted}",
-                    style = MaterialTheme.typography.titleMedium
-                )
+            textModernTextFieldUI.TimeOutlinedTextField(
+                value = endTime,
+                onValueChange = {
+                    val endTimeLocal = LocalTime.parse(it, DateTimeFormatter.ofPattern("HH:mm"))
+                    viewModel.setAppointmentEndTime(endTimeLocal)
+
+                    viewModel.checkAppointmentsList()
+                },
+                label = "Godzina Zakończenia",
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (selectedClient?.noted?.isNotEmpty() == true) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Column {
+                        Text(
+                            text = "Notatka:",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+
+                        Text(
+                            text = selectedClient?.noted ?: "",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            if(appointmentError.isNotEmpty()) {
+                Text(text = appointmentError.toString())
             }
 
             buttonsUI.ButtonsRow(

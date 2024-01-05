@@ -66,7 +66,7 @@ class Selectors {
 
                 if (findClient != null) {
                     viewModel.setSelectedClient(findClient)
-
+                    viewModel.checkAppointmentsList()
                     selectedClientName.value = findClient.fullName ?: "Wybierz klienta"
                 }
             },

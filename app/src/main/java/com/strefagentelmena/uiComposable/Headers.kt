@@ -1,7 +1,5 @@
 package com.strefagentelmena.uiComposable
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,7 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -127,31 +125,10 @@ class Headers {
         }
     }
 
-    fun getVisitTimes(appointments: List<Appointment>?, selectedDate: LocalDate): String {
-        val filteredAppointments = appointments?.filterNot { it.date.isEmpty() }?.filter {
-            LocalDate.parse(it.date, DateTimeFormatter.ofPattern("dd.MM.yyyy")) == selectedDate
-        } ?: emptyList()
-        val sortedAppointments = filteredAppointments.sortedBy { it.startTime }
-        val firstVisitTime = sortedAppointments.firstOrNull()?.startTime
-        val lastVisitTime =
-            sortedAppointments.lastOrNull()?.let { Appointment.calculateEndTime(it.startTime) }
-        return if (firstVisitTime != null && lastVisitTime != null) {
-            "$firstVisitTime - $lastVisitTime"
-        } else {
-            "Brak wizyt"
-        }
-    }
-
-
-    fun getCustomerCount(appointments: List<Appointment>?, selectedDate: LocalDate): Int {
-        return appointments?.filterNot { it.date.isEmpty() }?.filter {
-            LocalDate.parse(it.date, DateTimeFormatter.ofPattern("dd.MM.yyyy")) == selectedDate
-        }?.size ?: 0
-    }
 
     @Composable
     fun CalendarHeaderView(viewModel: ScheduleModelView) {
-        val selectedDateText by viewModel.currentSelectedAppoinmentsDate.observeAsState()
+        val selectedDateText by viewModel.selectedAppointmentDate.observeAsState()
         val dateFormatter = DateTimeFormatter.ofPattern("d MMMM", Locale("pl-PL"))
         val apoimentsList by viewModel.appointmentsList.observeAsState(emptyList())
 
@@ -194,131 +171,6 @@ class Headers {
         }
     }
 
-
-    @Composable
-    fun CalendarHeader(
-        currentDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH),
-        currentDayFormatter: String = appFunctions.getCurrentFormattedDate(),
-        onDaySelected: (String) -> Unit,
-    ) {
-        val selectedDay = remember { mutableIntStateOf(currentDay) }
-
-        val selectedDayFormatter = remember { mutableStateOf(currentDayFormatter) }
-
-        val daysInCurrentWeek = remember {
-            mutableStateOf(appFunctions.getCurrentWeekDays(selectedDayFormatter.value))
-        }
-
-        LaunchedEffect(currentDay) {
-            selectedDay.intValue = currentDay
-            selectedDayFormatter.value = currentDayFormatter
-            daysInCurrentWeek.value = appFunctions.getCurrentWeekDays(selectedDayFormatter.value)
-        }
-
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(color = colorsUI.headersBlue)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    val daysOfWeek = listOf(
-                        "PON.",
-                        "WT.",
-                        "ŚR.",
-                        "CZW.",
-                        "PT.",
-                        "SOB.",
-                        "NIEDZ."
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(colorsUI.grey, shape = RoundedCornerShape(4.dp))
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        daysOfWeek.forEach { day ->
-                            Text(
-                                text = day,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.Black,
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(4.dp),
-                        horizontalArrangement = if (daysInCurrentWeek.value.size <= 3) Arrangement.SpaceAround else Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        daysInCurrentWeek.value.forEach { (dayNumber, isFirstDayOfMonth) ->
-                            val isSelectedDay = dayNumber == selectedDay.intValue
-
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        when {
-                                            isSelectedDay -> colorsUI.papaya
-                                            else -> Color.Transparent
-                                        },
-                                        shape = CircleShape
-                                    )
-                                    .clickable {
-                                        selectedDay.intValue = dayNumber
-
-                                        val formattedDate = String.format(
-                                            "%02d.%02d.%04d",
-                                            dayNumber,
-                                            selectedDayFormatter.value.split(".")[1].toInt(),
-                                            selectedDayFormatter.value.split(".")[2].toInt()
-                                        )
-
-                                        selectedDayFormatter.value = formattedDate
-
-                                        if (appFunctions.isFirstDayOfNewMonth(
-                                                dayNumber,
-                                                selectedDayFormatter.value.split(".")[1].toInt(),
-                                                selectedDayFormatter.value.split(".")[2].toInt()
-                                            )
-                                        ) {
-                                            daysInCurrentWeek.value =
-                                                appFunctions.getCurrentWeekDays(
-                                                    selectedDayFormatter.value
-                                                )
-                                        }
-
-                                        onDaySelected(formattedDate)
-                                    }
-                            ) {
-                                Text(
-                                    text = dayNumber.toString(),
-                                    style = if (isSelectedDay) MaterialTheme.typography.headlineMedium.copy(
-                                        fontWeight = FontWeight.Bold
-                                    ) else MaterialTheme.typography.bodyLarge,
-                                    color = if (isSelectedDay) Color.Black else colorsUI.sunset.copy(
-                                        alpha = 0.7f
-                                    ),
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
 
     @Composable

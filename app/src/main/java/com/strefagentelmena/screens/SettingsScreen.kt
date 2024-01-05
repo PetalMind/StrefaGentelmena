@@ -52,11 +52,13 @@ class SettingsScreen {
 
         val context = LocalContext.current
 
-
+        LaunchedEffect(Unit) {
+            viewModel.loadAllData(context = context)
+            viewModel.closeAllStates()
+        }
 
         when (viewState) {
             AppState.Idle -> {
-                viewModel.closeAllStates()
                 viewModel.loadAllData(context = context)
             }
 
@@ -64,7 +66,10 @@ class SettingsScreen {
                 appViewStates.LoadingView()
             }
 
-            AppState.Error -> {}
+            AppState.Error -> {
+
+            }
+
             AppState.Success -> {
                 SettingsSuccessView(viewModel, navController)
             }
@@ -151,18 +156,19 @@ class SettingsScreen {
                         },
                         expandedState = backButtonViewState
                     )
-
-                    settingsUiElements.SettingsItem(
-                        icon = R.drawable.ic_upgrade,
-                        text = "Aktualizacja",
-                        onClick = {
-                            viewModel.setUpdateViewState()
-                        },
-                        expandedComposable = {
-                            settingsViews.UpgradeView(viewModel = viewModel)
-                        },
-                        expandedState = updateViewState
-                    )
+                    /*
+                                        settingsUiElements.SettingsItem(
+                                            icon = R.drawable.ic_upgrade,
+                                            text = "Aktualizacja",
+                                            onClick = {
+                                                viewModel.setUpdateViewState()
+                                            },
+                                            expandedComposable = {
+                                                settingsViews.UpgradeView(viewModel = viewModel)
+                                            },
+                                            expandedState = updateViewState
+                                        )
+                     */
                 }
             }
         }

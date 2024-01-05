@@ -1,7 +1,6 @@
 package com.strefagentelmena.uiComposable
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -54,7 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.strefagentelmena.functions.appFunctions
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -129,7 +128,7 @@ class Cards {
                     )
 
                     Text(
-                        text = appointment.startTime,
+                        text = appointment.startTime.toString(),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -308,7 +307,6 @@ class Cards {
     }
 
 
-
     @Composable
     fun CustomerListCard(
         customer: Customer,
@@ -371,7 +369,7 @@ class Cards {
                             )
 
                             Text(
-                                text = customer.appointment?.date ?: "",
+                                text = customer.appointment?.date.toString() ?: "",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                             )

@@ -1,6 +1,6 @@
 package com.strefagentelmena.models
 
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 
 class CustomerIdGenerator {
     private val availableIds = (1..15000).toMutableSet()
@@ -29,9 +29,7 @@ class Customer(
     var firstName: String = "",
     var lastName: String = "",
     var appointment: Appointment? = null,
-    var lastAppointmentDate: String = "",
     var phoneNumber: String = "",
-    var agreedToBeNotify: Boolean = false,
     var noted: String = "",
 ) {
     val fullName: String
@@ -42,9 +40,7 @@ class Customer(
         firstName: String = this.firstName,
         lastName: String = this.lastName,
         appointment: Appointment = this.appointment ?: Appointment(),
-        lastAppointmentDate: String = this.lastAppointmentDate,
         phoneNumber: String = this.phoneNumber,
-        agreedToBeNotify: Boolean = this.agreedToBeNotify,
         noted: String = this.noted
     ): Customer {
         return Customer(
@@ -52,9 +48,7 @@ class Customer(
             firstName,
             lastName,
             appointment,
-            lastAppointmentDate,
             phoneNumber,
-            agreedToBeNotify,
             noted
         )
     }

@@ -8,6 +8,9 @@ import com.strefagentelmena.functions.fileFuctions.backupFilesFunctions
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
 import com.strefagentelmena.models.settngsModel.BackupPreferences
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class SettingsModelView : ViewModel() {
     val viewState = MutableLiveData<AppState>(AppState.Idle)
@@ -23,7 +26,6 @@ class SettingsModelView : ViewModel() {
     val backupAutomatic = MutableLiveData(false)
     val backupCustomers = MutableLiveData(false)
     val backupAppoiments = MutableLiveData(false)
-    val backupDate = MutableLiveData("")
 
     private val greetingsLists = MutableLiveData<MutableList<String>>(mutableListOf())
 
@@ -82,9 +84,6 @@ class SettingsModelView : ViewModel() {
         backupAutomatic.value = value
     }
 
-    fun setBackupDate(backupDate: String) {
-        this.backupDate.value = backupDate
-    }
 
     fun setCustomersBackupViewState(value: Boolean) {
         backupCustomers.value = value
@@ -129,7 +128,6 @@ class SettingsModelView : ViewModel() {
     fun setNotificationSendEndTime(notificationSendEndTime: String) {
         this.notificationSendEndTime.value = notificationSendEndTime
     }
-
 
     fun closeAllStates() {
         profileViewState.value = false
@@ -179,6 +177,9 @@ class SettingsModelView : ViewModel() {
 
         val preferences = BackupPreferences(
             isBackupCreated = isBackupCreated.value ?: false,
+            lastestBackupDate = LocalDate.now().format(
+                DateTimeFormatter.ofPattern("dd.MM.yyyy")
+            ).toString(),
             backupCustom = backupCustom.value ?: false,
             backupAutomatic = backupAutomatic.value ?: false,
             backupCustomers = backupCustomers.value ?: false,
@@ -188,8 +189,15 @@ class SettingsModelView : ViewModel() {
         backupPrefecences.value = preferences
         profilePreferences.value?.backupPreferences = preferences
 
+        profilePreferences.value?.let {
+            fileFunctionsSettings.saveSettingsToFile(
+                context = context,
+                preferences = it
+            )
+        }
+
         if (backupFilesFunctions.createBackupFile(context = context)) {
-            setMessages("Utworzono kopę zapasowa")
+            setMessages("Utworzono kopię zapasowa")
         } else {
             setMessages("Nie udało się utworzenie kopii zapasowej")
         }
@@ -199,6 +207,7 @@ class SettingsModelView : ViewModel() {
 
     fun loadBackup(context: Context) {
         setViewState(AppState.Loading)
+
         if (backupFilesFunctions.readBackupFile(context = context)) {
             setMessages("Przywrócono kopię zapasową")
         } else {

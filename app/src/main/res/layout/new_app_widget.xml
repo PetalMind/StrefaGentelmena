@@ -1,0 +1,57 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/round_corner_bg"
+    android:padding="16dp"
+    android:gravity="center_horizontal"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/round_corner_bg"
+        android:padding="8dp">
+
+        <ImageView
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:src="@drawable/ic_person" />
+
+        <TextView
+            android:id="@+id/appwidget_current_clients"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/round_corner_bg"
+        android:padding="8dp">
+
+        <ImageView
+            android:layout_width="46dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_clock" />
+
+        <TextView
+            android:id="@+id/appwidget_next_visit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textSize="32sp"
+            android:textStyle="normal" />
+    </LinearLayout>
+    <ImageButton
+        android:id="@+id/appwidget_refresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription=""
+        android:src="@drawable/ic_notification"
+        />
+</LinearLayout>

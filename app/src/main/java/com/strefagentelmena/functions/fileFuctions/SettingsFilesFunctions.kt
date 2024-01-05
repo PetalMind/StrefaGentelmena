@@ -17,7 +17,7 @@ class SettingsFilesFunctions {
         val loadedPreferences: ProfilePreferences = if (file.exists()) {
             FileReader(file).use {
                 val type = object : TypeToken<ProfilePreferences>() {}.type
-                Gson().fromJson(it, type)
+                ownGson.fromJson(it, type)
             }
         } else {
             ProfilePreferences()
@@ -27,8 +27,7 @@ class SettingsFilesFunctions {
     }
 
     fun saveSettingsToFile(context: Context, preferences: ProfilePreferences) {
-        val gson = Gson()
-        val jsonString = gson.toJson(preferences)
+        val jsonString = ownGson.toJson(preferences)
         val file = File(context.filesDir, "preferences.json")
 
         FileWriter(file).use {

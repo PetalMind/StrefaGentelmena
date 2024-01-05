@@ -110,9 +110,8 @@ class CalendarHeaderUI {
     @Composable
     fun CalendarApp(modifier: Modifier = Modifier, viewModel: ScheduleModelView) {
         val dataSource = CalendarDataSource()
-        // we use `mutableStateOf` and `remember` inside composable function to schedules recomposition
         var calendarUiModel by remember { mutableStateOf(dataSource.getData(lastSelectedDate = dataSource.today)) }
-        val selectedDate by viewModel.currentSelectedAppoinmentsDate.observeAsState()
+        val selectedDate by viewModel.selectedAppointmentDate.observeAsState()
 
         LaunchedEffect(selectedDate) {
             if (selectedDate != null) {
@@ -130,10 +129,8 @@ class CalendarHeaderUI {
                 )
 
                 if (!newData.visibleDates.contains(date)) {
-                    // Jeżeli wybrana data nie znajduje się w widocznych datach, zmień widoczne daty
                     calendarUiModel = newData
                 } else {
-                    // W przeciwnym razie, zaznacz tylko wybraną datę
                     val updatedVisibleDates = newData.visibleDates.map {
                         it.copy(
                             isSelected = it.date.atStartOfDay() == date.date.atStartOfDay()
@@ -143,7 +140,6 @@ class CalendarHeaderUI {
                         selectedDate = date,
                         visibleDates = updatedVisibleDates
                     )
-
                 }
             }
         }
@@ -155,20 +151,14 @@ class CalendarHeaderUI {
             Header(
                 data = calendarUiModel,
                 onPrevClickListener = { startDate ->
-                    // refresh the CalendarUiModel with new data
-                    // by get data with new Start Date (which is the startDate-1 from the visibleDates)
                     val finalStartDate = startDate.minusDays(1)
-
                     calendarUiModel = dataSource.getData(
                         startDate = finalStartDate,
                         lastSelectedDate = calendarUiModel.selectedDate.date
                     )
                 },
                 onNextClickListener = { endDate ->
-                    // refresh the CalendarUiModel with new data
-                    // by get data with new Start Date (which is the endDate+2 from the visibleDates)
                     val finalStartDate = endDate.plusDays(2)
-
                     calendarUiModel = dataSource.getData(
                         startDate = finalStartDate,
                         lastSelectedDate = calendarUiModel.selectedDate.date
@@ -177,14 +167,10 @@ class CalendarHeaderUI {
             )
 
             Content(data = calendarUiModel, onDateClickListener = { date ->
-                // refresh the CalendarUiModel with new data
-                // by changing only the `selectedDate` with the date selected by User
-                val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                val parsedDate = LocalDate.parse(date.date.toString(), formatter)
 
-                val parsedDate = LocalDate.parse(date.date.toString())
-                val formattedDate = parsedDate.format(formatter)
-
-                viewModel.setNewAppoimentsDate(formattedDate)
+                viewModel.setNewAppoimentsDate(parsedDate)
 
                 calendarUiModel = calendarUiModel.copy(
                     selectedDate = date,
@@ -195,6 +181,7 @@ class CalendarHeaderUI {
                     }
                 )
             })
+
         }
     }
 

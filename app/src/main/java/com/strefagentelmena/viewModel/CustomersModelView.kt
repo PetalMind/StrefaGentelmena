@@ -11,7 +11,7 @@ import com.strefagentelmena.models.CustomerIdGenerator
 class CustomersModelView : ViewModel() {
     val customersLists = MutableLiveData<List<Customer>>(emptyList())
     val searchedCustomersLists = MutableLiveData<List<Customer>>(emptyList())
-    var selectedCustomer = MutableLiveData<Customer?>(Customer())
+    var selectedCustomer = MutableLiveData<Customer?>(null)
     val messages = MutableLiveData<String>("")
     val searchState = MutableLiveData<Boolean>(false)
     private val selectedCustomerNote = MutableLiveData<String>("")
@@ -107,7 +107,7 @@ class CustomersModelView : ViewModel() {
      * Close Add Client Dialog.
      *
      */
-    fun closeAddClientDialog() {
+    fun closeCustomerDialog() {
         clientDialogState.value = false
     }
 
@@ -150,14 +150,14 @@ class CustomersModelView : ViewModel() {
 
         currentList.add(newClient)
 
-        customersLists.value = currentList.toList()
-        searchedCustomersLists.value = customersLists.value
+        setCustomersList(currentList)
+        setSearchedCustomersList(currentList)
 
         // Aktualizuj listę klientów
         setMessage("Klient ${newClient.fullName} został dodany")
         fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: emptyList())
 
-        closeAddClientDialog()
+        closeCustomerDialog()
         clearSelectedClientAndData()
     }
 
@@ -168,37 +168,35 @@ class CustomersModelView : ViewModel() {
 
         if (index != -1) {
             currentList.removeAt(index)
+            scheduledAppointments = scheduledAppointments.filter { it.customer.id != customer.id }
+            setCustomersList(currentList)
+            setSearchedCustomersList(currentList)
 
-            val appointmentsToBeDeleted =
-                scheduledAppointments.filter { it.customer.id == customer.id }
-
-            val mutableAppointments = scheduledAppointments.toMutableList()
-            mutableAppointments.removeAll(appointmentsToBeDeleted)
-
-            filesFunctionsAppoiments.saveAppointmentToFile(context, mutableAppointments)
-
-            customersLists.value = currentList.toList()
-            searchedCustomersLists.value = customersLists.value
-
-            // Aktualizuj listę klientów
             setMessage("Klient ${customer.fullName} został usunięty")
 
-            fileFunctionsClients.saveCustomersToFile(context, currentList ?: emptyList())
-            customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
-            closeAllDialogs()
+            fileFunctionsClients.saveCustomersToFile(context, currentList)
+            filesFunctionsAppoiments.saveAppointmentToFile(context, scheduledAppointments)
+
+            closeDeleteDialog()
         }
     }
 
+    private fun setSearchedCustomersList(currentList: MutableList<Customer>) {
+        searchedCustomersLists.value = currentList
+    }
+
+    private fun setCustomersList(currentList: MutableList<Customer>) {
+        customersLists.value = currentList
+    }
+
+
     fun validateFirstName(firstName: String) {
         val namePattern = Regex("^[a-zA-Z]+$")
-        val lengthPattern = Regex("^.{2,20}$")
 
         if (firstName.isEmpty()) {
             firstNameError.postValue("Imię nie może być puste")
         } else if (!namePattern.matches(firstName)) {
             firstNameError.postValue("Imię może zawierać tylko litery")
-        } else if (!lengthPattern.matches(firstName)) {
-            firstNameError.postValue("Imię nie może być dłuższe niż 20 znaków")
         } else {
             firstNameError.postValue("")
         }
@@ -206,14 +204,11 @@ class CustomersModelView : ViewModel() {
 
     fun validateLastName(lastName: String) {
         val namePattern = Regex("^[a-zA-Z]+$")
-        val lengthPattern = Regex("^.{2,20}$")
 
         if (lastName.isEmpty()) {
             lastNameError.postValue("Nazwisko nie może być puste")
         } else if (!namePattern.matches(lastName)) {
             lastNameError.postValue("Nazwisko może zawierać tylko litery")
-        } else if (!lengthPattern.matches(lastName)) {
-            lastNameError.postValue("Nazwisko nie może być dłuższe niż 20 znaków")
         } else {
             lastNameError.postValue("")
         }
@@ -221,6 +216,7 @@ class CustomersModelView : ViewModel() {
 
     fun validatePhoneNumber(phoneNumber: String) {
         val phoneNumberPattern = "^[0-9]{9}$".toRegex()
+
         if (!phoneNumberPattern.matches(phoneNumber)) {
             phoneNumberError.value = "Numer telefonu musi składać się tylko z 9 cyfr"
         } else {
@@ -278,13 +274,8 @@ class CustomersModelView : ViewModel() {
         filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList)
     }
 
-    fun editCustomer(
-        context: Context,
-    ) {
-//
+    fun editCustomer(context: Context) {
         val customersList = customersLists.value ?: return
-
-        // Znajdź i edytuj klienta o danym ID
         val customerToEditIndex = customersList.indexOfFirst { it.id == selectedCustomer.value?.id }
         if (customerToEditIndex == -1) return
 
@@ -295,20 +286,16 @@ class CustomersModelView : ViewModel() {
             noted = selectedCustomerNote.value ?: return
         )
 
-        val updatedCustomersList = customersList.toMutableList().apply {
+        customersLists.value = customersList.toMutableList().apply {
             this[customerToEditIndex] = updatedCustomer
         }
 
-        // Aktualizuj listę klientów
-        customersLists.value = updatedCustomersList
         loadAndEditAppointments(context, updatedCustomer)
-
         setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
-
-        // Zapisz zmiany
-        fileFunctionsClients.saveCustomersToFile(context, updatedCustomersList)
-        closeAddClientDialog()
+        fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: return)
+        closeCustomerDialog()
     }
+
 
     fun sortClientsByName() {
         customersLists.value = customersLists.value?.sortedBy { it.fullName }
@@ -326,7 +313,7 @@ class CustomersModelView : ViewModel() {
         customersLists.value = customersLists.value?.sortedBy { it.appointment?.date }
     }
 
-    fun setSelectedCustomer(customer: Customer) {
+    fun setSelectedCustomer(customer: Customer?) {
         selectedCustomer.value = customer
     }
 }

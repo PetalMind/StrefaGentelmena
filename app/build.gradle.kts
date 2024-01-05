@@ -5,15 +5,19 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        create("run") {
+        }
+    }
     namespace = "com.strefagentelmena"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.strefagentelmena"
+        applicationId = "com.strefagentlemanakingakloss"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "1.5"
+        versionName = "1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -40,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -49,6 +54,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    buildToolsVersion = "34.0.0"
 }
 
 dependencies {
@@ -73,7 +79,7 @@ dependencies {
     implementation(libs.google.services.get())
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
-
+    implementation(libs.firebase.storage.ktx)
 
     //  implementation(libs.runtime)
     testImplementation(libs.junit)

@@ -1,19 +1,12 @@
 package com.strefagentelmena.functions
 
-import android.os.Build
 import android.telephony.SmsManager
-import androidx.annotation.RequiresApi
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
-import java.text.SimpleDateFormat
-import java.time.Duration
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Period
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 val smsManager = SMSManager()
 

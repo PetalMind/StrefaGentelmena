@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.strefagentelmena" />
-                  <option name="mobileSdkAppId" value="1:641264768492:android:bb5db237ad1c93f4afdcc9" />
-                  <option name="projectId" value="strefagentlemena" />
-                  <option name="projectNumber" value="641264768492" />
+                  <option name="appId" value="PLACEHOLDER" />
+                  <option name="mobileSdkAppId" value="" />
+                  <option name="projectId" value="" />
+                  <option name="projectNumber" value="" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

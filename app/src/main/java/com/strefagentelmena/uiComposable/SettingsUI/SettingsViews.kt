@@ -24,6 +24,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.models.settngsModel.BackupPreferences
 import com.strefagentelmena.uiComposable.buttonsUI
@@ -79,7 +80,6 @@ class SettingsViews {
             textModernTextFieldUI.TimeOutlinedTextField(
                 value = notificationSendStartTime,
                 onValueChange = { it -> viewModel.setNotificationSendStartTime(it) },
-                onFocusLost = {},
                 modifier = Modifier.padding(10.dp),
                 label = "Godzina rozpoczęcia wysyłania powiadomienia",
             )
@@ -87,12 +87,9 @@ class SettingsViews {
             textModernTextFieldUI.TimeOutlinedTextField(
                 value = notificationSendEndTime,
                 onValueChange = { it -> viewModel.setNotificationSendEndTime(it) },
-                onFocusLost = {},
                 modifier = Modifier.padding(10.dp),
                 label = "Godzina zakonczenia wysyłania powiadomienia",
             )
-
-            Spacer(modifier = Modifier.height(10.dp))
 
             settingsUiElements.CustomSwitch(
                 checked = notificationSendAutomatic,
@@ -100,7 +97,7 @@ class SettingsViews {
                     viewModel.setAutomaticNotificationViewState(it)
                 },
                 text = "Automatycznie wysyłaj powiadomienia",
-                modifier = Modifier.padding(10.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             )
 
 
@@ -133,38 +130,9 @@ class SettingsViews {
                 Text(
                     "Utwórz kopie zapasową",
                     modifier = Modifier.padding(10.dp),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
-                settingsUiElements.CustomSwitch(
-                    checked = isBackupCreated,
-                    onCheckedChange = {
-                        viewModel.setBackupCreatedViewState(it)
-                    },
-                    text = "Utwórz kopie zapasową automatycznie co 7 dni",
-                )
-
-                settingsUiElements.CustomSwitch(
-                    checked = customBackupPreferences,
-                    onCheckedChange = {
-                        viewModel.setCustomBackupViewState(it)
-                    },
-                    text = "Utwórz kopie zapasową z osobnymi ustawieniami",
-                )
-
-                if (customBackupPreferences) {
-
-                    settingsUiElements.CustomSwitch(
-                        checked = backupCustomers,
-                        onCheckedChange = {
-                            viewModel.setCustomersBackupViewState(it)
-                        },
-                        text = "Utwórz kopie zapasową klientów"
-                    )
-
-                    settingsUiElements.CustomSwitch(checked = backupAppoiments, onCheckedChange = {
-                        viewModel.setAppoimentsBackupViewState(it)
-                    }, text = " Utwórz kopie zapasową wizyt")
-                }
 
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -185,8 +153,20 @@ class SettingsViews {
                 Text(
                     "Odtwórz kopie",
                     modifier = Modifier.padding(10.dp),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
                 )
+
+                Row(modifier = Modifier.padding(10.dp)) {
+                    Text(
+                        text = "Ostatnia utworzona kopie zapasowa: ",
+                    )
+
+                    Text(
+                        text = backupPreferences.lastestBackupDate.ifBlank { "Brak" },
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center,

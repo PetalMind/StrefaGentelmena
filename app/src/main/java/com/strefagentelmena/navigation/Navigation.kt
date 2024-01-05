@@ -30,8 +30,8 @@ class Navigation {
         val navController = rememberNavController()
         val customersModelView: CustomersModelView = CustomersModelView()
         val settingsModelView = SettingsModelView()
+        val scheduleModelView = ScheduleModelView()
         val dashboardModelView = MainScreenModelView()
-val scheduleModelView = ScheduleModelView()
 
         NavHost(navController, startDestination = Screen.MainScreen.route) {
             composable(Screen.MainScreen.route,
@@ -48,9 +48,10 @@ val scheduleModelView = ScheduleModelView()
                     )
                 }
             ) {
+
                 mainScreen.DashboardView(
                     navController,
-                    dashboardModelView
+                    dashboardModelView,
                 )
             }
             composable(Screen.CustomersScreen.route,

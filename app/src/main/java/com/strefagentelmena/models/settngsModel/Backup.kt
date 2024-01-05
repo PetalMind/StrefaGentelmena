@@ -1,6 +1,6 @@
 package com.strefagentelmena.models.settngsModel
 
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
 
 class Backup(

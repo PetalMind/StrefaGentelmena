@@ -1,7 +1,6 @@
 package com.strefagentelmena.screens
 
 import android.Manifest
-import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.LinearEasing
@@ -31,8 +30,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -47,22 +46,23 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.firebase.FirebaseApp
 import com.strefagentelmena.R
 import com.strefagentelmena.appViewStates
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
-import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
-import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.functions.greetingsManager
 import com.strefagentelmena.functions.smsManager
-import com.strefagentelmena.models.AppoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import com.strefagentelmena.ui.theme.StrefaGentelmenaTheme
 import com.strefagentelmena.uiComposable.PopUpDialogs
-import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.headersUI
@@ -79,18 +79,39 @@ val mainScreen = MainScreen()
 class MainScreen {
     @OptIn(ExperimentalPermissionsApi::class)
     @Composable
-    fun PermissionAwareComponent() {
-        val smsPermissionState = rememberPermissionState(Manifest.permission.SEND_SMS)
-        val context = LocalContext.current
+    fun PermissionAwareComponents() {
         val lifecycleOwner = LocalLifecycleOwner.current
+        val permissionState = rememberMultiplePermissionsState(
+            permissions = listOf(
+                Manifest.permission.SEND_SMS, Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        )
 
-        LaunchedEffect(smsPermissionState) {
-            val lifecycle = lifecycleOwner.lifecycle
-            val permissionResult = smsPermissionState.hasPermission
+        DisposableEffect(key1 = lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> {
+                       permissionState.launchMultiplePermissionRequest()
+                    }
+                    else -> {
+                        // Do nothing
+                    }
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
 
-            if (!permissionResult) {
-                // Prośba o uprawnienia, nawet jeśli wcześniej zostały one odmówione
-                smsPermissionState.launchPermissionRequest()
+        permissionState.permissions.forEach {
+            when(it.permission) {
+                Manifest.permission.SEND_SMS -> {
+                }
+
+                Manifest.permission.WRITE_EXTERNAL_STORAGE -> {
+
+                }
             }
         }
     }
@@ -113,7 +134,7 @@ class MainScreen {
 
         LaunchedEffect(Unit) {
             viewModel.setViewState(AppState.Idle)
-            viewModel.dataLoaded.value = false
+            viewModel.setDataLoaded(false)
         }
 
 
@@ -132,7 +153,6 @@ class MainScreen {
 
             AppState.Error -> {
                 viewModel.setViewState(AppState.Idle)
-
             }
 
             AppState.Success -> {
@@ -162,30 +182,7 @@ class MainScreen {
             )
         )
 
-        val currentDay = remember {
-            mutableStateOf(
-                LocalDate.now()
-                    .format(DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.getDefault()))
-            )
-        }
-
         val context = LocalContext.current
-
-        val currentTimeString = remember {
-            mutableStateOf(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
-        }
-
-        val currentStringDate = remember {
-            mutableStateOf(
-                LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()))
-            )
-        }
-
-        val currentDayAndMonth = remember {
-            mutableStateOf(
-                LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM", Locale.getDefault()))
-            )
-        }
 
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -203,21 +200,6 @@ class MainScreen {
         LaunchedEffect(clientsToNotify) {
             if (clientsToNotify.isNotEmpty()) {
                 viewModel.showNotifyDialog()
-            }
-        }
-
-
-        // Aktualizacja aktualnego czasu co 5 sekund
-        LaunchedEffect(currentTimeString) {
-            while (true) {
-                delay(5000L)
-
-                currentTimeString.value =
-                    LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-
-                viewModel.sendNotificationsForUpcomingAppointments(
-                    currentDay.value
-                )
             }
         }
 
@@ -243,9 +225,6 @@ class MainScreen {
                             verticalArrangement = Arrangement.Center
                         ) {
                             DashboardHeaderGreetings(
-                                currentTimeString = currentTimeString,
-                                currentStringDate = currentStringDate,
-                                currentDayAndMonth = currentDayAndMonth,
                                 greeting = greetingRandom,
                                 onSettingsClick = {
                                     navController.navigate("settingsScreen")
@@ -255,7 +234,7 @@ class MainScreen {
 
                         headersUI.LogoHeader()
 
-                        PermissionAwareComponent()
+                        PermissionAwareComponents()
 
                         if (upcomingAppointment?.id != 0) {
                             upcomingAppointment?.let { cardUI.UpcomingClientCard(appointment = it) }
@@ -274,8 +253,6 @@ class MainScreen {
                             )
                         }
                         Spacer(modifier = Modifier.weight(1f))
-
-                        //footerUI.AppFooter(context = context)
                     }
                 }
 
@@ -288,7 +265,8 @@ class MainScreen {
 
                             viewModel.editAppointment(context, it, true)
                         }
-                        viewModel.newMessage("Wysłano powiadomienia dla ${clientsToNotify.size} klientów")
+
+                        viewModel.newMessage("Wysłano powiadomienia do ${if (clientsToNotify.size == 1) "1 klienta" else "${clientsToNotify.size} klientów"}")
 
                         viewModel.setAppointmentsToNotify(emptyList())
                         viewModel.hideNotifyDialog()
@@ -303,7 +281,7 @@ class MainScreen {
 
                                     viewModel.editAppointment(context, it, true)
                                 }
-
+                                viewModel.newMessage("Wysłano powiadomienia do ${if (clientsToNotify.size == 1) "1 klienta" else "${clientsToNotify.size} klientów"}")
                                 viewModel.setAppointmentsToNotify(emptyList())
                                 viewModel.hideNotifyDialog()
                             },
@@ -324,15 +302,38 @@ class MainScreen {
     @Composable
     fun DashboardHeaderGreetings(
         greeting: String,
-        currentTimeString: MutableState<String>,
-        currentStringDate: MutableState<String>,
-        currentDayAndMonth: MutableState<String>,
         onSettingsClick: () -> Unit,
     ) {
         val randomGreeting = remember { mutableStateOf(greeting) }
+        val currentTimeString = remember {
+            mutableStateOf(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
+        }
+
+        val currentStringDate = remember {
+            mutableStateOf(
+                LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()))
+            )
+        }
+
+        val currentDayAndMonth = remember {
+            mutableStateOf(
+                LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM", Locale.getDefault()))
+            )
+        }
 
         LaunchedEffect(greeting) {
             randomGreeting.value = greeting
+        }
+
+        // Aktualizacja aktualnego czasu co 5 sekund
+        LaunchedEffect(currentTimeString) {
+            while (true) {
+                delay(5000L)
+
+                currentTimeString.value =
+                    LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+
+            }
         }
 
         Box(

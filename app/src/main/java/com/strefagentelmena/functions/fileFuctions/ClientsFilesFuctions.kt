@@ -16,7 +16,7 @@ class ClientsFilesFuctions {
         val loadedCustomers: List<Customer> = if (file.exists()) {
             FileReader(file).use {
                 val type = object : TypeToken<List<Customer>>() {}.type
-                Gson().fromJson(it, type)
+                ownGson.fromJson(it, type)
             }
         } else {
             emptyList()
@@ -25,8 +25,7 @@ class ClientsFilesFuctions {
         return loadedCustomers
     }
     fun saveCustomersToFile(context: Context, customers: List<Customer>) {
-        val gson = Gson()
-        val jsonString = gson.toJson(customers)
+        val jsonString = ownGson.toJson(customers)
         val file = File(context.filesDir, "customers.json")
 
         FileWriter(file).use {
