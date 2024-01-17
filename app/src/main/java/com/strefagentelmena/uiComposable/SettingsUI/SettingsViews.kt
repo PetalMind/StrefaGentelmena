@@ -1,34 +1,36 @@
 package com.strefagentelmena.uiComposable.settingsUI
 
-import androidx.compose.foundation.layout.Arrangement
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.strefagentelmena.models.settngsModel.BackupPreferences
+import com.strefagentelmena.functions.fireBase.storageFireBase
+import com.strefagentelmena.models.settngsModel.BackupSettings
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.colorsUI
+import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
 import com.strefagentelmena.viewModel.SettingsModelView
 
@@ -115,12 +117,31 @@ class SettingsViews {
     @Composable
     fun BackupView(viewModel: SettingsModelView) {
         val context = LocalContext.current
-        val backupPreferences by viewModel.backupPrefecences.observeAsState(BackupPreferences())
+        val backupSettings by viewModel.backupPrefecences.observeAsState(BackupSettings())
         val isBackupCreated by viewModel.isBackupCreated.observeAsState(false)
         val customBackupPreferences by viewModel.backupCustom.observeAsState(false)
         val backupCustomers by viewModel.backupCustomers.observeAsState(false)
         val backupAppoiments by viewModel.backupAppoiments.observeAsState(false)
         val backupAutomatic by viewModel.backupAutomatic.observeAsState(false)
+        val hasOnlineCopy by viewModel.hasOnlineCopy.observeAsState(false)
+        val isBackupOnline by viewModel.isBackupOnline.observeAsState(false)
+        val onlineBackupLists by viewModel.onlineBackupLists.observeAsState(
+            mutableListOf()
+        )
+        val backupOnlineDialog by viewModel.backupOnlineDialog.observeAsState(false)
+        val selectedBackupOnlineName by viewModel.selectedBackupOnlineName.observeAsState("")
+
+        LaunchedEffect(isBackupOnline) {
+            if (isBackupOnline) {
+                viewModel.downloadBackupFiles()
+            }
+        }
+
+        LaunchedEffect(onlineBackupLists) {
+            if (onlineBackupLists.isNotEmpty()) {
+                Log.e("downloadBackupFiles", onlineBackupLists.toString())
+            }
+        }
 
         Column(
             Modifier
@@ -132,6 +153,15 @@ class SettingsViews {
                     modifier = Modifier.padding(10.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
+                )
+
+                settingsUiElements.CustomSwitch(
+                    checked = hasOnlineCopy,
+                    onCheckedChange = {
+                        viewModel.setHasOnlineCopy(it)
+                    },
+                    text = "Pozwól na kopię online",
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                 )
 
                 Box(
@@ -157,13 +187,22 @@ class SettingsViews {
                     fontWeight = FontWeight.Bold
                 )
 
+                settingsUiElements.CustomSwitch(
+                    checked = isBackupOnline,
+                    onCheckedChange = {
+                        viewModel.setIsBackupOnline(it)
+                    },
+                    text = "Odwtórz kopię online",
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                )
+
                 Row(modifier = Modifier.padding(10.dp)) {
                     Text(
                         text = "Ostatnia utworzona kopie zapasowa: ",
                     )
 
                     Text(
-                        text = backupPreferences.lastestBackupDate.ifBlank { "Brak" },
+                        text = backupSettings.latestBackupDate.ifBlank { "Brak" },
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -173,7 +212,14 @@ class SettingsViews {
                 ) {
                     buttonsUI.PrimaryButton(
                         text = "Odtwórz kopie",
-                        onClick = { viewModel.loadBackup(context) },
+                        onClick = {
+                            if (isBackupOnline && onlineBackupLists.isNotEmpty()) {
+                                viewModel.setBackupOnlineDialog(true)
+                            } else {
+                                viewModel.loadBackup(context)
+
+                            }
+                        },
                         containerColor = colorsUI.headersBlue
                     )
                 }

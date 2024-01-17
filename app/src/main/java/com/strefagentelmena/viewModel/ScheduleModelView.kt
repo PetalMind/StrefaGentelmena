@@ -51,6 +51,11 @@ class ScheduleModelView : ViewModel() {
     val selectedAppointment = MutableLiveData(Appointment())
     val selectedAppointmentEndTime =
         MutableLiveData(LocalTime.now().plusHours(1).format(timeFormatter))
+    val selectedAppointmentNote = MutableLiveData("")
+
+    fun setAppoimentNote(newValue: String) {
+        selectedAppointmentNote.value = newValue
+    }
 
     fun setAppoimentState(newValue: Boolean) {
         isNewAppointment.value = newValue
@@ -113,7 +118,6 @@ class ScheduleModelView : ViewModel() {
         deleteDialogState.value = true
     }
 
-
     /**
      * Hide Delete Dialog.
      *
@@ -158,6 +162,21 @@ class ScheduleModelView : ViewModel() {
      */
     fun findCustomerByName(name: String): Customer? {
         return customersList.value?.firstOrNull { it.fullName == name }
+    }
+
+    fun prepareAppointmentDetails() {
+        if (isNewAppointment.value!!) {
+            val currentTime = LocalTime.now()
+
+            clearDate()
+            setNewTime(currentTime)
+            setAppointmentEndTime(currentTime.plusHours(1))
+        } else {
+            setAppointmentEndTime(
+                selectedAppointment.value?.endTime ?: LocalTime.now().plusHours(1)
+            )
+
+        }
     }
 
     /**
@@ -244,6 +263,9 @@ class ScheduleModelView : ViewModel() {
             findCustomerByName(selectedClient.value?.fullName ?: "") ?: findCustomerByName(
                 selectedAppointment.value?.customer?.fullName ?: ""
             ) ?: return
+
+        selectedClient.noted = selectedAppointmentNote.value ?: ""
+
         val clientIndex = customersList.value?.indexOf(selectedClient) ?: return
 
         if (index != -1 && clientIndex != -1) {
@@ -252,8 +274,9 @@ class ScheduleModelView : ViewModel() {
                 date = selectedAppointmentDate.value ?: "",
                 startTime = LocalTime.parse(selectedAppointmentStartTime.value, timeFormatter),
                 endTime = LocalTime.parse(selectedAppointmentEndTime.value, timeFormatter),
-                customer = selectedClient
-            ) ?: return
+                customer = selectedClient,
+
+                ) ?: return
 
             currentAppointments[index] = updatedAppointment
 

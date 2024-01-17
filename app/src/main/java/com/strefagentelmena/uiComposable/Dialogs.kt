@@ -87,7 +87,6 @@ val dialogsUI = Dialogs()
 
 class Dialogs {
 
-    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     fun OnAddOrEditCustomerDialog(
         viewModel: CustomersModelView,
@@ -119,7 +118,7 @@ class Dialogs {
                 && lastName.isNotBlank()
 
         LaunchedEffect(selectedCustomer) {
-            if (selectedCustomer?.id != 0) {
+            if (selectedCustomer != null) {
                 viewModel.setSelectedCustomerData()
             }
         }
@@ -143,7 +142,7 @@ class Dialogs {
                         onClick = {},
                         onBackPressed = { onClose() },
                         compose = {
-                            if (selectedCustomer?.id != 0) {
+                            if (selectedCustomer != null) {
                                 buttonsUI.HeaderIconButton(
                                     icon = R.drawable.ic_delete,
                                     onClick = {
@@ -571,7 +570,6 @@ class Dialogs {
     }
 
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
     @Composable
     fun FullScreenLogisticDialogSelector(
         labelText: AnnotatedString,
@@ -580,7 +578,7 @@ class Dialogs {
         isEditable: Boolean,
         items: List<String>,
         onItemSelected: (String) -> Unit,
-        dialogShouldOpen: MutableState<Boolean>,
+        dialogShouldOpen: MutableState<Boolean> = mutableStateOf(false),
         itemFilter: (String, String) -> Boolean = { item, query ->
             item.contains(
                 query,

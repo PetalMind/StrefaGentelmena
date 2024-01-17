@@ -10,11 +10,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -30,11 +32,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.strefagentelmena.R
 import com.strefagentelmena.appViewStates
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.fireBase.storageFireBase
 import com.strefagentelmena.uiComposable.settingsUI.settingsUiElements
 import com.strefagentelmena.uiComposable.settingsUI.settingsViews
 import com.strefagentelmena.uiComposable.colorsUI
@@ -49,7 +53,11 @@ class SettingsScreen {
     @Composable
     fun SettingsView(viewModel: SettingsModelView, navController: NavController) {
         val viewState by viewModel.viewState.observeAsState(AppState.Idle)
-
+        val onlineBackupLists by viewModel.onlineBackupLists.observeAsState(
+            mutableListOf()
+        )
+        val selectedBackupOnlineName by viewModel.selectedBackupOnlineName.observeAsState("Wybierz liste do odtworzenia")
+        val backupOnlineDialog by viewModel.backupOnlineDialog.observeAsState(false)
         val context = LocalContext.current
 
         LaunchedEffect(Unit) {
@@ -74,6 +82,20 @@ class SettingsScreen {
                 SettingsSuccessView(viewModel, navController)
             }
         }
+        if (backupOnlineDialog) {
+            dialogsUI.FullScreenDialog(
+                onDismissRequest = { viewModel.setBackupOnlineDialog(false) },
+                labelText = "Wybierz kopię do odtworzenia",
+                itemList = onlineBackupLists,
+                openDialog = backupOnlineDialog,
+                itemOnClick = {
+                    viewModel.setSelectedBackupOnlineName(it)
+                    viewModel.downloadFileFromFirebase(it, context)
+                },
+                itemFilter = { it, _ -> it != selectedBackupOnlineName },
+                itemText = { it },
+            )
+        }
     }
 
     @Composable
@@ -85,7 +107,7 @@ class SettingsScreen {
         val backButtonViewState by viewModel.backButtonViewState.observeAsState(false)
         val updateViewState by viewModel.updateViewState.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
-
+        val backupOnlineDialog by viewModel.backupOnlineDialog.observeAsState(false)
         val scope = rememberCoroutineScope()
 
         LaunchedEffect(message) {

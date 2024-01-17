@@ -1,21 +1,24 @@
 package com.strefagentelmena.viewModel
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fileFuctions.backupFilesFunctions
 import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
-import com.strefagentelmena.models.settngsModel.BackupPreferences
+import com.strefagentelmena.functions.fireBase.storageFireBase
+import com.strefagentelmena.models.settngsModel.BackupSettings
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 class SettingsModelView : ViewModel() {
     val viewState = MutableLiveData<AppState>(AppState.Idle)
     val messages = MutableLiveData("")
-    val backupPrefecences = MutableLiveData(BackupPreferences())
+    val backupPrefecences = MutableLiveData(BackupSettings())
     val profilePreferences = MutableLiveData(ProfilePreferences())
     val profileName = MutableLiveData("")
     val notificationSendStartTime = MutableLiveData("")
@@ -26,6 +29,11 @@ class SettingsModelView : ViewModel() {
     val backupAutomatic = MutableLiveData(false)
     val backupCustomers = MutableLiveData(false)
     val backupAppoiments = MutableLiveData(false)
+    val hasOnlineCopy = MutableLiveData(false)
+    val isBackupOnline = MutableLiveData(false)
+    val onlineBackupLists = MutableLiveData<MutableList<String>>(mutableListOf())
+    val backupOnlineDialog = MutableLiveData(false)
+    val selectedBackupOnlineName = MutableLiveData("")
 
     private val greetingsLists = MutableLiveData<MutableList<String>>(mutableListOf())
 
@@ -42,6 +50,33 @@ class SettingsModelView : ViewModel() {
         profileViewState.value = !profileViewState.value!!
     }
 
+    fun setSelectedBackupOnlineName(value: String) {
+        selectedBackupOnlineName.value = value
+    }
+
+    fun downloadFileFromFirebase(it: String, context: Context) {
+        viewModelScope.launch {
+            val result = storageFireBase.getFileFromFirebase(it)
+            if (result != null) {
+
+            }
+        }
+    }
+
+    fun setBackupOnlineDialog(value: Boolean) {
+        backupOnlineDialog.value = value
+    }
+
+    private fun setOnlineBackupLists(value: MutableList<String>) {
+        onlineBackupLists.value = value
+    }
+
+
+    /**
+     * Set profile preferences
+     *
+     * @return
+     */
     private fun setProfilePreferences(): ProfilePreferences {
         // Sprawdź, czy wartości nie są null, zanim utworzysz obiekt ProfilePreferences
         val userName = profileName.value ?: "Kinga"
@@ -52,8 +87,8 @@ class SettingsModelView : ViewModel() {
         val greetings = greetingsLists.value ?: mutableListOf()
         val sendAutomatic = notificationSendAutomatic.value
             ?: false
-        val backupPreferences = backupPrefecences.value
-            ?: BackupPreferences()
+        val backupSettings = backupPrefecences.value
+            ?: BackupSettings()
 
         // Utwórz i zwróć obiekt ProfilePreferences z wartościami
         val loadedProfilePreferences = ProfilePreferences(
@@ -62,13 +97,23 @@ class SettingsModelView : ViewModel() {
             notificationSendEndTime = endTime,
             greetingsLists = greetings,
             notificationSendAutomatic = sendAutomatic,
-            backupPreferences = backupPreferences
+            backupSettings = backupSettings
         )
 
         // Zaktualizuj MutableState, jeśli to konieczne
         profilePreferences.value = loadedProfilePreferences
 
         return loadedProfilePreferences
+    }
+
+    fun setIsBackupOnline(value: Boolean) {
+        isBackupOnline.value = value
+    }
+
+    fun downloadBackupFiles() {
+        viewModelScope.launch {
+            setOnlineBackupLists(storageFireBase.listFilesInDirectory("Kopia_StrefaGentlemana"))
+        }
     }
 
 
@@ -95,6 +140,10 @@ class SettingsModelView : ViewModel() {
 
     fun setAutomaticNotificationViewState(value: Boolean) {
         notificationSendAutomatic.value = value
+    }
+
+    fun setHasOnlineCopy(value: Boolean) {
+        hasOnlineCopy.value = value
     }
 
     fun setNotificationViewState() {
@@ -135,6 +184,7 @@ class SettingsModelView : ViewModel() {
         greetingsViewState.value = false
         backButtonViewState.value = false
         updateViewState.value = false
+        backupOnlineDialog.value = false
     }
 
 
@@ -147,8 +197,11 @@ class SettingsModelView : ViewModel() {
             notificationSendEndTime.value = it.notificationSendEndTime
             greetingsLists.value = it.greetingsLists
             notificationSendAutomatic.value = it.notificationSendAutomatic
-            backupPrefecences.value = it.backupPreferences
+            backupPrefecences.value = it.backupSettings
+            hasOnlineCopy.value = it.backupSettings.hasOnlineCopy
+            isBackupOnline.value = it.backupSettings.isBackupOnline
         }
+
         profilePreferences.value = setProfilePreferences()
         setViewState(AppState.Success)
     }
@@ -162,7 +215,7 @@ class SettingsModelView : ViewModel() {
             notificationSendEndTime = notificationSendEndTime.value ?: "",
             greetingsLists = greetingsLists.value ?: mutableListOf(),
             notificationSendAutomatic = notificationSendAutomatic.value ?: false,
-            backupPreferences = backupPrefecences.value ?: BackupPreferences()
+            backupSettings = backupPrefecences.value ?: BackupSettings(),
         )
 
         fileFunctionsSettings.saveSettingsToFile(context = context, preferences = preferences)
@@ -175,19 +228,18 @@ class SettingsModelView : ViewModel() {
     fun createBackup(context: Context) {
         setViewState(AppState.Loading)
 
-        val preferences = BackupPreferences(
+        val preferences = BackupSettings(
             isBackupCreated = isBackupCreated.value ?: false,
-            lastestBackupDate = LocalDate.now().format(
+            latestBackupDate = LocalDate.now().format(
                 DateTimeFormatter.ofPattern("dd.MM.yyyy")
             ).toString(),
-            backupCustom = backupCustom.value ?: false,
-            backupAutomatic = backupAutomatic.value ?: false,
-            backupCustomers = backupCustomers.value ?: false,
-            backupAppoiments = backupAppoiments.value ?: false
+            isAutomaticBackupEnabled = backupAutomatic.value ?: false,
+            hasOnlineCopy = hasOnlineCopy.value ?: false,
+            isBackupOnline = isBackupOnline.value ?: false
         )
 
         backupPrefecences.value = preferences
-        profilePreferences.value?.backupPreferences = preferences
+        profilePreferences.value?.backupSettings = preferences
 
         profilePreferences.value?.let {
             fileFunctionsSettings.saveSettingsToFile(
@@ -196,7 +248,7 @@ class SettingsModelView : ViewModel() {
             )
         }
 
-        if (backupFilesFunctions.createBackupFile(context = context)) {
+        if (backupFilesFunctions.createAndUploadBackupFile(context = context)) {
             setMessages("Utworzono kopię zapasowa")
         } else {
             setMessages("Nie udało się utworzenie kopii zapasowej")
@@ -207,11 +259,24 @@ class SettingsModelView : ViewModel() {
 
     fun loadBackup(context: Context) {
         setViewState(AppState.Loading)
+        viewModelScope.launch {
+            if (profilePreferences.value?.backupSettings?.isBackupOnline == true) {
+                if (backupFilesFunctions.fetchAndReadFileFromFirebase(
+                        selectedBackupOnlineName.value ?: "", context
+                    )
+                ) {
+                    setMessages("Pobrano kopę zapasową online")
+                } else {
+                    setMessages("Nie znaleziono kopii zapasowej")
+                }
 
-        if (backupFilesFunctions.readBackupFile(context = context)) {
-            setMessages("Przywrócono kopię zapasową")
-        } else {
-            setMessages("Nie znaleziono kopii zapasowej")
+            } else {
+                if (backupFilesFunctions.readBackupFile(context = context)) {
+                    setMessages("Przywrócono kopię zapasową")
+                } else {
+                    setMessages("Nie znaleziono kopii zapasowej")
+                }
+            }
         }
 
         setViewState(AppState.Idle)

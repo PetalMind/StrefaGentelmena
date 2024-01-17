@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.strefagentlemanakingakloss" />
+                  <option name="mobileSdkAppId" value="1:641264768492:android:fda2fdf73359e5fcafdcc9" />
+                  <option name="projectId" value="strefagentlemena" />
+                  <option name="projectNumber" value="641264768492" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

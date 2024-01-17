@@ -2,6 +2,8 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
+    id("com.google.gms.google-services")
+
 }
 
 android {
@@ -14,7 +16,7 @@ android {
 
     defaultConfig {
         applicationId = "com.strefagentlemanakingakloss"
-        minSdk = 26
+        minSdk = 28
         targetSdk = 34
         versionCode = 1
         versionName = "1.6"
@@ -73,10 +75,8 @@ dependencies {
     implementation(libs.livedata)
     implementation(libs.viewmodel)
     implementation(libs.androidx.compose.livedata)
-    implementation(libs.accompanist.permissions.get())
     implementation(libs.accompanist.permissions)
     implementation(libs.google.services)
-    implementation(libs.google.services.get())
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.storage.ktx)
