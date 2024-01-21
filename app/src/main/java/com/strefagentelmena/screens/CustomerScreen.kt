@@ -48,8 +48,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.strefagentelmena.R
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.cardUI
@@ -235,7 +237,8 @@ class CustomerScreen {
                     viewModel.closeAllDialogs()
                 }
             },
-                objectName = selectedClient?.fullName ?: "")
+                objectName = selectedClient?.fullName ?: ""
+            )
         }
     }
 
@@ -255,7 +258,7 @@ class CustomerScreen {
                     }
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.MoreVert,
+                    painter = painterResource(id = R.drawable.ic_sort),
                     contentDescription = "Search",
                 )
             }
@@ -271,7 +274,10 @@ class CustomerScreen {
                 expanded = false
             }, text = { Text(text = "Sortuj alfabetycznie") },
                 leadingIcon = {
-                    Icon(Icons.Filled.Person, contentDescription = "Sort Options")
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_sort_by_alpha),
+                        contentDescription = "Sort Options"
+                    )
                 })
 
             DropdownMenuItem(
