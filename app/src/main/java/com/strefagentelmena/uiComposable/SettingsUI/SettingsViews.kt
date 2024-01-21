@@ -26,6 +26,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.firebase.FirebaseApp
+import com.google.firebase.ktx.app
 import com.strefagentelmena.functions.fireBase.storageFireBase
 import com.strefagentelmena.models.settngsModel.BackupSettings
 import com.strefagentelmena.uiComposable.buttonsUI
@@ -62,7 +64,8 @@ class SettingsViews {
                     viewModel.setProfileViewState()
                 },
                 onDismiss = { viewModel.setProfileViewState() },
-                containerColor = colorsUI.mintGreen
+                containerColor = colorsUI.mintGreen,
+                buttonEnabled = profileName.isNotEmpty()
             )
         }
     }
@@ -128,8 +131,6 @@ class SettingsViews {
         val onlineBackupLists by viewModel.onlineBackupLists.observeAsState(
             mutableListOf()
         )
-        val backupOnlineDialog by viewModel.backupOnlineDialog.observeAsState(false)
-        val selectedBackupOnlineName by viewModel.selectedBackupOnlineName.observeAsState("")
 
         LaunchedEffect(isBackupOnline) {
             if (isBackupOnline) {
@@ -137,11 +138,6 @@ class SettingsViews {
             }
         }
 
-        LaunchedEffect(onlineBackupLists) {
-            if (onlineBackupLists.isNotEmpty()) {
-                Log.e("downloadBackupFiles", onlineBackupLists.toString())
-            }
-        }
 
         Column(
             Modifier
@@ -155,14 +151,16 @@ class SettingsViews {
                     fontWeight = FontWeight.Bold
                 )
 
-                settingsUiElements.CustomSwitch(
-                    checked = hasOnlineCopy,
-                    onCheckedChange = {
-                        viewModel.setHasOnlineCopy(it)
-                    },
-                    text = "Pozwól na kopię online",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                )
+                if (FirebaseApp.getApps(context).isNotEmpty()) {
+                    settingsUiElements.CustomSwitch(
+                        checked = hasOnlineCopy,
+                        onCheckedChange = {
+                            viewModel.setHasOnlineCopy(it)
+                        },
+                        text = "Pozwól na kopię online",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
 
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -186,15 +184,16 @@ class SettingsViews {
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
-
-                settingsUiElements.CustomSwitch(
-                    checked = isBackupOnline,
-                    onCheckedChange = {
-                        viewModel.setIsBackupOnline(it)
-                    },
-                    text = "Odwtórz kopię online",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                )
+                if (FirebaseApp.getApps(context).isNotEmpty()) {
+                    settingsUiElements.CustomSwitch(
+                        checked = isBackupOnline,
+                        onCheckedChange = {
+                            viewModel.setIsBackupOnline(it)
+                        },
+                        text = "Odwtórz kopię online",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
 
                 Row(modifier = Modifier.padding(10.dp)) {
                     Text(
@@ -213,7 +212,7 @@ class SettingsViews {
                     buttonsUI.PrimaryButton(
                         text = "Odtwórz kopie",
                         onClick = {
-                            if (isBackupOnline && onlineBackupLists.isNotEmpty()) {
+                            if (isBackupOnline) {
                                 viewModel.setBackupOnlineDialog(true)
                             } else {
                                 viewModel.loadBackup(context)

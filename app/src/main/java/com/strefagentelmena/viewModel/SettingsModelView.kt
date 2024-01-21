@@ -57,9 +57,6 @@ class SettingsModelView : ViewModel() {
     fun downloadFileFromFirebase(it: String, context: Context) {
         viewModelScope.launch {
             val result = storageFireBase.getFileFromFirebase(it)
-            if (result != null) {
-
-            }
         }
     }
 
