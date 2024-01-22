@@ -2,6 +2,8 @@ package com.strefagentelmena.uiComposable
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
@@ -37,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDismissState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -112,42 +117,34 @@ class Cards {
                     }
                 }
 
-                Text(
-                    text = appointment.customer.fullName,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = appointment.customer.fullName,
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold
+                            )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Godzina:", style = MaterialTheme.typography.titleLarge
-                    )
+                            Text(
+                                text = "${appointment.startTime} - ${appointment.endTime}",
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
 
-                    Text(
-                        text = appointment.startTime.toString(),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                }
-
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    buttonsUI.PrimaryButton(
-                        onClick = {
+                        buttonsUI.IconButton(icon = Icons.Default.Call, onClick = {
                             appFunctions.dialPhoneNumber(
                                 context = context,
                                 phoneNumber = appointment.customer.phoneNumber
                             )
-                        },
-                        text = "Nie zwlekaj, dzwoń!",
-                        modifier = Modifier.align(Alignment.Center),
-                        containerColor = colorsUI.teaGreen,
-                        contentColor = Color.Black,
-                        fontWeight = FontWeight.Bold
-                    )
+                        })
+                    }
                 }
+
             }
         }
     }
@@ -211,6 +208,10 @@ class Cards {
     ) {
         val dismissState = rememberDismissState(initialValue = DismissValue.Default)
         val visible = rememberSaveable { mutableStateOf(true) }
+        val scale by animateFloatAsState(
+            targetValue = if (dismissState.currentValue != DismissValue.Default) 1.2f else 1f,
+            label = ""
+        )
 
         AnimatedVisibility(visible = visible.value) {
             SwipeToDismiss(
@@ -234,10 +235,15 @@ class Cards {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .animateContentSize()
                                     .background(color)
-                                    .padding(8.dp)
+                                    .padding(16.dp)
                             ) {
-                                Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .scale(scale)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Edit,
                                         contentDescription = null,
@@ -255,17 +261,24 @@ class Cards {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .animateContentSize()
                                     .background(color)
-                                    .padding(8.dp)
+                                    .padding(16.dp)
                             ) {
-                                Column(modifier = Modifier.align(Alignment.CenterEnd)) {
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .scale(scale)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = null,
                                         tint = Color.White,
                                         modifier = Modifier.align(Alignment.CenterHorizontally)
                                     )
+
                                     Spacer(modifier = Modifier.heightIn(5.dp))
+
                                     Text(
                                         text = "Usuń",
                                         textAlign = TextAlign.Center,
@@ -290,13 +303,14 @@ class Cards {
         LaunchedEffect(dismissState.targetValue) {
             if (dismissState.targetValue == DismissValue.DismissedToEnd) {
                 delay(300)
-                onEdit(customer)
                 dismissState.snapTo(DismissValue.Default)
+                onEdit(customer)
             } else if (dismissState.targetValue == DismissValue.DismissedToStart) {
-                onDismiss(customer)
                 delay(300)
+                onDismiss(customer)
             }
         }
+
 
         LaunchedEffect(dismissState.currentValue) {
             if (dismissState.currentValue == DismissValue.DismissedToEnd || dismissState.currentValue == DismissValue.DismissedToStart) {

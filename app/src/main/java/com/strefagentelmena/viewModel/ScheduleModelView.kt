@@ -183,9 +183,6 @@ class ScheduleModelView : ViewModel() {
      * Create New Apointment.
      *
      * @param isNew
-     * @param selectedClient
-     * @param date
-     * @param startTime
      * @param context
      */
     fun createNewAppointment(

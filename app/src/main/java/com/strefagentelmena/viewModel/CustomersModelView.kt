@@ -7,6 +7,7 @@ import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
+import java.util.Locale
 
 class CustomersModelView : ViewModel() {
     val customersLists = MutableLiveData<List<Customer>>(emptyList())
@@ -14,7 +15,6 @@ class CustomersModelView : ViewModel() {
     var selectedCustomer = MutableLiveData<Customer?>(null)
     val messages = MutableLiveData<String>("")
     val searchState = MutableLiveData<Boolean>(false)
-    private val selectedCustomerNote = MutableLiveData<String>("")
 
     //form Errors
     val firstNameError = MutableLiveData<String>()
@@ -27,9 +27,10 @@ class CustomersModelView : ViewModel() {
     val deleteDialogState = MutableLiveData<Boolean>(false)
 
     //Customer data
-    private val customerName = MutableLiveData<String>("")
-    private val customerLastName = MutableLiveData<String>("")
-    private val customerPhoneNumber = MutableLiveData<String>("")
+    val customerName = MutableLiveData<String>("")
+    val customerLastName = MutableLiveData<String>("")
+    val customerPhoneNumber = MutableLiveData<String>("")
+    val customerNote = MutableLiveData<String>("")
 
     fun closeAllDialogs() {
         clientDialogState.value = false
@@ -39,7 +40,7 @@ class CustomersModelView : ViewModel() {
     }
 
     fun setSelectedCustomerNote(note: String) {
-        selectedCustomerNote.value = note
+        customerNote.value = note
     }
 
     fun loadClients(context: Context) {
@@ -71,15 +72,29 @@ class CustomersModelView : ViewModel() {
     }
 
     fun setCustomerName(name: String) {
-        customerName.value = name.filterNot { it.isWhitespace() }
+        var newName = name.filterNot { it.isWhitespace() }
+
+        newName =
+            newName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        customerName.value = newName
     }
 
+
     fun setCustomerLastName(lastname: String) {
-        customerLastName.value = lastname.filterNot { it.isWhitespace() }
+        var newLastName = lastname.filterNot { it.isWhitespace() }
+
+        newLastName =
+            newLastName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
+        customerLastName.value = newLastName
     }
 
     fun setCustomerPhoneNumber(phoneNumber: String) {
-        customerPhoneNumber.value = phoneNumber.filterNot { it.isWhitespace() }
+        val newPhoneNumber = phoneNumber.filterNot { it.isWhitespace() }
+
+        if (newPhoneNumber.length <= 9) {
+            customerPhoneNumber.value = newPhoneNumber
+        }
     }
 
     fun setShowSearchState(showSearchState: Boolean) {
@@ -117,17 +132,17 @@ class CustomersModelView : ViewModel() {
             firstName = customerName.value ?: "",
             lastName = customerLastName.value ?: "",
             phoneNumber = customerPhoneNumber.value ?: "",
-            noted = selectedCustomerNote.value ?: ""
+            noted = customerNote.value ?: ""
         )
     }
 
 
-    private fun clearSelectedClientAndData() {
-        selectedCustomer.value = Customer()
+    fun clearSelectedClientAndData() {
+        selectedCustomer.value = null
         customerPhoneNumber.value = ""
         customerLastName.value = ""
         customerName.value = ""
-        selectedCustomerNote.value = ""
+        customerNote.value = ""
     }
 
     /**
@@ -137,7 +152,7 @@ class CustomersModelView : ViewModel() {
         customerName.value = selectedCustomer.value?.firstName ?: ""
         customerLastName.value = selectedCustomer.value?.lastName ?: ""
         customerPhoneNumber.value = selectedCustomer.value?.phoneNumber ?: ""
-        selectedCustomerNote.value = selectedCustomer.value?.noted ?: ""
+        customerNote.value = selectedCustomer.value?.noted ?: ""
     }
 
     /**
@@ -195,8 +210,6 @@ class CustomersModelView : ViewModel() {
 
         if (firstName.isEmpty()) {
             firstNameError.postValue("Imię nie może być puste")
-        } else if (!namePattern.matches(firstName)) {
-            firstNameError.postValue("Imię może zawierać tylko litery")
         } else {
             firstNameError.postValue("")
         }
@@ -207,8 +220,6 @@ class CustomersModelView : ViewModel() {
 
         if (lastName.isEmpty()) {
             lastNameError.postValue("Nazwisko nie może być puste")
-        } else if (!namePattern.matches(lastName)) {
-            lastNameError.postValue("Nazwisko może zawierać tylko litery")
         } else {
             lastNameError.postValue("")
         }
@@ -274,6 +285,11 @@ class CustomersModelView : ViewModel() {
         filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList)
     }
 
+    /**
+     * Edit customer
+     *
+     * @param context
+     */
     fun editCustomer(context: Context) {
         val customersList = customersLists.value ?: return
         val customerToEditIndex = customersList.indexOfFirst { it.id == selectedCustomer.value?.id }
@@ -283,7 +299,7 @@ class CustomersModelView : ViewModel() {
             firstName = customerName.value ?: return,
             lastName = customerLastName.value ?: return,
             phoneNumber = customerPhoneNumber.value ?: return,
-            noted = selectedCustomerNote.value ?: return
+            noted = customerNote.value ?: return
         )
 
         customersLists.value = customersList.toMutableList().apply {

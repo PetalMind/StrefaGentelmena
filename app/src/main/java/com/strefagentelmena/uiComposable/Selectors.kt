@@ -48,7 +48,7 @@ class Selectors {
                 if (findClient != null) {
                     viewModel.setSelectedClient(findClient)
 
-                    selectedClientName.value = findClient.fullName ?: "Wybierz klienta"
+                    selectedClientName.value = findClient.fullName
                 }
             }
         }
@@ -60,14 +60,15 @@ class Selectors {
                 selectedClientName.value = it
             },
             isEditable = true,
-            items = customersList?.map { it.fullName ?: "" } ?: emptyList(),
+            items = customersList?.filterNot { it.id == selectedClient?.id }
+                ?.map { it.fullName } ?: emptyList(),
             onItemSelected = { client ->
                 val findClient = viewModel.findCustomerByName(client)
 
                 if (findClient != null) {
                     viewModel.setSelectedClient(findClient)
                     viewModel.checkAppointmentsList()
-                    selectedClientName.value = findClient.fullName ?: "Wybierz klienta"
+                    selectedClientName.value = findClient.fullName
                 }
             },
             leadingIcon = {

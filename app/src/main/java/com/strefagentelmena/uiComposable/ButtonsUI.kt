@@ -13,7 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,6 +67,17 @@ class ButtonsUI {
     }
 
     @Composable
+    fun IconButton(icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(containerColor = colorsUI.teaGreen),
+            modifier = modifier
+        ) {
+            Icon(imageVector = icon, contentDescription = null)
+        }
+    }
+
+    @Composable
     fun PrimaryButton(
         text: String,
         onClick: () -> Unit,
@@ -89,7 +103,7 @@ class ButtonsUI {
             animationSpec = tween(durationMillis = 300), label = ""
         )
 
-        Button(
+        ElevatedButton(
             onClick = {
                 pressed.value = !pressed.value
                 onClick()
@@ -151,6 +165,20 @@ class ButtonsUI {
             containerColor = colorsUI.jade,
             contentColor = MaterialTheme.colorScheme.onSecondary
         )
+    }
+
+    @Composable
+    fun LargeFloatingActionButton(
+        icon: ImageVector,
+        onClick: () -> Unit,
+    ) {
+        FloatingActionButton(
+            onClick = onClick,
+            containerColor = colorsUI.jade,
+            contentColor = MaterialTheme.colorScheme.onSecondary
+        ) {
+            Icon(icon, contentDescription = null)
+        }
     }
 
     @Composable

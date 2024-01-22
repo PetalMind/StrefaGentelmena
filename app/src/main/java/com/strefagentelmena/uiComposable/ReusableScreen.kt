@@ -2,6 +2,7 @@ package com.strefagentelmena.uiComposable
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,27 +27,14 @@ val reusableScreen = ReusableScreen()
 class ReusableScreen {
 
     @Composable
-    fun EmptyScreen(emptyText: String = "Pusto, nic tu nie ma") {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.background_no_data),
-                    contentDescription = "empty image",
-                    modifier = Modifier
-                        .width(120.dp)
-                        .height(120.dp)
-                )
-                Text(
-                    text = emptyText,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-            }
+    fun EmptyScreen(emptyText: String = "Brak zaplanowanych wizyt") {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = emptyText,
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.Gray
+            )
         }
     }
 }

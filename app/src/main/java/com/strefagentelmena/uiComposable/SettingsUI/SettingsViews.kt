@@ -56,7 +56,10 @@ class SettingsViews {
                         Icons.Default.Person,
                         contentDescription = null
                     )
-                }
+                },
+                isError = profileName.isEmpty(),
+                supportText = "Nazwa użytkownika nie może być pusta"
+
             )
             buttonsUI.ButtonsRow(
                 onClick = {
@@ -150,18 +153,18 @@ class SettingsViews {
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
-
-                if (FirebaseApp.getApps(context).isNotEmpty()) {
-                    settingsUiElements.CustomSwitch(
-                        checked = hasOnlineCopy,
-                        onCheckedChange = {
-                            viewModel.setHasOnlineCopy(it)
-                        },
-                        text = "Pozwól na kopię online",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    )
-                }
-
+                /*
+                                if (FirebaseApp.getApps(context).isNotEmpty()) {
+                                    settingsUiElements.CustomSwitch(
+                                        checked = hasOnlineCopy,
+                                        onCheckedChange = {
+                                            viewModel.setHasOnlineCopy(it)
+                                        },
+                                        text = "Pozwól na kopię online",
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    )
+                                }
+                */
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center,
@@ -184,6 +187,7 @@ class SettingsViews {
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
+                /*
                 if (FirebaseApp.getApps(context).isNotEmpty()) {
                     settingsUiElements.CustomSwitch(
                         checked = isBackupOnline,
@@ -191,10 +195,10 @@ class SettingsViews {
                             viewModel.setIsBackupOnline(it)
                         },
                         text = "Odwtórz kopię online",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        modifier =F Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                     )
                 }
-
+*/
                 Row(modifier = Modifier.padding(10.dp)) {
                     Text(
                         text = "Ostatnia utworzona kopie zapasowa: ",

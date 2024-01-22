@@ -96,30 +96,27 @@ class Dialogs {
         onDeleteCustomer: () -> Unit,
     ) {
         val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
-        var firstName by remember { mutableStateOf(selectedCustomer?.firstName ?: "") }
-        var lastName by remember { mutableStateOf(selectedCustomer?.lastName ?: "") }
-        var phoneNumber by remember { mutableStateOf(selectedCustomer?.phoneNumber ?: "") }
-        var note by remember { mutableStateOf(selectedCustomer?.noted ?: "") }
+
+        val firstName by viewModel.customerName.observeAsState("")
+        val lastName by viewModel.customerLastName.observeAsState("")
+        val phoneNumber by viewModel.customerPhoneNumber.observeAsState("")
+        val note by viewModel.customerNote.observeAsState("")
 
         //errors fromViewModel
         val firstNameError by viewModel.firstNameError.observeAsState("")
         val lastNameError by viewModel.lastNameError.observeAsState("")
         val phoneNumberError by viewModel.phoneNumberError.observeAsState("")
+
         val headerText =
             if (selectedCustomer == null) "Nowy klient" else "Edytuj klienta"
 
         val focusRequester = remember { FocusRequester() }
 
-        val buttonEnabled = firstNameError.isEmpty()
-                && lastNameError.isEmpty()
-                && phoneNumberError.isEmpty()
-                && phoneNumber.isNotBlank()
-                && firstName.isNotBlank()
-                && lastName.isNotBlank()
-
         LaunchedEffect(selectedCustomer) {
             if (selectedCustomer != null) {
                 viewModel.setSelectedCustomerData()
+            } else {
+                viewModel.clearSelectedClientAndData()
             }
         }
 
@@ -158,10 +155,10 @@ class Dialogs {
                         textModernTextFieldUI.ModernTextField(
                             value = firstName,
                             onValueChange = {
-                                val newValue = it.replace(" ", "")
-                                firstName = newValue
-                                viewModel.validateFirstName(newValue)
-                                viewModel.setCustomerName(newValue)
+                                viewModel.setCustomerName(it)
+                                if (it.isNotBlank()) {
+                                    viewModel.validateFirstName(it)
+                                }
                             },
                             label = "Imię",
                             modifier = Modifier
@@ -180,10 +177,11 @@ class Dialogs {
                         textModernTextFieldUI.ModernTextField(
                             value = lastName,
                             onValueChange = {
-                                val newValue = it.replace(" ", "")
-                                lastName = newValue
-                                viewModel.validateLastName(newValue)
-                                viewModel.setCustomerLastName(newValue)
+                                viewModel.setCustomerLastName(it)
+
+                                if (it.isNotBlank()) {
+                                    viewModel.validateLastName(it)
+                                }
                             },
                             label = "Nazwisko",
                             isError = lastNameError.isNotEmpty(),
@@ -199,12 +197,10 @@ class Dialogs {
                         textModernTextFieldUI.ModernTextField(
                             value = phoneNumber,
                             onValueChange = {
-                                val newValue = it.replace(" ", "")
-                                if (newValue.length <= 9) {
-                                    phoneNumber = newValue
+                                viewModel.setCustomerPhoneNumber(it)
+                                if (it.isNotBlank()) {
+                                    viewModel.validatePhoneNumber(it)
                                 }
-                                viewModel.validatePhoneNumber(newValue)
-                                viewModel.setCustomerPhoneNumber(newValue)
                             },
                             label = "Numer Telefonu",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -220,7 +216,6 @@ class Dialogs {
                         textModernTextFieldUI.ModernTextField(
                             value = note,
                             onValueChange = {
-                                note = it
                                 viewModel.setSelectedCustomerNote(it)
                             },
                             label = "Notatka",
@@ -250,7 +245,7 @@ class Dialogs {
                             },
                             containerColor = colorsUI.green,
                             modifier = Modifier.padding(top = 16.dp),
-                            buttonEnabled = buttonEnabled
+                            buttonEnabled = true
                         )
                     }
                 }

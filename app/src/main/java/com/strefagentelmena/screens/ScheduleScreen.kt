@@ -221,7 +221,7 @@ class Schedule {
                 )
             },
             floatingActionButton = {
-                buttonsUI.ExtendedFab(text = "Dodaj", icon = Icons.Default.Add) {
+                buttonsUI.LargeFloatingActionButton(icon = Icons.Default.Add) {
                     viewModel.setAppoimentState(true)
                     viewModel.clearDate()
                     viewModel.showApoimentDialog()

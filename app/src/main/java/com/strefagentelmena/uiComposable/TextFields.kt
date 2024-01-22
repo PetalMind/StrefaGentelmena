@@ -84,7 +84,6 @@ class TextFields {
         modifier: Modifier = Modifier
     ) {
         val interactionSource = remember { MutableInteractionSource() }
-        val softwareKeyboardController = LocalSoftwareKeyboardController.current ?: return
 
         OutlinedTextField(
             value = value,
@@ -121,7 +120,7 @@ class TextFields {
     }
 
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+    @OptIn( ExperimentalComposeUiApi::class)
     @Composable
     fun SearchTextField(searchText: MutableState<String>, onSearchTextChange: (String) -> Unit) {
         val focusRequester = remember { FocusRequester() }

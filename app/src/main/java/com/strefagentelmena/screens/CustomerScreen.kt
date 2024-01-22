@@ -58,6 +58,7 @@ import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
+import com.strefagentelmena.uiComposable.reusableScreen
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
 import com.strefagentelmena.viewModel.CustomersModelView
 import kotlinx.coroutines.launch
@@ -111,7 +112,7 @@ class CustomerScreen {
                 SnackbarHost(hostState = snackbarHostState)
             },
             floatingActionButton = {
-                buttonsUI.ExtendedFab(text = "Dodaj", icon = Icons.Default.Add, onClick = {
+                buttonsUI.LargeFloatingActionButton(icon = Icons.Default.Add, onClick = {
                     viewModel.setSelectedCustomer(null)
                     viewModel.showAddCustomerDialog()
                 })
@@ -165,14 +166,7 @@ class CustomerScreen {
                 }
 
                 if (showedList.value.isEmpty()) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Text(
-                            text = "Lista klientów jest pusta",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.Gray
-                        )
-                    }
+                    reusableScreen.EmptyScreen("Lista klientów jest pusta")
                 } else {
                     ClientLazyColumn(
                         customerList = showedList.value,
