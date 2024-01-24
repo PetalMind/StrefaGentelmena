@@ -7,6 +7,7 @@ import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
 import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
+import com.strefagentelmena.models.appoimentsModel.Appointment
 import java.util.Locale
 
 class CustomersModelView : ViewModel() {
@@ -177,24 +178,43 @@ class CustomersModelView : ViewModel() {
     }
 
     fun deleteCustomer(context: Context, customer: Customer) {
-        val currentList = customersLists.value.orEmpty().toMutableList()
+        val currentList = customersLists.value?.toMutableList() ?: return
         val index = currentList.indexOfFirst { it.id == customer.id }
-        var scheduledAppointments = filesFunctionsAppoiments.loadAppointmentFromFile(context)
+        val scheduledAppointments = filesFunctionsAppoiments.loadAppointmentFromFile(context)
 
         if (index != -1) {
-            currentList.removeAt(index)
-            scheduledAppointments = scheduledAppointments.filter { it.customer.id != customer.id }
-            setCustomersList(currentList)
-            setSearchedCustomersList(currentList)
-
-            setMessage("Klient ${customer.fullName} został usunięty")
-
-            fileFunctionsClients.saveCustomersToFile(context, currentList)
-            filesFunctionsAppoiments.saveAppointmentToFile(context, scheduledAppointments)
-
-            closeDeleteDialog()
+            removeCustomerAndUpdateLists(
+                currentList,
+                index,
+                scheduledAppointments,
+                context,
+                customer
+            )
         }
     }
+
+    private fun removeCustomerAndUpdateLists(
+        currentList: MutableList<Customer>,
+        index: Int,
+        scheduledAppointments: List<Appointment>,
+        context: Context,
+        customer: Customer
+    ) {
+        currentList.removeAt(index)
+        val updatedScheduledAppointments =
+            scheduledAppointments.filter { it.customer.id != customer.id }
+
+        setCustomersList(currentList)
+        setSearchedCustomersList(currentList)
+
+        setMessage("Klient ${customer.fullName} został usunięty")
+
+        fileFunctionsClients.saveCustomersToFile(context, currentList)
+        filesFunctionsAppoiments.saveAppointmentToFile(context, updatedScheduledAppointments)
+
+        closeDeleteDialog()
+    }
+
 
     private fun setSearchedCustomersList(currentList: MutableList<Customer>) {
         searchedCustomersLists.value = currentList
@@ -206,8 +226,6 @@ class CustomersModelView : ViewModel() {
 
 
     fun validateFirstName(firstName: String) {
-        val namePattern = Regex("^[a-zA-Z]+$")
-
         if (firstName.isEmpty()) {
             firstNameError.postValue("Imię nie może być puste")
         } else {
@@ -216,8 +234,6 @@ class CustomersModelView : ViewModel() {
     }
 
     fun validateLastName(lastName: String) {
-        val namePattern = Regex("^[a-zA-Z]+$")
-
         if (lastName.isEmpty()) {
             lastNameError.postValue("Nazwisko nie może być puste")
         } else {
@@ -236,18 +252,17 @@ class CustomersModelView : ViewModel() {
     }
 
 
-    fun validateAllFields(
-    ): Boolean {
+    fun checkFormValidity(): Boolean {
         var isValid = true
 
-        if (customerName.value?.isEmpty() == true) {
+        if (customerName.value?.trim()?.isEmpty() == true) {
             firstNameError.postValue("Imię nie może być puste")
             isValid = false
         } else {
             firstNameError.postValue("")
         }
 
-        if (customerLastName.value?.isEmpty() == true) {
+        if (customerLastName.value?.trim()?.isEmpty() == true) {
             lastNameError.postValue("Nazwisko nie może być puste")
             isValid = false
         } else {
@@ -261,27 +276,20 @@ class CustomersModelView : ViewModel() {
             phoneNumberError.postValue("")
         }
 
-
         return isValid
     }
 
 
     private fun loadAndEditAppointments(context: Context, updatedCustomer: Customer) {
-        // Załaduj listę wizyt z pliku
         val appointmentsList = filesFunctionsAppoiments.loadAppointmentFromFile(context)
 
-        // Znajdź wizyty przypisane do wybranego klienta
         val appointmentsToEdit =
             appointmentsList.filter { it.customer.id == selectedCustomer.value?.id }
 
-        // Edytuj wizyty (przykładowa operacja, zastąp ją właściwą logiką edycji)
         appointmentsToEdit.forEach { appointment ->
-            // Przykładowa edycja: Zmiana czasu rozpoczęcia na 12:00
             appointment.customer = updatedCustomer
-            // Możesz dodać więcej operacji edycji w zależności od potrzeb
         }
 
-        // Zapisz zaktualizowaną listę wizyt z powrotem do pliku
         filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList)
     }
 
@@ -292,24 +300,36 @@ class CustomersModelView : ViewModel() {
      */
     fun editCustomer(context: Context) {
         val customersList = customersLists.value ?: return
+
         val customerToEditIndex = customersList.indexOfFirst { it.id == selectedCustomer.value?.id }
+
         if (customerToEditIndex == -1) return
 
-        val updatedCustomer = customersList[customerToEditIndex].copy(
-            firstName = customerName.value ?: return,
-            lastName = customerLastName.value ?: return,
-            phoneNumber = customerPhoneNumber.value ?: return,
-            noted = customerNote.value ?: return
-        )
+        val updatedCustomer = updateCustomerDetails(customersList[customerToEditIndex])
 
         customersLists.value = customersList.toMutableList().apply {
             this[customerToEditIndex] = updatedCustomer
         }
 
         loadAndEditAppointments(context, updatedCustomer)
+
         setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
+
         fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: return)
+
         closeCustomerDialog()
+    }
+
+    private fun updateCustomerDetails(customer: Customer): Customer {
+        return customer.copy(
+            firstName = customerName.value
+                ?: throw IllegalArgumentException("FirstName cannot be null"),
+            lastName = customerLastName.value
+                ?: throw IllegalArgumentException("LastName cannot be null"),
+            phoneNumber = customerPhoneNumber.value
+                ?: throw IllegalArgumentException("PhoneNumber cannot be null"),
+            noted = customerNote.value ?: ""
+        )
     }
 
 
