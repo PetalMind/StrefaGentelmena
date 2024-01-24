@@ -77,9 +77,6 @@ class Schedule {
         navController: NavController,
         viewModel: ScheduleModelView,
     ) {
-        val appointments by viewModel.appointmentsList.observeAsState(emptyList())
-        val showApoimentDialog by viewModel.showAppointmentDialog.observeAsState(false)
-        val message by viewModel.messages.observeAsState("")
         val context = LocalContext.current
         val viewState by viewModel.viewState.observeAsState(AppState.Idle)
 
@@ -112,10 +109,8 @@ class Schedule {
     /**
      * Appointment Succes Conent.
      *
-     * @param customersModelView
      * @param navController
      * @param viewModel
-     * @param dashboardModelView
      */
     @Composable
     fun AppointmentSuccesConent(
@@ -267,6 +262,7 @@ class Schedule {
     fun TimeLineWithAppointments(
         appointments: List<Appointment>,
         onClick: (Appointment) -> Unit,
+        onNotificationClick: (Appointment) -> Unit
     ) {
         LazyColumn {
             itemsIndexed(appointments) { index, appointment ->
@@ -307,12 +303,14 @@ class Schedule {
                                         modifier = Modifier.padding(start = 8.dp)
                                     )
                                 }
+
                                 val nextAppointment =
                                     if (index < appointments.size - 1) appointments[index + 1] else null
                                 val endTimesAppointment = nextAppointment?.startTime
 
                                 val intervals =
                                     generateTimeIntervals(startTime, endTimesAppointment ?: endTime)
+
                                 intervals.forEach { interval ->
                                     Row(
                                         modifier = Modifier.padding(vertical = 4.dp),
@@ -342,7 +340,9 @@ class Schedule {
                         cardUI.CustomerAppoimentListCard(
                             appointment,
                             onClick = { onClick(appointment) },
-                            onNotificationClick = {}
+                            onNotificationClick = {
+                                onNotificationClick(appointment)
+                            }
                         )
                     }
                 }
@@ -397,6 +397,9 @@ class Schedule {
                 TimeLineWithAppointments(
                     appointments = it,
                     onClick = onClick,
+                    onNotificationClick = {
+                        viewModel.showNotificationState()
+                    }
                 )
             }
         }

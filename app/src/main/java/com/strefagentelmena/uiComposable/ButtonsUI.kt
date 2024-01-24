@@ -67,13 +67,18 @@ class ButtonsUI {
     }
 
     @Composable
-    fun IconButton(icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    fun IconButton(
+        icon: ImageVector,
+        onClick: () -> Unit,
+        modifier: Modifier = Modifier,
+        color: Color = MaterialTheme.colorScheme.primary
+    ) {
         Button(
             onClick = onClick,
             colors = ButtonDefaults.buttonColors(containerColor = colorsUI.teaGreen),
             modifier = modifier
         ) {
-            Icon(imageVector = icon, contentDescription = null)
+            Icon(imageVector = icon, contentDescription = null, tint = color)
         }
     }
 

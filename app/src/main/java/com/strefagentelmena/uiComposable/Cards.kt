@@ -136,12 +136,16 @@ class Cards {
                             )
                         }
 
-                        buttonsUI.IconButton(icon = Icons.Default.Call, onClick = {
-                            appFunctions.dialPhoneNumber(
-                                context = context,
-                                phoneNumber = appointment.customer.phoneNumber
-                            )
-                        })
+                        buttonsUI.IconButton(
+                            color = Color.Black,
+                            icon = Icons.Default.Call,
+                            onClick = {
+                                appFunctions.dialPhoneNumber(
+                                    context = context,
+                                    phoneNumber = appointment.customer.phoneNumber,
+                                )
+                            },
+                        )
                     }
                 }
 
