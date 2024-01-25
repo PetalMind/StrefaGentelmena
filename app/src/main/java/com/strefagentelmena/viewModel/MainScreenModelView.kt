@@ -1,6 +1,7 @@
 package com.strefagentelmena.viewModel
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.strefagentelmena.enums.AppState
@@ -111,18 +112,7 @@ class  MainScreenModelView : ViewModel() {
                     appointmentDateTime.toLocalDate()
                 ).days
 
-                if (daysDifference.toLong() == 1L && currentTime.toLocalTime().isAfter(
-                        LocalTime.parse(
-                            profilePreferences.value?.notificationSendStartTime,
-                            DateTimeFormatter.ofPattern("HH:mm")
-                        )
-                    ) && currentTime.toLocalTime().isBefore(
-                        LocalTime.parse(
-                            profilePreferences.value?.notificationSendEndTime,
-                            DateTimeFormatter.ofPattern("HH:mm")
-                        )
-                    )
-                ) {
+                if (shouldSendNotification(daysDifference, currentTime)) {
                     try {
                         val nextDay = LocalDate.parse(
                             LocalDate.now().format(
@@ -131,12 +121,11 @@ class  MainScreenModelView : ViewModel() {
                             DateTimeFormatter.ofPattern("dd.MM.yyyy")
                         ).plusDays(1)
 
-                        if (appointment.date == nextDay.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-                        ) {
+                        if (appointment.date == nextDay.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))) {
                             appointmentsToSend.add(appointment)
                         }
                     } catch (e: Exception) {
-                        setViewState(AppState.Error)
+                        Log.e("Notification Error", e.message, e)
                     }
                 }
             }
@@ -145,6 +134,21 @@ class  MainScreenModelView : ViewModel() {
             setAppointmentsToNotify(appointmentsToSend)
         }
     }
+
+    private fun shouldSendNotification(daysDifference: Int, currentTime: LocalDateTime): Boolean {
+        return daysDifference.toLong() == 1L && currentTime.toLocalTime().isAfter(
+            LocalTime.parse(
+                profilePreferences.value?.notificationSendStartTime,
+                DateTimeFormatter.ofPattern("HH:mm")
+            )
+        ) && currentTime.toLocalTime().isBefore(
+            LocalTime.parse(
+                profilePreferences.value?.notificationSendEndTime,
+                DateTimeFormatter.ofPattern("HH:mm")
+            )
+        )
+    }
+
 
     /**
      * Find nearest appointment today
@@ -182,23 +186,26 @@ class  MainScreenModelView : ViewModel() {
         val clientIndex = customersLists.value?.indexOf(selectedClient) ?: return
 
         if (index != -1 && clientIndex != -1) {
-            appointment.notificationSent = notificationIsSent
-            currentAppointments[index] = appointment
-            selectedClient.appointment = appointment
-            setAppointmentsList(currentAppointments)
-
-            filesFunctionsAppoiments.saveAppointmentToFile(
-                context,
-                appointmentsLists.value ?: emptyList()
-            )
-
-            customersLists.value?.get(clientIndex)?.appointment = appointment
-            fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: emptyList())
-
-            setCustomersList(fileFunctionsClients.loadCustomersFromFile(context))
-            setAppointmentsList(filesFunctionsAppoiments.loadAppointmentFromFile(context))
+            updateAppointmentAndCustomer(currentAppointments, index, appointment, notificationIsSent, selectedClient, clientIndex)
+            saveAndReloadData(context, currentAppointments)
         }
     }
+
+    private fun updateAppointmentAndCustomer(currentAppointments: MutableList<Appointment>, index: Int, appointment: Appointment, notificationIsSent: Boolean, selectedClient: Customer, clientIndex: Int) {
+        appointment.notificationSent = notificationIsSent
+        currentAppointments[index] = appointment
+        selectedClient.appointment = appointment
+        setAppointmentsList(currentAppointments)
+        customersLists.value?.get(clientIndex)?.appointment = appointment
+    }
+
+    private fun saveAndReloadData(context: Context, currentAppointments: MutableList<Appointment>) {
+        filesFunctionsAppoiments.saveAppointmentToFile(context, currentAppointments)
+        fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: emptyList())
+        setCustomersList(fileFunctionsClients.loadCustomersFromFile(context))
+        setAppointmentsList(filesFunctionsAppoiments.loadAppointmentFromFile(context))
+    }
+
 
     private fun setAppointmentsList(loadAppointmentFromFile: List<Appointment>) {
         appointmentsLists.value = loadAppointmentFromFile

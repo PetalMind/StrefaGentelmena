@@ -37,7 +37,7 @@ class ScheduleModelView : ViewModel() {
     /**
      *Dialogs states
      */
-    val showAppointmentDialog = MutableLiveData(false)
+    val appointmentDialog = MutableLiveData(false)
     val deleteDialogState = MutableLiveData(false)
     val onNotificationClickState = MutableLiveData(false)
     val appointmentError = MutableLiveData("")
@@ -143,7 +143,7 @@ class ScheduleModelView : ViewModel() {
      *
      */
     fun showApoimentDialog() {
-        showAppointmentDialog.value = true
+        appointmentDialog.value = true
     }
 
     /**
@@ -151,7 +151,7 @@ class ScheduleModelView : ViewModel() {
      *
      */
     fun hideApoimentDialog() {
-        showAppointmentDialog.value = false
+        appointmentDialog.value = false
     }
 
     /**
@@ -308,7 +308,7 @@ class ScheduleModelView : ViewModel() {
 
 
     fun closeAllDialog() {
-        showAppointmentDialog.value = false
+        appointmentDialog.value = false
         deleteDialogState.value = false
     }
 

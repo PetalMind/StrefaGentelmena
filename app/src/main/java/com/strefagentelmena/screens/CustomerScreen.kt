@@ -63,7 +63,7 @@ val screenCustomerView = CustomerScreen()
 class CustomerScreen {
 
     @Composable
-    fun CustomerListView(
+    fun CustomersOverview(
         viewModel: CustomersModelView,
         navController: NavController,
     ) {

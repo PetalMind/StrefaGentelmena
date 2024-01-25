@@ -1,7 +1,5 @@
 package com.strefagentelmena.navigation
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.EaseOut
@@ -76,7 +74,7 @@ class Navigation {
                     )
                 }
             ) {
-                screenCustomerView.CustomerListView(
+                screenCustomerView.CustomersOverview(
                     customersModelView, navController
                 )
             }

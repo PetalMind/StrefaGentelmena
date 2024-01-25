@@ -97,7 +97,7 @@ class Schedule {
             }
 
             AppState.Success -> {
-                AppointmentSuccesConent(
+                ReservationSuccessContent(
                     navController = navController,
                     viewModel = viewModel,
                 )
@@ -113,14 +113,14 @@ class Schedule {
      * @param viewModel
      */
     @Composable
-    fun AppointmentSuccesConent(
+    fun ReservationSuccessContent(
         navController: NavController,
         viewModel: ScheduleModelView,
     ) {
-        val showApoimentDialog by viewModel.showAppointmentDialog.observeAsState(false)
+        val appointmentDialogState by viewModel.appointmentDialog.observeAsState(false)
         val message by viewModel.messages.observeAsState("")
         val context = LocalContext.current
-        val currentSelectedAppoinmentsDate by viewModel.selectedAppointmentDate.observeAsState(
+        val appointmentDateSelection by viewModel.selectedAppointmentDate.observeAsState(
             LocalDate.now().format(
                 DateTimeFormatter.ofPattern(
                     "dd.MM.yyyy"
@@ -130,7 +130,7 @@ class Schedule {
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
         val currentSelectedDay = remember {
-            mutableIntStateOf(currentSelectedAppoinmentsDate?.let {
+            mutableIntStateOf(appointmentDateSelection?.let {
                 if (it.isNotEmpty()) sdf.parse(it)?.date ?: Calendar.getInstance()
                     .get(Calendar.DAY_OF_MONTH)
                 else Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
@@ -138,16 +138,16 @@ class Schedule {
         }
 
 
-        LaunchedEffect(currentSelectedAppoinmentsDate) {
-            currentSelectedDay.intValue = currentSelectedAppoinmentsDate?.let {
+        LaunchedEffect(appointmentDateSelection) {
+            currentSelectedDay.intValue = appointmentDateSelection?.let {
                 if (it.isNotEmpty()) sdf.parse(it)?.date ?: Calendar.getInstance()
                     .get(Calendar.DAY_OF_MONTH)
                 else Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
             } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
         }
 
-        LaunchedEffect(currentSelectedAppoinmentsDate) {
-            currentSelectedDay.intValue = currentSelectedAppoinmentsDate?.let {
+        LaunchedEffect(appointmentDateSelection) {
+            currentSelectedDay.intValue = appointmentDateSelection?.let {
                 sdf.parse(it)?.date ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
             } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
         }
@@ -157,7 +157,6 @@ class Schedule {
         val snackbarHostState = remember { SnackbarHostState() }
 
 
-        // Efekt wyzwalany, gdy wartość 'message' się zmienia
         LaunchedEffect(message) {
             if (message?.isNotEmpty() == true && message != "") {
                 scope.launch {
@@ -244,7 +243,7 @@ class Schedule {
             }
         }
 
-        if (showApoimentDialog) {
+        if (appointmentDialogState) {
             dialogsUI.OnAddOrEditSchedule(
                 viewModel = viewModel,
             )
@@ -294,6 +293,7 @@ class Schedule {
                                     }
                                     Text(
                                         text = String.format(
+                                            Locale.getDefault(),
                                             "%02d:%02d",
                                             startTime.hour,
                                             startTime.minute
@@ -319,6 +319,7 @@ class Schedule {
                                     ) {
                                         Text(
                                             text = String.format(
+                                                Locale.getDefault(),
                                                 "%02d:%02d",
                                                 interval.hour,
                                                 interval.minute
@@ -361,7 +362,6 @@ class Schedule {
     }
 
 
-    @OptIn(ExperimentalAnimationApi::class)
     @Composable
     fun AppointmentsList(viewModel: ScheduleModelView, onClick: (Appointment) -> Unit) {
         val appointmentsList by viewModel.appointmentsList.observeAsState(emptyList())
@@ -375,6 +375,7 @@ class Schedule {
         }.sortedBy {
             it.startTime
         }
+
         AnimatedContent(targetState = filteredAppointments, label = "", transitionSpec = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Up,
@@ -397,12 +398,15 @@ class Schedule {
                 TimeLineWithAppointments(
                     appointments = it,
                     onClick = onClick,
-                    onNotificationClick = {
+                    onNotificationClick = { appointment ->
+                        viewModel.selectAppointmentAndClient(appointment)
                         viewModel.showNotificationState()
+
                     }
                 )
             }
         }
+
         if (notificationDialogState) {
             dialogsUI.SendNotificationDialog(
                 objectName = selectedAppointment?.customer?.fullName ?: "",
