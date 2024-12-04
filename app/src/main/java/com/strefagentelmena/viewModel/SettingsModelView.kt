@@ -5,43 +5,35 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.functions.fileFuctions.backupFilesFunctions
-import com.strefagentelmena.functions.fileFuctions.fileFunctionsSettings
-import com.strefagentelmena.functions.fireBase.storageFireBase
+import com.strefagentelmena.functions.fireBase.FirebaseEmployeeFunctions
+import com.strefagentelmena.functions.fireBase.FirebaseProfilePreferences
 import com.strefagentelmena.models.settngsModel.BackupSettings
+import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 class SettingsModelView : ViewModel() {
-    val viewState = MutableLiveData<AppState>(AppState.Idle)
+    val viewState = MutableLiveData(AppState.Idle)
     val messages = MutableLiveData("")
-    val backupPrefecences = MutableLiveData(BackupSettings())
     val profilePreferences = MutableLiveData(ProfilePreferences())
     val profileName = MutableLiveData("")
+    private val selectedEmployee = MutableLiveData(Employee())
+    val newEmployee = MutableLiveData(Employee())
+    val empolyeeName = MutableLiveData("")
+    val empolyeeSurname = MutableLiveData("")
+    val empoleesList = MutableLiveData<MutableList<Employee>>(mutableListOf())
+    val addEmpolyeeState = MutableLiveData(false)
     val notificationSendStartTime = MutableLiveData("")
     val notificationSendEndTime = MutableLiveData("")
     val notificationSendAutomatic = MutableLiveData(false)
-    val isBackupCreated = MutableLiveData(false)
-    val backupCustom = MutableLiveData(false)
-    val backupAutomatic = MutableLiveData(false)
-    val backupCustomers = MutableLiveData(false)
-    val backupAppoiments = MutableLiveData(false)
-    val hasOnlineCopy = MutableLiveData(false)
-    val isBackupOnline = MutableLiveData(false)
-    val onlineBackupLists = MutableLiveData<MutableList<String>>(mutableListOf())
-    val backupOnlineDialog = MutableLiveData(false)
-    val selectedBackupOnlineName = MutableLiveData("")
 
     private val greetingsLists = MutableLiveData<MutableList<String>>(mutableListOf())
 
-    private val notificationMessage =
-        MutableLiveData("Przypominamy o wizycie w dniu {data wizyty} o godzinie {godzina ropozczęcia} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola.")
-
     val profileViewState = MutableLiveData<Boolean>(false)
     val notificationViewState = MutableLiveData<Boolean>(false)
+    val empolyeeViewState = MutableLiveData<Boolean>(false)
     val greetingsViewState = MutableLiveData(false)
     val backButtonViewState = MutableLiveData<Boolean>(false)
     val updateViewState = MutableLiveData<Boolean>(false)
@@ -50,97 +42,124 @@ class SettingsModelView : ViewModel() {
         profileViewState.value = !profileViewState.value!!
     }
 
-    fun setSelectedBackupOnlineName(value: String) {
-        selectedBackupOnlineName.value = value
+    fun setAddNewEmployeeState() {
+        addEmpolyeeState.value = !addEmpolyeeState.value!!
     }
 
-    fun downloadFileFromFirebase(it: String, context: Context) {
-        viewModelScope.launch {
-            val result = storageFireBase.getFileFromFirebase(it)
-        }
+    fun setEmpolyeeViewState() {
+        empolyeeViewState.value = !empolyeeViewState.value!!
     }
 
-    fun setBackupOnlineDialog(value: Boolean) {
-        backupOnlineDialog.value = value
+    fun setEmpolyeeName(value: String) {
+        empolyeeName.value = value
     }
 
-    private fun setOnlineBackupLists(value: MutableList<String>) {
-        onlineBackupLists.value = value
+    fun setEmpolyeeSurname(value: String) {
+        empolyeeSurname.value = value
+    }
+
+    fun clearNewEmpolyee() {
+        newEmployee.value = Employee()
+        empolyeeName.value = ""
+        empolyeeSurname.value = ""
+    }
+
+    fun setNewProfileName(value: String) {
+        profileName.value = value
     }
 
 
     /**
-     * Set profile preferences
-     *
-     * @return
+     * Set selected empolyee
      */
-    private fun setProfilePreferences(): ProfilePreferences {
-        // Sprawdź, czy wartości nie są null, zanim utworzysz obiekt ProfilePreferences
-        val userName = profileName.value ?: "Kinga"
-        val startTime = notificationSendStartTime.value
-            ?: "7:30"
-        val endTime = notificationSendEndTime.value
-            ?: "21:00"
-        val greetings = greetingsLists.value ?: mutableListOf()
-        val sendAutomatic = notificationSendAutomatic.value
-            ?: false
-        val backupSettings = backupPrefecences.value
-            ?: BackupSettings()
-
-        // Utwórz i zwróć obiekt ProfilePreferences z wartościami
-        val loadedProfilePreferences = ProfilePreferences(
-            userName = userName,
-            notificationSendStartTime = startTime,
-            notificationSendEndTime = endTime,
-            greetingsLists = greetings,
-            notificationSendAutomatic = sendAutomatic,
-            backupSettings = backupSettings
-        )
-
-        // Zaktualizuj MutableState, jeśli to konieczne
-        profilePreferences.value = loadedProfilePreferences
-
-        return loadedProfilePreferences
+    fun setSlectedEmpolyee(value: Employee) {
+        selectedEmployee.value = value
     }
 
-    fun setIsBackupOnline(value: Boolean) {
-        isBackupOnline.value = value
+
+    /*
+    * Set notification message
+       *
+     */
+    private fun setNotificationTimes(profile: ProfilePreferences) {
+        notificationSendStartTime.value = profile.notificationSendStartTime
+        notificationSendEndTime.value = profile.notificationSendEndTime
     }
 
-    fun downloadBackupFiles() {
+    /**
+     * Set new empolyee
+     */
+
+    fun setNewEmployee(context: Context) {
+        val name = empolyeeName.value
+        val surname = empolyeeSurname.value
+
+        if (name.isNullOrEmpty() || surname.isNullOrEmpty()) {
+            // Obsługa przypadku, gdy dane są niekompletne
+            return
+        }
+
+        // Generujemy ID dla nowego pracownika
+        val newEmployee = Employee().apply {
+            this.id = (empoleesList.value?.maxOfOrNull { it.id ?: 0 } ?: 0) + 1
+            this.name = name
+            this.surname = surname
+        }
+
+        empoleesList.value?.add(newEmployee)
+
+        FirebaseEmployeeFunctions().addEmployeeToFirebase(
+            firebaseDatabase = FirebaseDatabase.getInstance(),
+            employee = newEmployee
+        ) { success ->
+            if (success) {
+                setMessages("Pracownik ${newEmployee.name} został dodany")
+            } else {
+                setMessages("Nie udało się dodać pracownika")
+            }
+        }
+
+        saveAllData()
+    }
+
+
+    // Funkcja do odczytu danych z Firebase
+    private fun loadProfilePreferencesFromFirebase(firebaseDatabase: FirebaseDatabase) {
         viewModelScope.launch {
-            setOnlineBackupLists(storageFireBase.listFilesInDirectory("Kopia_StrefaGentlemana"))
+            try {
+                val profile =
+                    FirebaseProfilePreferences().loadProfilePreferencesFromFirebase(firebaseDatabase)
+                profilePreferences.value = profile
+                setNotificationTimes(profile)
+                setNewProfileName(profile.userName)
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Failed to load ProfilePreferences", e)
+                viewState.value = AppState.Error
+            }
         }
     }
 
 
-    fun setCustomBackupViewState(value: Boolean) {
-        backupCustom.value = value
+    fun deleteEmpolyee(value: Employee) {
+        empoleesList.value?.remove(value)
+        value.id?.let {
+            FirebaseEmployeeFunctions().deleteEmployeeFromFirebase(firebaseDatabase = FirebaseDatabase.getInstance(),
+                it,
+                completion = { succes ->
+
+                    if (succes) {
+                        setMessages("Pracownik usunięty")
+                    } else {
+                        setMessages("Nie udało się usunąć pracownika")
+                    }
+                })
+        }
+        saveAllData()
     }
 
-    fun setBackupCreatedViewState(value: Boolean) {
-        isBackupCreated.value = value
-    }
-
-    fun setAutomaticBackupViewState(value: Boolean) {
-        backupAutomatic.value = value
-    }
-
-
-    fun setCustomersBackupViewState(value: Boolean) {
-        backupCustomers.value = value
-    }
-
-    fun setAppoimentsBackupViewState(value: Boolean) {
-        backupAppoiments.value = value
-    }
 
     fun setAutomaticNotificationViewState(value: Boolean) {
         notificationSendAutomatic.value = value
-    }
-
-    fun setHasOnlineCopy(value: Boolean) {
-        hasOnlineCopy.value = value
     }
 
     fun setNotificationViewState() {
@@ -151,10 +170,6 @@ class SettingsModelView : ViewModel() {
         backButtonViewState.value = !backButtonViewState.value!!
     }
 
-    fun setUpdateViewState() {
-        updateViewState.value = !updateViewState.value!!
-    }
-
     private fun setViewState(state: AppState) {
         viewState.value = state
     }
@@ -163,9 +178,6 @@ class SettingsModelView : ViewModel() {
         messages.value = message
     }
 
-    fun setUserName(userName: String) {
-        this.profileName.value = userName
-    }
 
     fun setNotificationSendStartTime(notificationSendStartTime: String) {
         this.notificationSendStartTime.value = notificationSendStartTime
@@ -181,29 +193,32 @@ class SettingsModelView : ViewModel() {
         greetingsViewState.value = false
         backButtonViewState.value = false
         updateViewState.value = false
-        backupOnlineDialog.value = false
+        empolyeeViewState.value = false
     }
 
 
-    fun loadAllData(context: Context) {
-        setViewState(AppState.Loading)
-
-        fileFunctionsSettings.loadSettingsFromFile(context = context).let {
-            profileName.value = it.userName
-            notificationSendStartTime.value = it.notificationSendStartTime
-            notificationSendEndTime.value = it.notificationSendEndTime
-            greetingsLists.value = it.greetingsLists
-            notificationSendAutomatic.value = it.notificationSendAutomatic
-            backupPrefecences.value = it.backupSettings
-            hasOnlineCopy.value = it.backupSettings.hasOnlineCopy
-            isBackupOnline.value = it.backupSettings.isBackupOnline
+    fun loadEmployeesListFromFirebase() {
+        try {
+            viewModelScope.launch {
+                val employees =
+                    FirebaseEmployeeFunctions().loadEmployeesFromFirebase(FirebaseDatabase.getInstance())
+                empoleesList.value = employees.toMutableList()
+            }
+        } catch (e: Exception) {
+            setMessages("Błąd podczas ładowania listy pracowników: ${e.message}")
         }
+    }
 
-        profilePreferences.value = setProfilePreferences()
+
+    fun loadAllData() {
+        setViewState(AppState.Loading)
+        loadProfilePreferencesFromFirebase(FirebaseDatabase.getInstance())
+        loadEmployeesListFromFirebase()
+
         setViewState(AppState.Success)
     }
 
-    fun saveAllData(context: Context) {
+    fun saveAllData() {
         setViewState(AppState.Loading)
 
         val preferences = ProfilePreferences(
@@ -212,75 +227,32 @@ class SettingsModelView : ViewModel() {
             notificationSendEndTime = notificationSendEndTime.value ?: "",
             greetingsLists = greetingsLists.value ?: mutableListOf(),
             notificationSendAutomatic = notificationSendAutomatic.value ?: false,
-            backupSettings = backupPrefecences.value ?: BackupSettings(),
         )
 
-        fileFunctionsSettings.saveSettingsToFile(context = context, preferences = preferences)
-        profilePreferences.value = fileFunctionsSettings.loadSettingsFromFile(context = context)
+        //fileFunctionsSettings.saveSettingsToFile(context = context, preferences = preferences)
+        // profilePreferences.value = fileFunctionsSettings.loadSettingsFromFile(context = context)
 
         setMessages("Zapisano zmiany")
-        setViewState(AppState.Success)
-    }
 
-    fun createBackup(context: Context) {
-        setViewState(AppState.Loading)
+        FirebaseProfilePreferences().saveProfilePreferencesToFirebase(
+            FirebaseDatabase.getInstance(), preferences
+        ) { success ->
 
-        val preferences = BackupSettings(
-            isBackupCreated = isBackupCreated.value ?: false,
-            latestBackupDate = LocalDate.now().format(
-                DateTimeFormatter.ofPattern("dd.MM.yyyy")
-            ).toString(),
-            isAutomaticBackupEnabled = backupAutomatic.value ?: false,
-            hasOnlineCopy = hasOnlineCopy.value ?: false,
-            isBackupOnline = isBackupOnline.value ?: false
-        )
-
-        backupPrefecences.value = preferences
-        profilePreferences.value?.backupSettings = preferences
-
-        profilePreferences.value?.let {
-            fileFunctionsSettings.saveSettingsToFile(
-                context = context,
-                preferences = it
-            )
-        }
-
-        if (backupFilesFunctions.createAndUploadBackupFile(context = context)) {
-            setMessages("Utworzono kopię zapasowa")
-        } else {
-            setMessages("Nie udało się utworzenie kopii zapasowej")
-        }
-
-        setViewState(AppState.Idle)
-    }
-
-    fun loadBackup(context: Context) {
-        setViewState(AppState.Loading)
-        viewModelScope.launch {
-            if (profilePreferences.value?.backupSettings?.isBackupOnline == true) {
-                if (backupFilesFunctions.fetchAndReadFileFromFirebase(
-                        selectedBackupOnlineName.value ?: "", context
-                    )
-                ) {
-                    setMessages("Pobrano kopę zapasową online")
-                } else {
-                    setMessages("Nie znaleziono kopii zapasowej")
-                }
-
+            if (success) {
+                Log.i("App", "ProfilePreferences saved!")
             } else {
-                if (backupFilesFunctions.readBackupFile(context = context)) {
-                    setMessages("Przywrócono kopię zapasową")
-                } else {
-                    setMessages("Nie znaleziono kopii zapasowej")
-                }
+                Log.e("App", "Failed to save ProfilePreferences.")
             }
         }
 
-        setViewState(AppState.Idle)
+        Log.e("save settings empolyee", empolyeeName.toString())
+        setViewState(AppState.Success)
     }
+
 
     fun clearMessages() {
         messages.value = ""
     }
+
 
 }

@@ -39,7 +39,7 @@ class Customer(
         id: Int = this.id,
         firstName: String = this.firstName,
         lastName: String = this.lastName,
-        appointment: Appointment = this.appointment ?: Appointment(),
+        appointment: Appointment? = this.appointment ?: null,
         phoneNumber: String = this.phoneNumber,
         noted: String = this.noted
     ): Customer {

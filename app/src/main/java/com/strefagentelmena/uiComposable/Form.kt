@@ -1,7 +1,6 @@
 package com.strefagentelmena.uiComposable
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,13 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
+import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
 import java.time.LocalTime
@@ -48,7 +45,7 @@ class Form {
         val startTime by viewModel.selectedAppointmentStartTime.observeAsState("")
         val endTime by viewModel.selectedAppointmentEndTime.observeAsState("")
         val note by viewModel.selectedAppointmentNote.observeAsState("")
-
+        val selectedEmployee by viewModel.selectedEmployee.observeAsState(Employee())
 
         val customerIdError by remember { mutableStateOf(false) }
         val dateError by remember { mutableStateOf(false) }
@@ -83,8 +80,8 @@ class Form {
         }
 
         Column {
+            selectorsUI.WorkerSelector(viewModel = viewModel)
             selectorsUI.ClientSelector(viewModel = viewModel)
-
             if (customerIdError) {
                 Text("Wymagany klient", color = Color.Red)
             }
@@ -96,7 +93,7 @@ class Form {
                 onValueChange = {
                     val date = LocalDate.parse(it, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
 
-                    viewModel.setNewDataAppointment(date)
+                    viewModel.setNewDataAppointment(date.toString())
                     viewModel.checkAppointmentsList()
                 },
             )
@@ -111,7 +108,7 @@ class Form {
                 value = startTime,
                 onValueChange = {
                     val startTimeLocal = LocalTime.parse(it, DateTimeFormatter.ofPattern("HH:mm"))
-                    viewModel.setNewTime(startTimeLocal)
+                    viewModel.setNewTime(startTimeLocal.toString())
 
                     viewModel.checkAppointmentsList()
                 },

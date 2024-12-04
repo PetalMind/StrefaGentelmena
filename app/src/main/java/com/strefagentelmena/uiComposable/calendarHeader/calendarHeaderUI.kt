@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -108,7 +107,7 @@ class CalendarHeaderUI {
 
     @SuppressLint("NewApi")
     @Composable
-    fun CalendarApp(modifier: Modifier = Modifier, viewModel: ScheduleModelView) {
+    fun CalendarHeader(modifier: Modifier = Modifier, viewModel: ScheduleModelView) {
         val dataSource = CalendarDataSource()
         var calendarUiModel by remember { mutableStateOf(dataSource.getData(lastSelectedDate = dataSource.today)) }
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState()

@@ -8,9 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,9 +21,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
@@ -71,14 +71,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
+import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -262,6 +262,7 @@ class Dialogs {
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(Appointment())
         val selectedClient by viewModel.selectedClient.observeAsState(Customer())
+        val selectedWorker by viewModel.selectedEmployee.observeAsState(Employee())
 
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
         val selectedDate = if (selectedAppointment != null) {
@@ -323,8 +324,11 @@ class Dialogs {
             ) {
                 Column(
                     verticalArrangement = Arrangement.Top,
+
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState()) // Dodanie przewijania w pionie
+
                 ) {
                     Row {
                         headersUI.AppBarWithBackArrow(
@@ -367,7 +371,7 @@ class Dialogs {
                                         )
                                     } else {
                                         viewModel.editAppointment(
-                                            context,
+                                            FirebaseDatabase.getInstance(),
                                             sendNotification.value
                                         )
 

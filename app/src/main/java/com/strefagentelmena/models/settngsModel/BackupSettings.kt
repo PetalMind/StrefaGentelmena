@@ -5,5 +5,6 @@ class BackupSettings(
     val latestBackupDate: String = "",
     val isAutomaticBackupEnabled: Boolean = false,
     val hasOnlineCopy: Boolean = false,
-    val isBackupOnline: Boolean = false
+    val isBackupOnline: Boolean = false,
+    val empoleesList: MutableList<Employee> = mutableListOf()
 )

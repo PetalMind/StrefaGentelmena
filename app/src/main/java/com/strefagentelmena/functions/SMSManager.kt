@@ -18,10 +18,7 @@ class SMSManager {
      * @param viewModel
      * @param context
      */
-    fun sendNotification(
-        appointment: Appointment,
-        profile: ProfilePreferences
-    ) {
+    fun sendNotification(appointment: Appointment, profile: ProfilePreferences): Boolean {
         val currentTime = LocalDateTime.now()
         val appointmentDateTime = LocalDateTime.parse("${appointment.date} ${appointment.startTime}", DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
 
@@ -30,12 +27,18 @@ class SMSManager {
 
         val daysDifference = Period.between(currentTime.toLocalDate(), appointmentDateTime.toLocalDate()).days
 
-        if (daysDifference.toLong() == 1L && currentTime.toLocalTime().isAfter(startTime) && currentTime.toLocalTime().isBefore(endTime)) {
+        val isEndTimeAfterMidnight = endTime.isBefore(startTime) // Check if end time is after midnight
+
+        if ((daysDifference.toLong() == 1L || daysDifference.toLong() == 0L) && currentTime.toLocalTime().isAfter(startTime) &&
+            (currentTime.toLocalTime().isBefore(endTime) || (isEndTimeAfterMidnight && currentTime.toLocalTime().isBefore(LocalTime.MAX)))) {
             sendSMS(
                 appointment.customer.phoneNumber,
                 "Przypominamy o wizycie w dniu ${appointment.date} o godzinie ${appointment.startTime} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola."
             )
+            return true // Notification sent
         }
+
+        return false // Notification not sent
     }
 
     /**

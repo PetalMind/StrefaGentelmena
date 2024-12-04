@@ -8,25 +8,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:641264768492:android:bb5db237ad1c93f4afdcc9",
-        "android_client_info": {
-          "package_name": "com.strefagentelmena"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyB_L-NMfC2erIAd1mngx4SMXlrOwv15LSM"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:641264768492:android:fda2fdf73359e5fcafdcc9",
         "android_client_info": {
           "package_name": "com.strefagentlemanakingakloss"

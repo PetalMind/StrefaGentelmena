@@ -1,8 +1,8 @@
 package com.strefagentelmena.screens
 
+import android.content.Context
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,7 +51,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.enums.AppState
+import com.strefagentelmena.functions.fireBase.FirebaseEmployeeFunctions
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.calendarHeader.callendarHeaderUI
@@ -59,6 +62,7 @@ import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
 import com.strefagentelmena.uiComposable.reusableScreen
+import com.strefagentelmena.uiComposable.selectorsUI
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -77,23 +81,25 @@ class Schedule {
         navController: NavController,
         viewModel: ScheduleModelView,
     ) {
-        val context = LocalContext.current
-        val viewState by viewModel.viewState.observeAsState(AppState.Idle)
+        val viewState by viewModel.viewState.observeAsState(AppState.Loading)
 
 
         when (viewState) {
             AppState.Idle -> {
                 LaunchedEffect(Unit) {
-                    viewModel.loadAllData(context = context)
+                    viewModel.viewState.value = AppState.Success
+                    viewModel.loadAllData()
+
                 }
             }
 
             AppState.Loading -> {
-
             }
 
             AppState.Error -> {
-
+                Column {
+                    Text(text = "Error", fontSize = 30.sp)
+                }
             }
 
             AppState.Success -> {
@@ -118,25 +124,25 @@ class Schedule {
         viewModel: ScheduleModelView,
     ) {
         val appointmentDialogState by viewModel.appointmentDialog.observeAsState(false)
-        val message by viewModel.messages.observeAsState("")
+        val message by viewModel.messages.observeAsState(null)
         val context = LocalContext.current
         val appointmentDateSelection by viewModel.selectedAppointmentDate.observeAsState(
-            LocalDate.now().format(
-                DateTimeFormatter.ofPattern(
-                    "dd.MM.yyyy"
-                )
-            )
+            LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
         )
+        val appointments by viewModel.appointmentsList.observeAsState(emptyList())
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+        val selectedWorker by viewModel.selectedEmployee.observeAsState()
 
+        // Obecny dzień w miesiącu
         val currentSelectedDay = remember {
-            mutableIntStateOf(appointmentDateSelection?.let {
-                if (it.isNotEmpty()) sdf.parse(it)?.date ?: Calendar.getInstance()
-                    .get(Calendar.DAY_OF_MONTH)
-                else Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-            } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH))
+            mutableIntStateOf(
+                appointmentDateSelection?.let {
+                    if (it.isNotEmpty()) sdf.parse(it)?.date
+                        ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+                    else Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+                } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+            )
         }
-
 
         LaunchedEffect(appointmentDateSelection) {
             currentSelectedDay.intValue = appointmentDateSelection?.let {
@@ -146,116 +152,142 @@ class Schedule {
             } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
         }
 
-        LaunchedEffect(appointmentDateSelection) {
-            currentSelectedDay.intValue = appointmentDateSelection?.let {
-                sdf.parse(it)?.date ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-            } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-        }
-
-        // Inicjalizacja stanu Scaffold
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
 
-
+        // Obsługa wiadomości
         LaunchedEffect(message) {
-            if (message?.isNotEmpty() == true && message != "") {
+            if (message?.isNotEmpty() == true) {
                 scope.launch {
-                    message?.let {
-                        snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short)
-                    }
+                    snackbarHostState.showSnackbar(message!!, duration = SnackbarDuration.Short)
                     viewModel.clearMessages()
                 }
             }
         }
 
-        LaunchedEffect(Unit) {
-            viewModel.clearMessages()
-            viewModel.loadAllData(context = context)
+        LaunchedEffect(selectedWorker) {
+            if (appointments?.size == (0 ?: 0)) {
+                viewModel.loadAllData()
+            }
+
         }
+
 
         Scaffold(
-            snackbarHost = {
-                SnackbarHost(hostState = snackbarHostState)
-            },
-            topBar = {
-                headersUI.AppBarWithBackArrow(
-                    title = "Harmonogram",
-                    onBackPressed = {
-                        navController.navigate("mainScreen")
-                    },
-                    compose = {
-                        Box(modifier = Modifier.padding(end = 8.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
-                                    .clip(RoundedCornerShape(15.dp))
-                                    .padding(10.dp)
-                                    .clickable {
-                                        dialogsUI.showDatePickerDialog(
-                                            context = context,
-                                            dateSetListener = { it ->
-                                                val formatter =
-                                                    DateTimeFormatter.ofPattern("dd.MM.yyyy")
-                                                val date = LocalDate.parse(it, formatter)
-                                                viewModel.setNewAppoimentsDate(date)
-                                            },
-                                        )
-                                    }
-                            ) {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    },
-                    onClick = {
-                    },
-                )
-            },
-            floatingActionButton = {
-                buttonsUI.LargeFloatingActionButton(icon = Icons.Default.Add) {
-                    viewModel.setAppoimentState(true)
-                    viewModel.clearDate()
-                    viewModel.showApoimentDialog()
-                }
-            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            topBar = { ReservationTopBar(navController, viewModel, context) },
+            floatingActionButton = { AddAppointmentFab(viewModel) },
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-            ) {
-                callendarHeaderUI.CalendarApp(
-                    modifier = Modifier
-                        .background(color = colorsUI.babyBlue.copy(0.7f))
-                        .fillMaxWidth()
-                        .height(130.dp),
-                    viewModel = viewModel
-                )
-
-                AppointmentsList(viewModel) { selectedAppointment ->
-                    viewModel.selectAppointmentAndClient(selectedAppointment)
-                    viewModel.setAppoimentState(false)
-
-                    viewModel.showApoimentDialog()
-                }
-            }
-        }
-
-        if (appointmentDialogState) {
-            dialogsUI.OnAddOrEditSchedule(
+            ReservationContent(
+                innerPadding = innerPadding,
                 viewModel = viewModel,
             )
         }
+
+        if (appointmentDialogState) {
+            dialogsUI.OnAddOrEditSchedule(viewModel = viewModel)
+        }
     }
+
+    @Composable
+    private fun ReservationTopBar(
+        navController: NavController,
+        viewModel: ScheduleModelView,
+        context: Context,
+    ) {
+        headersUI.AppBarWithBackArrow(
+            title = "Harmonogram",
+            onBackPressed = { navController.navigate("mainScreen") },
+            compose = {
+                Box(modifier = Modifier.padding(end = 8.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                            .clip(RoundedCornerShape(15.dp))
+                            .padding(10.dp)
+                            .clickable {
+                                dialogsUI.showDatePickerDialog(
+                                    context = context,
+                                    dateSetListener = {
+                                        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                                        val date = LocalDate.parse(it, formatter)
+                                        viewModel.setNewAppoimentsDate(date)
+                                    }
+                                )
+                            }
+                    ) {
+                        Icon(
+                            Icons.Default.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            },
+            onClick = {}
+        )
+    }
+
+    @Composable
+    private fun AddAppointmentFab(viewModel: ScheduleModelView) {
+        buttonsUI.LargeFloatingActionButton(icon = Icons.Default.Add) {
+            viewModel.setAppoimentState(true)
+            viewModel.clearDate()
+            viewModel.showApoimentDialog()
+        }
+    }
+
+    @Composable
+    private fun ReservationContent(
+        innerPadding: PaddingValues,
+        viewModel: ScheduleModelView,
+    ) {
+        Column(modifier = Modifier.padding(innerPadding)) {
+            callendarHeaderUI.CalendarHeader(
+                modifier = Modifier
+                    .background(color = colorsUI.babyBlue.copy(0.7f))
+                    .fillMaxWidth()
+                    .height(130.dp),
+                viewModel = viewModel
+            )
+
+            ChooseWorker(viewModel)
+
+            AppointmentsList(viewModel) { selectedAppointment ->
+                viewModel.selectAppointmentAndClient(selectedAppointment)
+                viewModel.setAppoimentState(false)
+                viewModel.showApoimentDialog()
+            }
+        }
+    }
+
+
+    @Composable
+    fun ChooseWorker(viewModel: ScheduleModelView) {
+        val selectedEmpolyee by viewModel.selectedEmployee.observeAsState()
+        val employeeList by viewModel.employeeList.observeAsState(emptyList())
+
+        LaunchedEffect(Unit) {
+            if (employeeList.isEmpty()) {
+                FirebaseEmployeeFunctions().loadEmployeesFromFirebase(firebaseDatabase = FirebaseDatabase.getInstance())
+            } else {
+                viewModel.setEmpolyee(employeeList[0])
+            }
+        }
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            selectorsUI.WorkerSelector(viewModel = viewModel)
+        }
+
+    }
+
 
     /**
      * Time line with appointments
      *
      * @param appointments
      * @param onClick
-     * @receiver
+     * @param onNotificationClick
      */
     @Composable
     fun TimeLineWithAppointments(
@@ -265,8 +297,11 @@ class Schedule {
     ) {
         LazyColumn {
             itemsIndexed(appointments) { index, appointment ->
-                val startTime = appointment.startTime
-                val endTime = appointment.endTime
+                // Konwersja czasu z String na LocalTime
+                val startTime =
+                    LocalTime.parse(appointment.startTime, DateTimeFormatter.ofPattern("HH:mm"))
+                val endTime =
+                    LocalTime.parse(appointment.endTime, DateTimeFormatter.ofPattern("HH:mm"))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -276,7 +311,7 @@ class Schedule {
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (index == 0 || appointments[index - 1].startTime != appointment.startTime) {
+                        if (index == 0 || LocalTime.parse(appointments[index - 1].startTime) != startTime) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Row {
                                     Canvas(
@@ -306,7 +341,9 @@ class Schedule {
 
                                 val nextAppointment =
                                     if (index < appointments.size - 1) appointments[index + 1] else null
-                                val endTimesAppointment = nextAppointment?.startTime
+                                val endTimesAppointment = nextAppointment?.startTime?.let {
+                                    LocalTime.parse(it, DateTimeFormatter.ofPattern("HH:mm"))
+                                }
 
                                 val intervals =
                                     generateTimeIntervals(startTime, endTimesAppointment ?: endTime)
@@ -351,6 +388,7 @@ class Schedule {
         }
     }
 
+
     private fun generateTimeIntervals(start: LocalTime, end: LocalTime): List<LocalTime> {
         val intervals = mutableListOf<LocalTime>()
         var current = start.plusMinutes(15) // Start at the first 15 minute interval
@@ -370,9 +408,10 @@ class Schedule {
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
         val context = LocalContext.current
 
-        val filteredAppointments = appointmentsList.filter {
+
+        val filteredAppointments = appointmentsList?.filter {
             it.date == selectedDate
-        }.sortedBy {
+        }?.sortedBy {
             it.startTime
         }
 
@@ -387,23 +426,27 @@ class Schedule {
                 )
             )
         }) {
-            if (filteredAppointments.isEmpty()) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    reusableScreen.EmptyScreen()
-                }
-            } else {
-                TimeLineWithAppointments(
-                    appointments = it,
-                    onClick = onClick,
-                    onNotificationClick = { appointment ->
-                        viewModel.selectAppointmentAndClient(appointment)
-                        viewModel.showNotificationState()
-
+            if (filteredAppointments != null) {
+                if (filteredAppointments.isEmpty()) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        reusableScreen.EmptyScreen()
                     }
-                )
+                } else {
+                    if (it != null) {
+                        TimeLineWithAppointments(
+                            appointments = it,
+                            onClick = onClick,
+                            onNotificationClick = { appointment ->
+                                viewModel.selectAppointmentAndClient(appointment)
+                                viewModel.showNotificationState()
+
+                            }
+                        )
+                    }
+                }
             }
         }
 
@@ -411,7 +454,7 @@ class Schedule {
             dialogsUI.SendNotificationDialog(
                 objectName = selectedAppointment?.customer?.fullName ?: "",
                 onConfirm = {
-                    viewModel.sendNotificationForAppointment(context = context)
+                    viewModel.sendNotificationForAppointment()
                     viewModel.hideNotificationState()
                     viewModel.hideApoimentDialog()
                 },

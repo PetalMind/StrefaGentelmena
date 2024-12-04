@@ -46,6 +46,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.firebase.FirebaseApp
+import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.R
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.uiComposable.buttonsUI
@@ -57,6 +59,7 @@ import com.strefagentelmena.uiComposable.reusableScreen
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
 import com.strefagentelmena.viewModel.CustomersModelView
 import kotlinx.coroutines.launch
+import com.strefagentelmena.functions.fireBase.removeCustomerFromFirebase
 
 val screenCustomerView = CustomerScreen()
 
@@ -77,6 +80,8 @@ class CustomerScreen {
 
         val context = LocalContext.current
         val searchText = remember { mutableStateOf("") }
+        val firebaseDatabase by remember { mutableStateOf<FirebaseDatabase?>(null) }
+        var firebaseApp = FirebaseApp.initializeApp(context)
 
         val showedList = rememberUpdatedState(
             if (searchState) searchedCustomerList else customerList
@@ -89,7 +94,7 @@ class CustomerScreen {
         LaunchedEffect(Unit) {
             viewModel.clearMessage()
             viewModel.closeAllDialogs()
-            viewModel.loadClients(context)
+            viewModel.loadClients(firebaseDatabase ?: FirebaseDatabase.getInstance())
         }
 
         // Efekt wyzwalany, gdy wartość 'message' się zmienia
@@ -203,12 +208,12 @@ class CustomerScreen {
                 onAddCustomer = {
                     if (viewModel.checkFormValidity()
                     ) {
-                        viewModel.addCustomer(context)
+                        viewModel.addCustomer(context,firebaseDatabase?: FirebaseDatabase.getInstance())
                     }
                 },
                 viewModel = viewModel,
                 onEditCustomer = {
-                    viewModel.editCustomer(context)
+                    viewModel.editCustomer(context, firebaseDatabase ?: FirebaseDatabase.getInstance())
                 },
                 onDeleteCustomer = {
                     viewModel.showDeleteDialog()
@@ -222,7 +227,7 @@ class CustomerScreen {
         ) {
             dialogsUI.DeleteDialog(onDismiss = { viewModel.closeDeleteDialog() }, onConfirm = {
                 selectedClient?.let {
-                    viewModel.deleteCustomer(context = context, customer = it)
+                    removeCustomerFromFirebase(database = firebaseDatabase ?: FirebaseDatabase.getInstance(), customerId = it.id.toString(), completion = {})
                 }
             },
                 objectName = selectedClient?.fullName ?: ""
@@ -296,7 +301,7 @@ class CustomerScreen {
         onEdit: (Customer) -> Unit
     ) {
         LazyColumn(contentPadding = paddingValues) {
-            items(customerList, key = { it.id ?: 0 }) { customer ->
+            items(customerList) { customer ->
                 cardUI.SwipeToDismissCustomerCard(customer = customer, onClick = {
                     onCustomerClick(customer)
                 },

@@ -1,30 +1,35 @@
 package com.strefagentelmena.models.appoimentsModel
 
 import com.strefagentelmena.models.Customer
-import java.time.LocalDate
+import com.strefagentelmena.models.settngsModel.Employee
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 class Appointment(
     var id: Int = 0,
     var customer: Customer = Customer(),
-    var date: String = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
-    var startTime: LocalTime = LocalTime.now(),
-    var endTime: LocalTime = LocalTime.now().plusHours(1), // or whatever your default end time is
+    var date: String = "", // Data jako String w formacie "dd.MM.yyyy"
+    var startTime: String = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")), // Czas jako String
+    var endTime: String = LocalTime.now().plusHours(1).format(DateTimeFormatter.ofPattern("HH:mm")), // Czas jako String
     var notificationSent: Boolean = false,
+    var employee: Employee = Employee()
 ) {
-    private fun getFormattedDate(): String {
-        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-        return date.format(formatter)
+    fun getStartTimeAsLocalTime(): LocalTime {
+        return LocalTime.parse(startTime, TIME_FORMATTER)
+    }
+
+    fun getEndTimeAsLocalTime(): LocalTime {
+        return LocalTime.parse(endTime, TIME_FORMATTER)
     }
 
     fun copy(
         id: Int = this.id,
         customer: Customer = this.customer,
-        date: String = this.getFormattedDate(),
-        startTime: LocalTime = this.startTime,
-        endTime: LocalTime = this.endTime,
-        notificationSent: Boolean = this.notificationSent
+        date: String = this.date,
+        startTime: String = this.startTime,
+        endTime: String = this.endTime,
+        notificationSent: Boolean = this.notificationSent,
+        employee: Employee = this.employee
     ): Appointment {
         return Appointment(
             id = id,
@@ -32,8 +37,11 @@ class Appointment(
             date = date,
             startTime = startTime,
             endTime = endTime,
-            notificationSent = notificationSent
+            notificationSent = notificationSent,
+            employee = employee
         )
     }
+    companion object {
+        val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    }
 }
-

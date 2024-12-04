@@ -1,6 +1,10 @@
 package com.strefagentelmena.screens
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.LinearEasing
@@ -21,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -53,11 +58,14 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.google.firebase.FirebaseApp
+import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.R
 import com.strefagentelmena.appViewStates
 import com.strefagentelmena.enums.AppState
-import com.strefagentelmena.functions.greetingsManager
+import com.strefagentelmena.functions.Greetings
+import com.strefagentelmena.functions.fireBase.FirebaseFunctionsAppointments
 import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
@@ -83,35 +91,20 @@ class MainScreen {
         val lifecycleOwner = LocalLifecycleOwner.current
         val permissionState = rememberMultiplePermissionsState(
             permissions = listOf(
-                Manifest.permission.SEND_SMS, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.READ_EXTERNAL_STORAGE // Ogranicz do API 29+
             )
         )
 
         DisposableEffect(key1 = lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_START -> {
-                       permissionState.launchMultiplePermissionRequest()
-                    }
-                    else -> {
-                        // Do nothing
-                    }
+                if (event == Lifecycle.Event.ON_START) {
+                    permissionState.launchMultiplePermissionRequest()
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
             onDispose {
                 lifecycleOwner.lifecycle.removeObserver(observer)
-            }
-        }
-
-        permissionState.permissions.forEach {
-            when(it.permission) {
-                Manifest.permission.SEND_SMS -> {
-                }
-
-                Manifest.permission.WRITE_EXTERNAL_STORAGE -> {
-
-                }
             }
         }
     }
@@ -122,13 +115,14 @@ class MainScreen {
         navController: NavController,
         viewModel: MainScreenModelView,
     ) {
-        val context = LocalContext.current
         val viewState by viewModel.viewState.observeAsState(AppState.Idle)
         val dataLoaded by viewModel.dataLoaded.observeAsState(false)
 
         LaunchedEffect(dataLoaded) {
             if (dataLoaded) {
                 viewModel.setViewState(AppState.Success)
+            } else {
+                viewModel.setViewState(AppState.Error)
             }
         }
 
@@ -141,7 +135,7 @@ class MainScreen {
 
         when (viewState) {
             AppState.Idle -> {
-                viewModel.loadData(context = context)
+                viewModel.startLoadingData()
             }
 
             AppState.Loading -> {
@@ -173,19 +167,19 @@ class MainScreen {
         val messages by viewModel.messages.observeAsState("")
         val showNotifyDialog by viewModel.showNotifyDialog.observeAsState(false)
         val clientsToNotify by viewModel.appointmentsToNotify.observeAsState(emptyList())
-        val upcomingAppointment by viewModel.upcomingAppointment.observeAsState(Appointment())
-        val profilePreference by viewModel.profilePreferences.observeAsState(ProfilePreferences())
+        val upcomingAppointment by viewModel.upcomingAppointment.observeAsState(null)
+        val profilePreference by viewModel.profilePreferences.observeAsState(null)
         val customersList by viewModel.customersLists.observeAsState(emptyList())
+
         val greetingRandom by viewModel.displayGreetings.observeAsState(
-            greetingsManager.randomGreeting(
-                profilePreference.userName
-            )
+            Greetings().getSeasonalAndPartOfDayGreeting(profilePreference?.userName ?: "Użytkownik")
         )
 
         val context = LocalContext.current
 
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
+        FirebaseApp.initializeApp(context)
 
 
         LaunchedEffect(messages) {
@@ -200,7 +194,15 @@ class MainScreen {
         LaunchedEffect(clientsToNotify) {
             if (clientsToNotify.isNotEmpty()) {
                 viewModel.showNotifyDialog()
+            } else {
+                viewModel.checkAppointments()
             }
+        }
+
+        LaunchedEffect(profilePreference) {
+            viewModel.displayGreetings.value = Greetings().getSeasonalAndPartOfDayGreeting(
+                profilePreference?.userName ?: "Użytkownik"
+            )
         }
 
         StrefaGentelmenaTheme(dynamicColor = false, darkTheme = false) {
@@ -257,13 +259,18 @@ class MainScreen {
                 }
 
                 if (showNotifyDialog) {
-                    if (profilePreference.notificationSendAutomatic) {
+                    if (profilePreference?.notificationSendAutomatic == true) {
                         clientsToNotify.forEach {
-                            smsManager.sendNotification(
-                                it, profile = profilePreference
-                            )
+                            profilePreference?.let { it1 ->
+                                smsManager.sendNotification(
+                                    it, profile = it1
+                                )
+                            }
 
-                            viewModel.editAppointment(context, it, true)
+                            FirebaseFunctionsAppointments().editAppointmentInFirebase(
+                                firebaseDatabase = FirebaseDatabase.getInstance(),
+                                updatedAppointment = it,
+                                completion = {})
                         }
 
                         viewModel.newMessage("Wysłano powiadomienia do ${if (clientsToNotify.size == 1) "1 klienta" else "${clientsToNotify.size} klientów"}")
@@ -275,11 +282,18 @@ class MainScreen {
                             onClick = {
                                 clientsToNotify.forEach {
 
-                                    smsManager.sendNotification(
-                                        it, profile = profilePreference
-                                    )
+                                    profilePreference?.let { it1 ->
+                                        smsManager.sendNotification(
+                                            it, profile = it1
+                                        )
+                                    }
 
-                                    viewModel.editAppointment(context, it, true)
+                                    FirebaseFunctionsAppointments().editAppointmentInFirebase(
+                                        firebaseDatabase = FirebaseDatabase.getInstance(),
+                                        updatedAppointment = it,
+                                        completion = {
+
+                                        })
                                 }
                                 viewModel.newMessage("Wysłano powiadomienia do ${if (clientsToNotify.size == 1) "1 klienta" else "${clientsToNotify.size} klientów"}")
                                 viewModel.setAppointmentsToNotify(emptyList())
@@ -410,13 +424,13 @@ class MainScreen {
                         }) {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = colorsUI.fontGrey
                         )
                     }
                 }
-                Box(modifier = Modifier.padding(end = 16.dp)) {
+                Box(modifier = Modifier.padding(end = 25.dp)) {
                     Box(
                         modifier = Modifier
                             .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))

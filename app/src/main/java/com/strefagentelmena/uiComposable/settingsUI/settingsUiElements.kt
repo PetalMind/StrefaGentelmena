@@ -7,6 +7,7 @@ import androidx.compose.animation.expandIn
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,6 +54,15 @@ class SettingsUiElements {
         expandedComposable: @Composable () -> Unit,
         expandedState: Boolean
     ) {
+        // Dynamiczna wysokość karty z animacją
+        val cardHeight by animateDpAsState(
+            targetValue = if (expandedState) 420.dp else 60.dp, // Dopasuj wysokość
+            animationSpec = tween(
+                durationMillis = 300,
+                easing = LinearOutSlowInEasing
+            )
+        )
+
         Card(
             modifier = Modifier
                 .animateContentSize(
@@ -62,55 +72,48 @@ class SettingsUiElements {
                     )
                 )
                 .fillMaxWidth()
-                .height(60.dp)
+                .height(cardHeight) // Ustaw dynamiczną wysokość
                 .padding(4.dp),
             onClick = {
                 onClick()
             },
             shape = MaterialTheme.shapes.medium,
-            colors = androidx.compose.material3.CardDefaults.cardColors(
+            colors = CardDefaults.cardColors(
                 containerColor = Color.White
             ),
-            elevation = androidx.compose.material3.CardDefaults.cardElevation(4.dp)
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp), // Dodaj ten modifier, aby wycentrować zawartość
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 12.dp), // Dopasuj padding dla zawartości
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = CenterVertically
                 ) {
+                    Row(verticalAlignment = CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = icon),
+                            contentDescription = null
+                        )
+                        Text(
+                            text = text,
+                            modifier = Modifier.padding(start = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
                     Icon(
-                        painter = painterResource(id = icon),
+                        imageVector = Icons.Default.ArrowForward,
                         contentDescription = null
                     )
-                    Text(
-                        text = text,
-                        modifier = Modifier.padding(start = 8.dp),
-                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
-                    )
                 }
-                Spacer(modifier = Modifier.weight(1f))
 
-                Icon(
-                    imageVector = Icons.Default.ArrowForward,
-                    contentDescription = null
-                )
+                if (expandedState) {
+                    expandedComposable()
+                }
             }
         }
-
-        AnimatedVisibility(
-            visible = expandedState,
-            enter = expandIn(),
-            exit = shrinkOut()
-        ) {
-            ExpandedContent(expandedComposable)
-        }
-
     }
 
     @Composable
@@ -123,7 +126,7 @@ class SettingsUiElements {
     ) {
         Row(
             modifier = modifier.padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
             Switch(
@@ -167,7 +170,7 @@ class SettingsUiElements {
             Surface(
                 color = Color.White,
                 shadowElevation = 4.dp,
-                shape = androidx.compose.material3.MaterialTheme.shapes.medium,
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Box(Modifier.padding(8.dp)) {
                     composable()

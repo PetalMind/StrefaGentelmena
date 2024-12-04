@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
+import com.strefagentelmena.models.settngsModel.Employee
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -324,6 +325,181 @@ class Cards {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun SwipeToDismissEmployeeCard(
+        employee: Employee,
+        onClick: () -> Unit,
+        onDismiss: (Employee) -> Unit,
+        onEdit: (Employee) -> Unit
+    ) {
+        val dismissState = rememberDismissState(initialValue = DismissValue.Default)
+        val visible = rememberSaveable { mutableStateOf(true) }
+        val scale by animateFloatAsState(
+            targetValue = if (dismissState.currentValue != DismissValue.Default) 1.2f else 1f,
+            label = ""
+        )
+
+        AnimatedVisibility(visible = visible.value) {
+            SwipeToDismiss(
+                state = dismissState,
+                background = {
+                    val color = when (dismissState.dismissDirection) {
+                        DismissDirection.StartToEnd -> colorsUI.mintGreen
+                        DismissDirection.EndToStart -> colorsUI.amaranthPurple
+                        null -> Color.Transparent
+                    }
+
+                    val direction = dismissState.dismissDirection
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(color)
+                    ) {
+                        if (direction == DismissDirection.StartToEnd) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .animateContentSize()
+                                    .background(color)
+                                    .padding(16.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .scale(scale)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                    )
+                                    Text(
+                                        text = "Edytuj", fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .animateContentSize()
+                                    .background(color)
+                                    .padding(16.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .scale(scale)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                    )
+
+                                    Spacer(modifier = Modifier.heightIn(5.dp))
+
+                                    Text(
+                                        text = "Usuń",
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.LightGray
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                dismissContent = {
+                    EmployeeListCard(
+                        employee = employee,
+                        onClick = onClick
+                    )
+                },
+                directions = setOf(DismissDirection.EndToStart, DismissDirection.StartToEnd),
+            )
+        }
+
+        LaunchedEffect(dismissState.targetValue) {
+            if (dismissState.targetValue == DismissValue.DismissedToEnd) {
+                delay(300)
+                dismissState.snapTo(DismissValue.Default)
+                onEdit(employee)
+            } else if (dismissState.targetValue == DismissValue.DismissedToStart) {
+                delay(300)
+                onDismiss(employee)
+            }
+        }
+
+
+        LaunchedEffect(dismissState.currentValue) {
+            if (dismissState.currentValue == DismissValue.DismissedToEnd || dismissState.currentValue == DismissValue.DismissedToStart) {
+                delay(300)
+                dismissState.snapTo(DismissValue.Default)
+            }
+        }
+    }
+
+    @Composable
+    fun EmployeeListCard(
+        employee: Employee,
+        onClick: () -> Unit,
+    ) {
+        Card(shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colorsUI.papaya,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(colorsUI.jade)
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = (employee.name + " " + employee.surname),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+    }
+
 
     @Composable
     fun CustomerListCard(
@@ -369,7 +545,7 @@ class Cards {
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = customer.fullName ?: "Brak imienia",
+                        text = customer.fullName,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -379,7 +555,7 @@ class Cards {
                         fontWeight = FontWeight.Medium
                     )
 
-                    if (customer.appointment != null) {
+                    if (customer.appointment?.customer?.id != (0 ?: return@Card)) {
                         Row {
                             Text(
                                 text = "Ostatnia wizyta: ",
@@ -387,7 +563,7 @@ class Cards {
                             )
 
                             Text(
-                                text = customer.appointment?.date.toString() ?: "",
+                                text = customer.appointment?.date.toString(),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -428,7 +604,7 @@ class Cards {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = appointment.customer.fullName ?: "Brak imienia",
+                        text = appointment.customer.fullName,
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

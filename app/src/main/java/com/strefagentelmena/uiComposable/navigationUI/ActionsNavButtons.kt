@@ -1,4 +1,4 @@
-package com.strefagentelmena.uiComposable.NavigationUI
+package com.strefagentelmena.uiComposable.navigationUI
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack

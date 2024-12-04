@@ -1,13 +1,16 @@
 package com.strefagentelmena.viewModel
 
+import com.strefagentelmena.functions.fireBase.addNewCustomerToFirebase
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.strefagentelmena.functions.fileFuctions.fileFunctionsClients
-import com.strefagentelmena.functions.fileFuctions.filesFunctionsAppoiments
+import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.CustomerIdGenerator
 import com.strefagentelmena.models.appoimentsModel.Appointment
+import com.strefagentelmena.functions.fireBase.editCustomerInFirebase
+import com.strefagentelmena.functions.fireBase.getAllCustomersFromFirebase
 import java.util.Locale
 
 class CustomersModelView : ViewModel() {
@@ -44,8 +47,9 @@ class CustomersModelView : ViewModel() {
         customerNote.value = note
     }
 
-    fun loadClients(context: Context) {
-        customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
+    suspend fun loadClients(firebaseDatabase: FirebaseDatabase) {
+        val customers = getAllCustomersFromFirebase(database = firebaseDatabase)
+        customersLists.value = customers
         searchedCustomersLists.value = customersLists.value
     }
 
@@ -160,61 +164,30 @@ class CustomersModelView : ViewModel() {
      * Add Customer.
      *
      */
-    fun addCustomer(context: Context) {
+    fun addCustomer(context: Context, firebaseDatabase: FirebaseDatabase) {
         val currentList = customersLists.value?.toMutableList() ?: mutableListOf()
         val newClient = createNewCustomer()
 
+        // Dodanie nowego klienta do lokalnej listy
         currentList.add(newClient)
 
+        // Ustawienie zaktualizowanej listy klientów
         setCustomersList(currentList)
         setSearchedCustomersList(currentList)
 
-        // Aktualizuj listę klientów
-        setMessage("Klient ${newClient.fullName} został dodany")
-        fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: emptyList())
+        // Dodanie klienta do Firebase
+        addNewCustomerToFirebase(firebaseDatabase, newClient) { success ->
+            if (success) {
+                setMessage("Klient ${newClient.fullName} został dodany")
+            } else {
+                setMessage("Błąd dodawania klienta")
+            }
+        }
 
+        // Zamknięcie dialogu i czyszczenie danych
         closeCustomerDialog()
         clearSelectedClientAndData()
     }
-
-    fun deleteCustomer(context: Context, customer: Customer) {
-        val currentList = customersLists.value?.toMutableList() ?: return
-        val index = currentList.indexOfFirst { it.id == customer.id }
-        val scheduledAppointments = filesFunctionsAppoiments.loadAppointmentFromFile(context)
-
-        if (index != -1) {
-            removeCustomerAndUpdateLists(
-                currentList,
-                index,
-                scheduledAppointments,
-                context,
-                customer
-            )
-        }
-    }
-
-    private fun removeCustomerAndUpdateLists(
-        currentList: MutableList<Customer>,
-        index: Int,
-        scheduledAppointments: List<Appointment>,
-        context: Context,
-        customer: Customer
-    ) {
-        currentList.removeAt(index)
-        val updatedScheduledAppointments =
-            scheduledAppointments.filter { it.customer.id != customer.id }
-
-        setCustomersList(currentList)
-        setSearchedCustomersList(currentList)
-
-        setMessage("Klient ${customer.fullName} został usunięty")
-
-        fileFunctionsClients.saveCustomersToFile(context, currentList)
-        filesFunctionsAppoiments.saveAppointmentToFile(context, updatedScheduledAppointments)
-
-        closeDeleteDialog()
-    }
-
 
     private fun setSearchedCustomersList(currentList: MutableList<Customer>) {
         searchedCustomersLists.value = currentList
@@ -279,46 +252,42 @@ class CustomersModelView : ViewModel() {
         return isValid
     }
 
-
-    private fun loadAndEditAppointments(context: Context, updatedCustomer: Customer) {
-        val appointmentsList = filesFunctionsAppoiments.loadAppointmentFromFile(context)
-
-        val appointmentsToEdit =
-            appointmentsList.filter { it.customer.id == selectedCustomer.value?.id }
-
-        appointmentsToEdit.forEach { appointment ->
-            appointment.customer = updatedCustomer
-        }
-
-        filesFunctionsAppoiments.saveAppointmentToFile(context, appointmentsList)
-    }
-
     /**
      * Edit customer
      *
      * @param context
      */
-    fun editCustomer(context: Context) {
+    fun editCustomer(context: Context, database: FirebaseDatabase) {
         val customersList = customersLists.value ?: return
+        val selectedCustomer = selectedCustomer.value ?: return // Upewnij się, że dane są dostępne
 
-        val customerToEditIndex = customersList.indexOfFirst { it.id == selectedCustomer.value?.id }
+        val customerToEditIndex = customersList.indexOfFirst { it.id == selectedCustomer.id }
 
-        if (customerToEditIndex == -1) return
+        if (customerToEditIndex == -1) {
+            setMessage("Klient nie został znaleziony") // Obsługa sytuacji, gdy klient nie istnieje
+            return
+        }
 
         val updatedCustomer = updateCustomerDetails(customersList[customerToEditIndex])
 
-        customersLists.value = customersList.toMutableList().apply {
-            this[customerToEditIndex] = updatedCustomer
+        editCustomerInFirebase(database, updatedCustomer) { success ->
+            if (success) {
+                // Aktualizacja listy klientów po udanej edycji w Firebase
+                customersLists.value = customersList.toMutableList().apply {
+                    this[customerToEditIndex] = updatedCustomer
+                }
+
+                // Przeładuj powiązane wizyty
+
+                setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
+            } else {
+                setMessage("Błąd edycji klienta")
+            }
         }
-
-        loadAndEditAppointments(context, updatedCustomer)
-
-        setMessage("Klient ${updatedCustomer.fullName} został zaktualizowany")
-
-        fileFunctionsClients.saveCustomersToFile(context, customersLists.value ?: return)
 
         closeCustomerDialog()
     }
+
 
     private fun updateCustomerDetails(customer: Customer): Customer {
         return customer.copy(
@@ -329,6 +298,10 @@ class CustomersModelView : ViewModel() {
             phoneNumber = customerPhoneNumber.value
                 ?: throw IllegalArgumentException("PhoneNumber cannot be null"),
             noted = customerNote.value ?: ""
+            ?: throw IllegalArgumentException("Note cannot be null"),
+            appointment = selectedCustomer.value?.appointment
+                ?: Appointment()
+
         )
     }
 
@@ -341,8 +314,8 @@ class CustomersModelView : ViewModel() {
         customersLists.value = customersLists.value?.sortedByDescending { it.appointment?.date }
     }
 
-    fun sortClientsNormal(context: Context) {
-        customersLists.value = fileFunctionsClients.loadCustomersFromFile(context)
+    suspend fun sortClientsNormal(database: FirebaseDatabase) {
+        customersLists.value = getAllCustomersFromFirebase(database)
     }
 
     fun sortClientsByDateDesc() {

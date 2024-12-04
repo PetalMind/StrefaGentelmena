@@ -6,7 +6,6 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +74,73 @@ class Selectors {
                 Icon(imageVector = Icons.Outlined.Person, contentDescription = "Person")
             },
             dialogShouldOpen = isNew,
+        )
+    }
+
+    @Composable
+    fun WorkerSelector(
+        viewModel: ScheduleModelView,
+    ) {
+        val employeesList by viewModel.employeeList.observeAsState(emptyList())
+        val selectedWorker by viewModel.selectedEmployee.observeAsState()
+        val isNewAppointment by viewModel.isNewAppointment.observeAsState(false)
+        val isNew = remember { mutableStateOf(isNewAppointment) }
+        val appoiment by viewModel.selectedAppointment.observeAsState()
+        val appointmentDialog by viewModel.appointmentDialog.observeAsState()
+
+        val selectedWorkerName =
+            remember { mutableStateOf(selectedWorker?.name ?: "Wybierz Pracownika") }
+
+        val shouldOpen = remember { mutableStateOf(false) }
+
+        val labelText = buildAnnotatedString {
+            withStyle(style = SpanStyle(color = Color.Black)) {
+                append("Pracownik")
+            }
+        }
+
+        LaunchedEffect(isNewAppointment) {
+            isNew.value = isNewAppointment
+
+            if (appointmentDialog == true) {
+                if (!isNewAppointment) {
+                    viewModel.setEmpolyee(appoiment?.employee ?: return@LaunchedEffect)
+
+                    selectedWorkerName.value = appoiment!!.employee.name
+                }
+            }
+        }
+
+        LaunchedEffect(selectedWorker)
+        {
+            if (selectedWorker!!.id != null) {
+                shouldOpen.value = false
+            }
+        }
+
+        dialogsUI.FullScreenLogisticDialogSelector(
+            labelText = labelText,
+            selectedItem = selectedWorker?.name.toString(),
+            onItemChange =
+            {
+                selectedWorkerName.value = it
+            },
+            isEditable = true,
+            items = employeesList?.filterNot
+            { it.id == selectedWorker?.id }
+                ?.map
+                { it.name } ?: emptyList(),
+            onItemSelected =
+            { client ->
+                val employee = viewModel.findWorkerByName(client)
+
+                viewModel.setEmpolyee(employee ?: return@FullScreenLogisticDialogSelector)
+            },
+            leadingIcon =
+            {
+                Icon(imageVector = Icons.Outlined.Person, contentDescription = "Person")
+            },
+            dialogShouldOpen = shouldOpen,
         )
     }
 

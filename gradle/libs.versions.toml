@@ -16,9 +16,10 @@ livedata = "2.7.0"
 viewmodel = "2.7.0"
 androidx-compose-livedata = "1.5.4"
 google-services = "4.4.0"
-firebase-bom = "32.7.0"
-firebase-analytics = "21.5.0"
-firebase-storage-ktx = "20.3.0"
+firebase-bom = "33.6.0"
+firebase-analytics = "22.1.2"
+firebase-storage-ktx = "21.0.1"
+firebase-database-ktx = "21.0.0"
 
 
 [libraries]
@@ -47,6 +48,7 @@ google-services = { group = "com.google.gms", name = "google-services", version.
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics", version.ref = "firebase-analytics" }
 firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebase-storage-ktx" }
+firebase-database-ktx = { group = "com.google.firebase", name = "firebase-database-ktx", version.ref = "firebase-database-ktx" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
