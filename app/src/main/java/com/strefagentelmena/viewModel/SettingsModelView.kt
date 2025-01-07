@@ -1,6 +1,5 @@
 package com.strefagentelmena.viewModel
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -9,17 +8,18 @@ import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fireBase.FirebaseEmployeeFunctions
 import com.strefagentelmena.functions.fireBase.FirebaseProfilePreferences
-import com.strefagentelmena.models.settngsModel.BackupSettings
 import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import kotlinx.coroutines.launch
 
 class SettingsModelView : ViewModel() {
+    val isNewEmplyee = MutableLiveData(false)
+    val deleteEmployeeDialog = MutableLiveData(false)
     val viewState = MutableLiveData(AppState.Idle)
     val messages = MutableLiveData("")
     val profilePreferences = MutableLiveData(ProfilePreferences())
     val profileName = MutableLiveData("")
-    private val selectedEmployee = MutableLiveData(Employee())
+    val selectedEmployee = MutableLiveData(Employee())
     val newEmployee = MutableLiveData(Employee())
     val empolyeeName = MutableLiveData("")
     val empolyeeSurname = MutableLiveData("")
@@ -37,6 +37,11 @@ class SettingsModelView : ViewModel() {
     val greetingsViewState = MutableLiveData(false)
     val backButtonViewState = MutableLiveData<Boolean>(false)
     val updateViewState = MutableLiveData<Boolean>(false)
+
+
+    fun setIsNewEmplyee(value: Boolean) {
+        isNewEmplyee.value = value
+    }
 
     fun setProfileViewState() {
         profileViewState.value = !profileViewState.value!!
@@ -58,6 +63,10 @@ class SettingsModelView : ViewModel() {
         empolyeeSurname.value = value
     }
 
+    fun setEmpolyeeDeleteDialog() {
+        deleteEmployeeDialog.value = !deleteEmployeeDialog.value!!
+    }
+
     fun clearNewEmpolyee() {
         newEmployee.value = Employee()
         empolyeeName.value = ""
@@ -74,6 +83,8 @@ class SettingsModelView : ViewModel() {
      */
     fun setSlectedEmpolyee(value: Employee) {
         selectedEmployee.value = value
+        empolyeeName.value = value.name
+        empolyeeSurname.value = value.surname
     }
 
 
@@ -90,7 +101,7 @@ class SettingsModelView : ViewModel() {
      * Set new empolyee
      */
 
-    fun setNewEmployee(context: Context) {
+    fun addNewEmployee() {
         val name = empolyeeName.value
         val surname = empolyeeSurname.value
 
@@ -109,8 +120,7 @@ class SettingsModelView : ViewModel() {
         empoleesList.value?.add(newEmployee)
 
         FirebaseEmployeeFunctions().addEmployeeToFirebase(
-            firebaseDatabase = FirebaseDatabase.getInstance(),
-            employee = newEmployee
+            firebaseDatabase = FirebaseDatabase.getInstance(), employee = newEmployee
         ) { success ->
             if (success) {
                 setMessages("Pracownik ${newEmployee.name} został dodany")
@@ -132,6 +142,7 @@ class SettingsModelView : ViewModel() {
                 profilePreferences.value = profile
                 setNotificationTimes(profile)
                 setNewProfileName(profile.userName)
+                setAutomaticNotificationViewState(profile.notificationSendAutomatic)
             } catch (e: Exception) {
                 Log.e("ViewModel", "Failed to load ProfilePreferences", e)
                 viewState.value = AppState.Error
@@ -143,7 +154,8 @@ class SettingsModelView : ViewModel() {
     fun deleteEmpolyee(value: Employee) {
         empoleesList.value?.remove(value)
         value.id?.let {
-            FirebaseEmployeeFunctions().deleteEmployeeFromFirebase(firebaseDatabase = FirebaseDatabase.getInstance(),
+            FirebaseEmployeeFunctions().deleteEmployeeFromFirebase(
+                firebaseDatabase = FirebaseDatabase.getInstance(),
                 it,
                 completion = { succes ->
 
@@ -155,6 +167,25 @@ class SettingsModelView : ViewModel() {
                 })
         }
         saveAllData()
+    }
+
+    fun editEmployee(value: Employee) {
+        val updatedEmployee = Employee().apply {
+            this.id = value.id
+            this.name = empolyeeName.value ?: value.name
+            this.surname = empolyeeSurname.value ?: value.surname
+        }
+
+        FirebaseEmployeeFunctions().editEmployeeInFirebase(firebaseDatabase = FirebaseDatabase.getInstance(),
+            updatedEmployee = updatedEmployee,
+            completion = { success ->
+                if (success) {
+                    setMessages("Pracownik ${updatedEmployee.name} został edytowany")
+                    loadEmployeesListFromFirebase()
+                } else {
+                    setMessages("Nie udało się edytować pracownika")
+                }
+            })
     }
 
 
@@ -200,8 +231,9 @@ class SettingsModelView : ViewModel() {
     fun loadEmployeesListFromFirebase() {
         try {
             viewModelScope.launch {
-                val employees =
-                    FirebaseEmployeeFunctions().loadEmployeesFromFirebase(FirebaseDatabase.getInstance())
+                val employees = FirebaseEmployeeFunctions().loadEmployeesFromFirebase(
+                    FirebaseDatabase.getInstance()
+                )
                 empoleesList.value = employees.toMutableList()
             }
         } catch (e: Exception) {

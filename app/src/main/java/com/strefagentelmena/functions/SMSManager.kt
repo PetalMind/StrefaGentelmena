@@ -33,7 +33,7 @@ class SMSManager {
             (currentTime.toLocalTime().isBefore(endTime) || (isEndTimeAfterMidnight && currentTime.toLocalTime().isBefore(LocalTime.MAX)))) {
             sendSMS(
                 appointment.customer.phoneNumber,
-                "Przypominamy o wizycie w dniu ${appointment.date} o godzinie ${appointment.startTime} w Strefie Gentlemana Kinga Kloss, adres: Łaska 4, Zduńska Wola."
+                "Czekamy na Ciebie w Strefie Gentlemana Kinga Kloss w dniu ${appointment.date} o godzinie ${appointment.startTime}. W razie zmian prosimy o telefon na numer 724 506 728 "
             )
             return true // Notification sent
         }

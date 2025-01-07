@@ -9,10 +9,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -76,7 +74,6 @@ import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.Customer
-import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.viewModel.CustomersModelView
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
@@ -95,7 +92,7 @@ class Dialogs {
         onEditCustomer: () -> Unit,
         onDeleteCustomer: () -> Unit,
     ) {
-        val selectedCustomer by viewModel.selectedCustomer.observeAsState(null)
+        val selectedCustomer by viewModel.selectedCustomer.observeAsState()
 
         val firstName by viewModel.customerName.observeAsState("")
         val lastName by viewModel.customerLastName.observeAsState("")
@@ -260,149 +257,135 @@ class Dialogs {
     ) {
         val isNewState by viewModel.isNewAppointment.observeAsState(false)
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
-        val selectedAppointment by viewModel.selectedAppointment.observeAsState(Appointment())
-        val selectedClient by viewModel.selectedClient.observeAsState(Customer())
-        val selectedWorker by viewModel.selectedEmployee.observeAsState(Employee())
+        val selectedAppointment by viewModel.selectedAppointment.observeAsState()
+        val selectedClient by viewModel.selectedClient.observeAsState()
+        val selectedWorker by viewModel.selectedEmployee.observeAsState()
 
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-        val selectedDate = if (selectedAppointment != null) {
-            LocalDate.parse(
-                if (isNewState) selectedAppointment.date else viewModel.currentDate, formatter
-            )
-        } else {
-            LocalDate.now()
-        }
-
-
         val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-        val selectedTime = if (selectedAppointment != null) {
-            LocalTime.parse(
-                (if (isNewState) selectedAppointment.startTime else viewModel.currentTime).toString(),
-                timeFormatter
-            )
-        } else {
-            LocalTime.now()
-        }
-
-        val appointmentError by viewModel.appointmentError.observeAsState("")
-
-        val sendNotification = remember {
-            mutableStateOf(false)
-        }
-
+        val sendNotification = remember { mutableStateOf(false) }
         val title = if (isNewState) "Dodaj" else "Edytuj"
         val context = LocalContext.current
 
-        LaunchedEffect(selectedAppointment) {
-            if (selectedAppointment?.id != 0 && selectedAppointment != null) {
-                if (selectedDate != LocalDate.parse(
-                        selectedAppointment.date.toString(),
-                        formatter
-                    ) || selectedTime != LocalTime.parse(
-                        selectedAppointment.startTime.toString(),
-                        timeFormatter
-                    )
+        val selectedDate = remember(selectedAppointment, isNewState) {
+            selectedAppointment?.date?.takeIf { it.isNotBlank() }?.let {
+                LocalDate.parse(it, formatter)
+            } ?: LocalDate.now()
+        }
+
+        val selectedTime = remember(selectedAppointment, isNewState) {
+            selectedAppointment?.startTime?.takeIf { it.isNotBlank() }?.let {
+                LocalTime.parse(it, timeFormatter)
+            } ?: LocalTime.now()
+        }
+
+
+        // Obsługa powiadomień
+        LaunchedEffect(selectedAppointment, isNewState) {
+            selectedAppointment?.let {
+                if (it.id != 0 && selectedDate != LocalDate.parse(it.date, formatter) ||
+                    selectedTime != LocalTime.parse(it.startTime, timeFormatter)
                 ) {
                     sendNotification.value = true
                 }
             }
-        }
 
-        LaunchedEffect(isNewState) {
             if (isNewState) {
                 viewModel.setSelectedClient(Customer())
                 viewModel.selectedAppointment.value = Appointment()
             }
         }
 
+        // Główne okno dialogowe
         Dialog(
-            onDismissRequest = { viewModel.hideApoimentDialog() },
+            onDismissRequest = { viewModel.changeAppointmentDialogState() },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize()
-            ) {
+            Surface(modifier = Modifier.fillMaxSize()) {
                 Column(
-                    verticalArrangement = Arrangement.Top,
-
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState()) // Dodanie przewijania w pionie
-
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Row {
-                        headersUI.AppBarWithBackArrow(
-                            title = title,
-                            onClick = {},
-                            onBackPressed = { viewModel.hideApoimentDialog() },
-                            compose = {
-                                if (selectedAppointment != null) {
-                                    buttonsUI.HeaderIconButton(
-                                        icon = R.drawable.ic_delete,
-                                        onClick = {
-                                            viewModel.showDeleteDialog()
-                                        },
-                                        containerColor = colorsUI.amaranthPurple,
-                                        iconColor = Color.White
-                                    )
+                    // Nagłówek z przyciskami
+                    AppHeader(
+                        title = title,
+                        selectedAppointment = selectedAppointment,
+                        onDeleteClick = { viewModel.setDeleteDialogState() },
+                        onNotificationClick = { viewModel.changeNotificationDialogState() },
+                        onBackClick = { viewModel.changeAppointmentDialogState() }
+                    )
 
-                                    if (!selectedAppointment!!.notificationSent) {
-                                        buttonsUI.HeaderIconButton(
-                                            icon = R.drawable.ic_notification,
-                                            onClick = {
-                                                viewModel.showNotificationState()
-                                            },
-                                            containerColor = colorsUI.sunset
-                                        )
-                                    }
-                                }
-                            })
-                    }
-
+                    // Formularz edycji/dodawania wizyty
                     Column(modifier = Modifier.padding(16.dp)) {
                         formUI.AppointmentForm(
                             viewModel = viewModel,
                             onSave = {
-                                if (selectedClient?.id != 0) {
-                                    if (isNewState) {
-                                        viewModel.createNewAppointment(
-                                            isNew = isNewState,
-                                            context = context
-                                        )
-                                    } else {
-                                        viewModel.editAppointment(
-                                            FirebaseDatabase.getInstance(),
-                                            sendNotification.value
-                                        )
+                                if (isNewState) {
+                                    viewModel.createNewAppointment(isNewState)
+                                } else {
+                                    viewModel.editAppointment(
+                                        FirebaseDatabase.getInstance(),
+                                        sendNotification.value
+                                    )
+                                    viewModel.changeAppointmentDialogState()
 
-                                        viewModel.hideApoimentDialog()
-                                    }
                                 }
                             },
-                            onCancel = { viewModel.hideApoimentDialog() },
+                            onCancel = { viewModel.changeAppointmentDialogState() },
                         )
                     }
                 }
             }
         }
 
+        // Dialog potwierdzający usunięcie
         if (deleteDialogState) {
             DeleteDialog(
-                objectName = "${selectedAppointment?.customer?.fullName ?: ""}\n${selectedAppointment?.date}",
+                objectName = "${selectedAppointment?.customer?.fullName ?: ""}\n${selectedAppointment?.date ?: ""}",
                 onConfirm = {
                     viewModel.removeAppointment(
                         id = selectedAppointment?.id ?: 0,
-                        context = context
                     )
-
                     viewModel.closeAllDialog()
                 },
-                onDismiss = { viewModel.hideDeleteDialog() },
-                labelName = "Czy chcesz usunąć wizytę "
+                onDismiss = { viewModel.setDeleteDialogState() },
+                labelName = "Czy chcesz usunąć wizytę?"
             )
         }
     }
 
+    @Composable
+    private fun AppHeader(
+        title: String,
+        selectedAppointment: Appointment?,
+        onDeleteClick: () -> Unit,
+        onNotificationClick: () -> Unit,
+        onBackClick: () -> Unit
+    ) {
+        headersUI.AppBarWithBackArrow(
+            title = title,
+            onClick = {}, // Nieobsługiwany
+            onBackPressed = onBackClick,
+            compose = {
+                if (selectedAppointment != null) {
+                    buttonsUI.HeaderIconButton(
+                        icon = R.drawable.ic_delete,
+                        onClick = onDeleteClick,
+                        containerColor = colorsUI.amaranthPurple,
+                        iconColor = Color.White
+                    )
+                    if (!selectedAppointment.notificationSent) {
+                        buttonsUI.HeaderIconButton(
+                            icon = R.drawable.ic_notification,
+                            onClick = onNotificationClick,
+                            containerColor = colorsUI.sunset
+                        )
+                    }
+                }
+            }
+        )
+    }
 
     @OptIn(
         ExperimentalMaterial3Api::class,
@@ -550,21 +533,23 @@ class Dialogs {
         val clientList by viewModel.customersLists.observeAsState(emptyList())
 
         if (expanded.value) {
-            FullScreenDialog(
-                onDismissRequest = { expanded.value = false },
-                itemList = clientList.map { it.fullName },
-                itemOnClick = { client ->
-                    showDialog.value = false
+            clientList?.let {
+                FullScreenDialog(
+                    onDismissRequest = { expanded.value = false },
+                    itemList = it.map { it.fullName },
+                    itemOnClick = { client ->
+                        showDialog.value = false
 
-                    expanded.value = false
-                },
-                itemFilter = { item: String?, query: String ->
-                    item!!.contains(query, ignoreCase = true)
-                },
-                labelText = "",
-                itemText = { item -> item },
-                openDialog = showDialog.value
-            )
+                        expanded.value = false
+                    },
+                    itemFilter = { item: String?, query: String ->
+                        item!!.contains(query, ignoreCase = true)
+                    },
+                    labelText = "",
+                    itemText = { item -> item },
+                    openDialog = showDialog.value
+                )
+            }
         }
     }
 

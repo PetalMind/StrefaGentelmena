@@ -105,18 +105,10 @@ class Selectors {
             if (appointmentDialog == true) {
                 if (!isNewAppointment) {
                     viewModel.setEmpolyee(appoiment?.employee ?: return@LaunchedEffect)
-
-                    selectedWorkerName.value = appoiment!!.employee.name
                 }
             }
         }
 
-        LaunchedEffect(selectedWorker)
-        {
-            if (selectedWorker!!.id != null) {
-                shouldOpen.value = false
-            }
-        }
 
         dialogsUI.FullScreenLogisticDialogSelector(
             labelText = labelText,
@@ -135,6 +127,7 @@ class Selectors {
                 val employee = viewModel.findWorkerByName(client)
 
                 viewModel.setEmpolyee(employee ?: return@FullScreenLogisticDialogSelector)
+                viewModel.getsAppoiments()
             },
             leadingIcon =
             {

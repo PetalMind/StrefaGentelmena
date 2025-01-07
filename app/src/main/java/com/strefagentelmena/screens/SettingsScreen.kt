@@ -48,7 +48,9 @@ class SettingsScreen {
             }
 
             AppState.Loading -> {
-                appViewStates.LoadingView()
+                appViewStates.LoadingView(onRetry = {
+                    viewModel.loadAllData()
+                })
             }
 
             AppState.Error -> {

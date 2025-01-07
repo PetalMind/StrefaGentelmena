@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -67,6 +68,7 @@ import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.Greetings
 import com.strefagentelmena.functions.fireBase.FirebaseFunctionsAppointments
 import com.strefagentelmena.functions.smsManager
+import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
 import com.strefagentelmena.ui.theme.StrefaGentelmenaTheme
@@ -136,17 +138,20 @@ class MainScreen {
         when (viewState) {
             AppState.Idle -> {
                 viewModel.startLoadingData()
+                viewModel.clearMessage()
             }
 
             AppState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    appViewStates.LoadingView()
+                    appViewStates.LoadingView(onRetry = {
+                        viewModel.startLoadingData()
+                    })
                 }
 
             }
 
             AppState.Error -> {
-                viewModel.setViewState(AppState.Idle)
+                viewModel.setViewState(AppState.Loading)
             }
 
             AppState.Success -> {
@@ -176,12 +181,45 @@ class MainScreen {
         )
 
         val context = LocalContext.current
-
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
+
         FirebaseApp.initializeApp(context)
 
 
+        HandleMessages(messages, snackbarHostState, viewModel)
+        HandleNotifyDialog(viewModel, clientsToNotify)
+
+        UpdateGreetingOnProfileChange(profilePreference, viewModel)
+
+        StrefaGentelmenaTheme(dynamicColor = false, darkTheme = false) {
+            Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
+                DashboardContent(
+                    navController = navController,
+                    paddingValues = paddingValues,
+                    greetingRandom = greetingRandom,
+                    customersList = customersList,
+                    upcomingAppointment = upcomingAppointment
+                )
+
+                if (showNotifyDialog) {
+                    NotifyDialogHandler(
+                        profilePreference = profilePreference,
+                        clientsToNotify = clientsToNotify,
+                        viewModel = viewModel
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun HandleMessages(
+        messages: String,
+        snackbarHostState: SnackbarHostState,
+        viewModel: MainScreenModelView
+    ) {
+        val scope = rememberCoroutineScope()
         LaunchedEffect(messages) {
             if (messages.isNotEmpty()) {
                 scope.launch {
@@ -190,125 +228,166 @@ class MainScreen {
                 }
             }
         }
+    }
 
+    @Composable
+    private fun HandleNotifyDialog(
+        viewModel: MainScreenModelView,
+        clientsToNotify: List<Appointment>
+    ) {
         LaunchedEffect(clientsToNotify) {
             if (clientsToNotify.isNotEmpty()) {
-                viewModel.showNotifyDialog()
+                viewModel.setViewNotifyDialog()
             } else {
                 viewModel.checkAppointments()
             }
         }
+    }
 
+    @Composable
+    private fun UpdateGreetingOnProfileChange(
+        profilePreference: ProfilePreferences?,
+        viewModel: MainScreenModelView
+    ) {
         LaunchedEffect(profilePreference) {
             viewModel.displayGreetings.value = Greetings().getSeasonalAndPartOfDayGreeting(
                 profilePreference?.userName ?: "Użytkownik"
             )
         }
+    }
 
-        StrefaGentelmenaTheme(dynamicColor = false, darkTheme = false) {
-            Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
-                Surface(
+    @Composable
+    private fun DashboardContent(
+        navController: NavController,
+        paddingValues: PaddingValues,
+        greetingRandom: String,
+        customersList: List<Customer>,
+        upcomingAppointment: Appointment?
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    color = MaterialTheme.colorScheme.background
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(0.dp, 0.dp, 16.dp, 16.dp)
+                        )
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .shadow(
-                                    elevation = 8.dp,
-                                    shape = RoundedCornerShape(0.dp, 0.dp, 16.dp, 16.dp)
-                                )
-                                .fillMaxWidth(),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            DashboardHeaderGreetings(
-                                greeting = greetingRandom,
-                                onSettingsClick = {
-                                    navController.navigate("settingsScreen")
-                                }
-                            )
-                        }
-
-                        headersUI.LogoHeader()
-
-                        PermissionAwareComponents()
-
-                        if (upcomingAppointment?.id != 0) {
-                            upcomingAppointment?.let { cardUI.UpcomingClientCard(appointment = it) }
-                        }
-
-                        Row {
-                            cardUI.DashboardSmallCard(iconId = R.drawable.ic_clients,
-                                labelText = customersList.size.toString(),
-                                nameText = "Klienci Salonu",
-                                onClick = { navController.navigate("customersScreen") })
-
-                            cardUI.DashboardSmallCard(
-                                iconId = R.drawable.ic_events, labelText = "", onClick = {
-                                    navController.navigate("scheduleScreen")
-                                }, nameText = "Harmonogram"
-                            )
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                    DashboardHeaderGreetings(
+                        greeting = greetingRandom,
+                        onSettingsClick = { navController.navigate("settingsScreen") }
+                    )
                 }
 
-                if (showNotifyDialog) {
-                    if (profilePreference?.notificationSendAutomatic == true) {
-                        clientsToNotify.forEach {
-                            profilePreference?.let { it1 ->
-                                smsManager.sendNotification(
-                                    it, profile = it1
-                                )
-                            }
+                headersUI.LogoHeader()
+                PermissionAwareComponents()
 
-                            FirebaseFunctionsAppointments().editAppointmentInFirebase(
-                                firebaseDatabase = FirebaseDatabase.getInstance(),
-                                updatedAppointment = it,
-                                completion = {})
-                        }
+                if (upcomingAppointment?.id != 0) {
+                    upcomingAppointment?.let { cardUI.UpcomingClientCard(appointment = it) }
+                }
 
-                        viewModel.newMessage("Wysłano powiadomienia do ${if (clientsToNotify.size == 1) "1 klienta" else "${clientsToNotify.size} klientów"}")
+                Row {
+                    cardUI.DashboardSmallCard(
+                        iconId = R.drawable.ic_clients,
+                        labelText = customersList.size.toString(),
+                        nameText = "Klienci Salonu",
+                        onClick = { navController.navigate("customersScreen") }
+                    )
 
-                        viewModel.setAppointmentsToNotify(emptyList())
-                        viewModel.hideNotifyDialog()
-                    } else {
-                        PopUpDialogs().NotifyDialog(
-                            onClick = {
-                                clientsToNotify.forEach {
+                    cardUI.DashboardSmallCard(
+                        iconId = R.drawable.ic_events,
+                        labelText = "",
+                        onClick = { navController.navigate("scheduleScreen") },
+                        nameText = "Harmonogram"
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
 
-                                    profilePreference?.let { it1 ->
-                                        smsManager.sendNotification(
-                                            it, profile = it1
-                                        )
-                                    }
-
-                                    FirebaseFunctionsAppointments().editAppointmentInFirebase(
-                                        firebaseDatabase = FirebaseDatabase.getInstance(),
-                                        updatedAppointment = it,
-                                        completion = {
-
-                                        })
-                                }
-                                viewModel.newMessage("Wysłano powiadomienia do ${if (clientsToNotify.size == 1) "1 klienta" else "${clientsToNotify.size} klientów"}")
-                                viewModel.setAppointmentsToNotify(emptyList())
-                                viewModel.hideNotifyDialog()
-                            },
-                            onDismissRequest = {
-                                viewModel.setAppointmentsToNotify(emptyList())
-                                viewModel.hideNotifyDialog()
-                            },
-                            clientCountString = clientsToNotify.size.toString(),
-                            appoiments = clientsToNotify
-                        )
+    @Composable
+    private fun NotifyDialogHandler(
+        profilePreference: ProfilePreferences?,
+        clientsToNotify: List<Appointment>,
+        viewModel: MainScreenModelView
+    ) {
+        if (profilePreference?.notificationSendAutomatic == true) {
+            // Automatyczne wysyłanie powiadomień
+            clientsToNotify.forEach { appointment ->
+                try {
+                    // Wysyłanie powiadomienia SMS
+                    profilePreference.let { profile ->
+                        smsManager.sendNotification(appointment, profile)
                     }
+
+                    // Aktualizacja statusu powiadomienia
+                    val updatedAppointment = appointment.copy(notificationSent = true)
+
+                    FirebaseFunctionsAppointments().editAppointmentInFirebase(
+                        firebaseDatabase = FirebaseDatabase.getInstance(),
+                        updatedAppointment = updatedAppointment
+                    ) { success ->
+                        if (!success) {
+                            val message = "Nie udało się zaktualizować powiadomienia dla klienta ${appointment.customer.fullName}"
+                            viewModel.newMessage(message)
+                        }
+                    }
+                } catch (e: Exception) {
+                    val errorMessage = "Błąd wysyłania SMS do ${appointment.customer.fullName}: ${e.message}"
+                    viewModel.newMessage(errorMessage)
                 }
             }
+        } else {
+            // Ręczne potwierdzenie za pomocą dialogu
+            PopUpDialogs().NotifyDialog(
+                onClick = {
+                    clientsToNotify.forEach { appointment ->
+                        try {
+                            // Wysyłanie powiadomienia SMS
+                            profilePreference?.let { profile ->
+                                smsManager.sendNotification(appointment, profile)
+                            }
+
+                            // Aktualizacja statusu powiadomienia
+                            val updatedAppointment = appointment.copy(notificationSent = true)
+                            FirebaseFunctionsAppointments().editAppointmentInFirebase(
+                                firebaseDatabase = FirebaseDatabase.getInstance(),
+                                updatedAppointment = updatedAppointment
+                            ) { success ->
+                                if (!success) {
+                                    val message = "Nie udało się zaktualizować powiadomienia dla klienta ${appointment.customer.fullName}"
+                                    viewModel.newMessage(message)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            val errorMessage = "Błąd wysyłania SMS do ${appointment.customer.fullName}: ${e.message}"
+                            viewModel.newMessage(errorMessage)
+                        }
+                    }
+
+                    // Powiadomienie o zakończeniu procesu
+                    viewModel.newMessage("Wysłano powiadomienia do ${clientsToNotify.size} klientów")
+                    viewModel.setViewNotifyDialog() // Zakończenie dialogu po wysłaniu
+                },
+                onDismissRequest = {
+                    // Odroczenie na 5 minut
+                    viewModel.deferNotifyDialog(5)
+                    viewModel.setViewNotifyDialog()
+                },
+                clientCountString = clientsToNotify.size.toString(),
+                appoiments = clientsToNotify
+            )
         }
     }
 

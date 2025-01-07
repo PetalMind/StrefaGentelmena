@@ -14,14 +14,6 @@ class Appointment(
     var notificationSent: Boolean = false,
     var employee: Employee = Employee()
 ) {
-    fun getStartTimeAsLocalTime(): LocalTime {
-        return LocalTime.parse(startTime, TIME_FORMATTER)
-    }
-
-    fun getEndTimeAsLocalTime(): LocalTime {
-        return LocalTime.parse(endTime, TIME_FORMATTER)
-    }
-
     fun copy(
         id: Int = this.id,
         customer: Customer = this.customer,
@@ -40,8 +32,5 @@ class Appointment(
             notificationSent = notificationSent,
             employee = employee
         )
-    }
-    companion object {
-        val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

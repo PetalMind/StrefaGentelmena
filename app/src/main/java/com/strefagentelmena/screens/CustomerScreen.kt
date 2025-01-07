@@ -119,29 +119,27 @@ class CustomerScreen {
             },
             floatingActionButtonPosition = FabPosition.End,
             topBar = {
-                headersUI.AppBarWithBackArrow(
-                    title = "Klienci salonu",
-                    onBackPressed = {
-                        navController.navigate("mainScreen")
-                    }, compose = {
-                        Box(modifier = Modifier.padding(end = 8.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
-                                    .clip(RoundedCornerShape(15.dp))
-                                    .padding(10.dp)
-                                    .clickable {
-                                        viewModel.setShowSearchState(!searchState)
-                                    }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Search,
-                                    contentDescription = "Search",
-                                )
-                            }
+                headersUI.AppBarWithBackArrow(title = "Klienci salonu", onBackPressed = {
+                    navController.navigate("mainScreen")
+                }, compose = {
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        Box(modifier = Modifier
+                            .background(
+                                colorsUI.headersBlue, RoundedCornerShape(15.dp)
+                            )
+                            .clip(RoundedCornerShape(15.dp))
+                            .padding(10.dp)
+                            .clickable {
+                                viewModel.setShowSearchState(!searchState)
+                            }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Search,
+                                contentDescription = "Search",
+                            )
                         }
-                        SortMenu(viewModel)
-                    })
+                    }
+                    SortMenu(viewModel)
+                })
             },
         ) { paddingValues ->
             Column(
@@ -165,71 +163,75 @@ class CustomerScreen {
                     }
                 }
 
-                if (showedList.value.isEmpty()) {
+                if (showedList.value?.isEmpty() == true) {
                     reusableScreen.EmptyScreen("Lista klientów jest pusta")
                 } else {
-                    ClientLazyColumn(
-                        customerList = showedList.value,
-                        paddingValues = PaddingValues(8.dp, 4.dp),
-                        onCustomerClick = { customer ->
-                            viewModel.selectedCustomer.value = customer
-                            viewModel.showAddCustomerDialog()
-                        },
-                        onEdit = {
-                            viewModel.selectedCustomer.value = it
-                            viewModel.showAddCustomerDialog()
-                        },
-                        onDelete = {
-                            viewModel.selectedCustomer.value = it
-                            viewModel.showDeleteDialog()
-                        }
-                    )
+                    showedList.value?.let {
+                        ClientLazyColumn(customerList = it,
+                            paddingValues = PaddingValues(8.dp, 4.dp),
+                            onCustomerClick = { customer ->
+                                viewModel.selectedCustomer.value = customer
+                                viewModel.showAddCustomerDialog()
+                            },
+                            onEdit = {
+                                viewModel.selectedCustomer.value = it
+                                viewModel.showAddCustomerDialog()
+                            },
+                            onDelete = {
+                                viewModel.selectedCustomer.value = it
+                                viewModel.deleteCustomer(
+                                    firebaseDatabase ?: FirebaseDatabase.getInstance()
+                                )
+                                viewModel.changeDeleteDialogState()
+                                viewModel.loadClients(FirebaseDatabase.getInstance())
+                            })
+                    }
                 }
             }
         }
 
         AnimatedVisibility(
-            visible = clientDialogState,
-            enter = slideInVertically(
+            visible = clientDialogState, enter = slideInVertically(
                 animationSpec = tween(
                     durationMillis = 700,
                     easing = LinearEasing,
                 ),
-            ) + expandIn(),
-            exit = slideOutVertically(
+            ) + expandIn(), exit = slideOutVertically(
                 animationSpec = tween(
                     durationMillis = 700,
                     easing = LinearEasing,
                 ),
             ) + shrinkOut()
         ) {
-            dialogsUI.OnAddOrEditCustomerDialog(
-                onClose = { viewModel.closeCustomerDialog() },
+            dialogsUI.OnAddOrEditCustomerDialog(onClose = { viewModel.closeCustomerDialog() },
                 onAddCustomer = {
-                    if (viewModel.checkFormValidity()
-                    ) {
-                        viewModel.addCustomer(context,firebaseDatabase?: FirebaseDatabase.getInstance())
+                    if (viewModel.checkFormValidity()) {
+                        viewModel.addCustomer(firebaseDatabase ?: FirebaseDatabase.getInstance())
                     }
                 },
                 viewModel = viewModel,
                 onEditCustomer = {
-                    viewModel.editCustomer(context, firebaseDatabase ?: FirebaseDatabase.getInstance())
+                    viewModel.editCustomer(
+                        context, firebaseDatabase ?: FirebaseDatabase.getInstance()
+                    )
                 },
                 onDeleteCustomer = {
-                    viewModel.showDeleteDialog()
-                }
-            )
+                    viewModel.changeDeleteDialogState()
+                })
         }
 
         AnimatedVisibility(
             visible = deleteDialogState,
             enter = fadeIn() + expandIn(),
         ) {
-            dialogsUI.DeleteDialog(onDismiss = { viewModel.closeDeleteDialog() }, onConfirm = {
-                selectedClient?.let {
-                    removeCustomerFromFirebase(database = firebaseDatabase ?: FirebaseDatabase.getInstance(), customerId = it.id.toString(), completion = {})
-                }
-            },
+            dialogsUI.DeleteDialog(
+                onDismiss = { viewModel.changeDeleteDialogState() },
+                onConfirm = {
+                    selectedClient?.let {
+                        viewModel.deleteCustomer(firebaseDatabase ?: FirebaseDatabase.getInstance())
+                    }
+                    viewModel.changeDeleteDialogState()
+                },
                 objectName = selectedClient?.fullName ?: ""
             )
         }
@@ -240,15 +242,13 @@ class CustomerScreen {
         var expanded by remember { mutableStateOf(false) }
 
         Box(modifier = Modifier.padding(end = 8.dp)) {
-            Box(
-                modifier = Modifier
-                    .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
-                    .clip(RoundedCornerShape(15.dp))
-                    .padding(10.dp)
-                    .clickable {
-                        expanded = !expanded
-                    }
-            ) {
+            Box(modifier = Modifier
+                .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                .clip(RoundedCornerShape(15.dp))
+                .padding(10.dp)
+                .clickable {
+                    expanded = !expanded
+                }) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_sort),
                     contentDescription = "Search",
@@ -257,38 +257,30 @@ class CustomerScreen {
         }
 
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(onClick = {
                 viewModel.sortClientsByName()
                 expanded = false
-            }, text = { Text(text = "Sortuj alfabetycznie") },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_sort_by_alpha),
-                        contentDescription = "Sort Options"
-                    )
-                })
+            }, text = { Text(text = "Sortuj alfabetycznie") }, leadingIcon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_sort_by_alpha),
+                    contentDescription = "Sort Options"
+                )
+            })
 
-            DropdownMenuItem(
-                onClick = {
-                    viewModel.sortClientsByDate()
-                    expanded = false
-                },
-                text = { Text(text = "Sortuj po dacie od najnowszych") },
-                leadingIcon = {
-                    Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
-                })
+            DropdownMenuItem(onClick = {
+                viewModel.sortClientsByDate()
+                expanded = false
+            }, text = { Text(text = "Sortuj po dacie od najnowszych") }, leadingIcon = {
+                Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
+            })
 
             DropdownMenuItem(onClick = {
                 viewModel.sortClientsByDateDesc()
                 expanded = false
-            }, text = { Text(text = "Sortuj po dacie od najstarszych") },
-                leadingIcon = {
-                    Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
-                })
+            }, text = { Text(text = "Sortuj po dacie od najstarszych") }, leadingIcon = {
+                Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
+            })
         }
     }
 
@@ -304,11 +296,9 @@ class CustomerScreen {
             items(customerList) { customer ->
                 cardUI.SwipeToDismissCustomerCard(customer = customer, onClick = {
                     onCustomerClick(customer)
-                },
-                    onDismiss = {
-                        onDelete(it)
-                    },
-                    onEdit = { onEdit(it) })
+                }, onDismiss = {
+                    onDelete(it)
+                }, onEdit = { onEdit(it) })
             }
         }
     }

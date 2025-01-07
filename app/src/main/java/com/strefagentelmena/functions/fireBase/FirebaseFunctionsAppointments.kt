@@ -2,8 +2,13 @@ package com.strefagentelmena.functions.fireBase
 
 import android.util.Log
 import com.google.firebase.database.FirebaseDatabase
+import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import kotlin.random.Random
 
 class FirebaseFunctionsAppointments {
     fun addNewAppointmentToFirebase(
@@ -33,7 +38,6 @@ class FirebaseFunctionsAppointments {
             completion(false) // Błąd z ID
         }
     }
-
 
 
     fun editAppointmentInFirebase(

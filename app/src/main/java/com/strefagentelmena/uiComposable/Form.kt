@@ -55,27 +55,20 @@ class Form {
             viewModel.prepareAppointmentDetails()
         }
 
-        LaunchedEffect(selectedClient, Unit) {
+        // Zmiana startTime oraz ustawienie endTime na startTime + 1 godzina
+        LaunchedEffect(startTime, selectedClient) {
             if (startTime != "") {
-                if (selectedClient != null) {
-                    val startTimeLocal =
-                        LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"))
-                    val endTimeLocal = startTimeLocal.plusHours(1)
+                val startTimeLocal = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"))
+                val endTimeLocal = startTimeLocal.plusHours(1)  // Dodajemy 1 godzinę do startTime
 
-                    viewModel.apply {
-                        setAppoimentNote(selectedClient?.noted ?: "")
-                        setAppoimentError("")
-                        selectedAppointmentDate.value = currentSelectedAppoinmentsDate
-                        selectedAppointmentStartTime.value = startTime
-                        selectedAppointmentEndTime.value = endTime
-                    }
+                // Ustawiamy odpowiednio startTime i endTime
+                viewModel.apply {
+                    setAppoimentNote(selectedClient?.noted ?: "")
+                    setAppoimentError("")
+                    selectedAppointmentDate.value = currentSelectedAppoinmentsDate
+                    selectedAppointmentStartTime.value = startTime
+                    selectedAppointmentEndTime.value = endTimeLocal.toString() // Ustawiamy endTime
                 }
-            }
-        }
-
-        LaunchedEffect(key1 = startTime) {
-            if (startTime != "") {
-                //   setAppointmentEndTime(selectedAppointment)
             }
         }
 
@@ -169,6 +162,8 @@ class Form {
             )
         }
     }
+
+
 
 
     @Composable

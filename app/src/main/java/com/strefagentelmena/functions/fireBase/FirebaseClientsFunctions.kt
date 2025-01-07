@@ -73,7 +73,7 @@ fun editCustomerInFirebase(
 
     customerRef.setValue(updatedCustomer)
         .addOnSuccessListener {
-            completion(true) // Customer updated successfully
+            completion(true) // Customer updated sucfcessfully
             Log.e("Firebase", "Customer updated successfully")
         }
         .addOnFailureListener { exception ->

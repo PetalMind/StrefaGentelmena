@@ -37,7 +37,21 @@ class MainScreenModelView : ViewModel() {
     val upcomingAppointment: MutableLiveData<Appointment> = MutableLiveData(Appointment())
     val profilePreferences = MutableLiveData(ProfilePreferences())
     val dataLoaded = MutableLiveData(false)
-    val displayGreetings: MutableLiveData<String> = MutableLiveData( Greetings().getSeasonalAndPartOfDayGreeting(profilePreferences.value?.userName ?: "Użytkownik"))
+    val displayGreetings: MutableLiveData<String> = MutableLiveData(
+        Greetings().getSeasonalAndPartOfDayGreeting(
+            profilePreferences.value?.userName ?: "Użytkownik"
+        )
+    )
+    private val _deferNotificationUntil = MutableLiveData<LocalDateTime?>()
+
+    fun deferNotifyDialog(minutes: Long) {
+        _deferNotificationUntil.value = LocalDateTime.now().plusMinutes(minutes)
+    }
+
+    fun shouldShowNotifyDialog(): Boolean {
+        val deferUntil = _deferNotificationUntil.value
+        return deferUntil == null || LocalDateTime.now().isAfter(deferUntil)
+    }
 
     fun setViewState(viewState: AppState) {
         this.viewState.value = viewState
@@ -51,12 +65,9 @@ class MainScreenModelView : ViewModel() {
         messages.value = ""
     }
 
-    fun hideNotifyDialog() {
-        showNotifyDialog.value = false
-    }
+    fun setViewNotifyDialog() {
+        showNotifyDialog.value = !showNotifyDialog.value!!
 
-    fun showNotifyDialog() {
-        showNotifyDialog.value = true
     }
 
     private fun setAppointmentsList(value: List<Appointment>) {
@@ -75,7 +86,7 @@ class MainScreenModelView : ViewModel() {
         upcomingAppointment.value = appointment
     }
 
-    fun setAppointmentsToNotify(emptyList: List<Appointment>) {
+    private fun setAppointmentsToNotify(emptyList: List<Appointment>) {
         appointmentsToNotify.value = emptyList
     }
 
@@ -146,39 +157,76 @@ class MainScreenModelView : ViewModel() {
 
     private fun sendNotificationsForUpcomingAppointments() {
         val currentTime = LocalDateTime.now()
+        val today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
         val nextDay = LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
 
         val appointmentsToSend = appointmentsLists.value
-            ?.filter { !it.notificationSent }
             ?.filter { appointment ->
-                try {
-                    val appointmentDateTime = LocalDateTime.parse(
-                        "${appointment.date} ${appointment.startTime}",
-                        DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
-                    )
-
-                    // Sprawdzenie, czy data spotkania to następny dzień
-                    appointment.date == nextDay &&
-                            shouldSendNotification(
-                                Period.between(
-                                    currentTime.toLocalDate(),
-                                    appointmentDateTime.toLocalDate()
-                                ).days,
-                                currentTime
-                            )
-                } catch (e: Exception) {
-                    Log.e(
-                        "Notification Error",
-                        "Error parsing appointment: ${appointment.date} ${appointment.startTime}",
-                        e
-                    )
-                    false
-                }
-            }.orEmpty() // Gwarantuje, że wynik nie będzie `null`
+                !appointment.notificationSent && shouldSendNotificationSafe(
+                    appointment,
+                    today,
+                    nextDay,
+                    currentTime
+                )
+            }
+            .orEmpty() // Gwarantujemy, że wynik nie będzie `null`
 
         if (appointmentsToSend.isNotEmpty()) {
+            // Ustawienie listy spotkań do powiadomienia
             setAppointmentsToNotify(appointmentsToSend)
+
+            messages.value = "Znaleziono ${appointmentsToSend.size} spotkań do powiadomienia"
+            // Opcjonalnie: komunikat o znalezionych spotkaniach
+            Log.d("Notifications", "Znaleziono ${appointmentsToSend.size} spotkań do powiadomienia")
         }
+    }
+
+    private fun shouldSendNotificationSafe(
+        appointment: Appointment,
+        today: String,
+        nextDay: String,
+        currentTime: LocalDateTime
+    ): Boolean {
+        return try {
+            shouldSendNotificationForAppointment(appointment, today, nextDay, currentTime)
+        } catch (e: Exception) {
+            Log.e(
+                "Notification Error",
+                "Error parsing appointment: ${appointment.date} ${appointment.startTime}",
+                e
+            )
+            messages.value = "Błąd parsowania daty spotkania: ${appointment.date}"
+            false
+        }
+    }
+
+
+    private fun shouldSendNotificationForAppointment(
+        appointment: Appointment,
+        today: String,
+        nextDay: String,
+        currentTime: LocalDateTime
+    ): Boolean {
+        if (appointment.notificationSent) return false
+
+        val appointmentDateTime = LocalDateTime.parse(
+            "${appointment.date} ${appointment.startTime}",
+            DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+        )
+
+        val isToday = appointment.date == today &&
+                currentTime.toLocalTime().isBefore(LocalTime.parse(appointment.startTime))
+
+        val isTomorrow = appointment.date == nextDay &&
+                shouldSendNotification(
+                    Period.between(
+                        currentTime.toLocalDate(),
+                        appointmentDateTime.toLocalDate()
+                    ).days,
+                    currentTime
+                )
+
+        return isToday || isTomorrow
     }
 
 
@@ -196,7 +244,8 @@ class MainScreenModelView : ViewModel() {
             val startLocalTime = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"))
             val endLocalTime = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"))
 
-            daysDifference == 1 &&
+            // Powiadomienie może być wysłane w dniu wizyty (daysDifference == 0) lub dzień przed (daysDifference == 1)
+            (daysDifference == 1 || daysDifference == 0) &&
                     currentTime.toLocalTime().isAfter(startLocalTime) &&
                     currentTime.toLocalTime().isBefore(endLocalTime)
         } catch (e: Exception) {
@@ -216,6 +265,7 @@ class MainScreenModelView : ViewModel() {
      * @param currentDateTime
      * @return
      */
+
     private fun findNearestAppointmentToday(
         currentDateTime: LocalDateTime = LocalDateTime.now()
     ): Appointment? {
@@ -231,15 +281,23 @@ class MainScreenModelView : ViewModel() {
                 appointmentDateTime.isAfter(currentDateTime) &&
                         appointmentDateTime.isBefore(oneHourLater)
             } ?: run {
-                setViewState(AppState.Error)
+                // Poprawka: użyj postValue zamiast setValue
+                viewModelScope.launch(Dispatchers.Main) {
+                    setViewState(AppState.Error)
+                }
                 null
             }
         } catch (e: Exception) {
             Log.e("Appointment Error", "Error finding the nearest appointment: ${e.message}", e)
-            setViewState(AppState.Error)
+
+            // Upewnij się, że zmiana stanu odbywa się na głównym wątku
+            viewModelScope.launch(Dispatchers.Main) {
+                setViewState(AppState.Error)
+            }
             null
         }
     }
+
 
     private fun loadProfilePreferencesFromFirebase(firebaseDatabase: FirebaseDatabase) {
         viewModelScope.launch {
@@ -259,8 +317,10 @@ class MainScreenModelView : ViewModel() {
     }
 
     fun startLoadingData() {
+        setViewState(AppState.Loading)
         viewModelScope.launch {
             try {
+                clearMessage()
                 val database = FirebaseDatabase.getInstance()
                 val customers = withContext(Dispatchers.IO) {
                     loadCustomersList(database)
@@ -297,8 +357,9 @@ class MainScreenModelView : ViewModel() {
                 // Obsługa błędów
                 Log.e("CheckAppointments", "Error while checking appointments: ${e.message}", e)
 
-                // Ewentualna aktualizacja widoku, np. ustawienie stanu błędu
+                // Ustawienie stanu błędu w widoku
                 setViewState(AppState.Error)
+                messages.value = "Wystąpił błąd podczas sprawdzania spotkań."
             }
         }
     }

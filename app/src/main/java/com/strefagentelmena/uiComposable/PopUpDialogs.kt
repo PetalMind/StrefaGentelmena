@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -72,7 +73,7 @@ class PopUpDialogs {
         onDismissRequest: () -> Unit,
         onClick: () -> Unit,
     ) {
-        val showClientList = remember { mutableStateOf(false) }
+        val showClientList = remember { mutableStateOf(true) }
 
         Dialog(
             onDismissRequest = { onDismissRequest() },
@@ -91,46 +92,46 @@ class PopUpDialogs {
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        IconHeader()
-
                         Text(
-                            text = "Zostaw to mnie! Chcesz wysłać powiadomienia?",
+                            text = "Powiadom swoich klientów!",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 16.dp)
+                            modifier = Modifier.padding(top = 16.dp),
+                            textAlign = TextAlign.Center
                         )
 
-                        val clientText = if (clientCountString == "1") {
-                            "Niech 1 klient będzie przygotowany na jutro!"
-                        } else {
-                            "Niech każdy z $clientCountString klientów będzie przygotowany na jutro!"
+                        val clientText = when (clientCountString) {
+                            "1" -> "Przypomnij 1 klientowi o nadchodzącej wizycie."
+                            "0" -> "Nie masz klientów do powiadomienia."
+                            else -> "Przypomnij $clientCountString klientom o nadchodzących wizytach."
                         }
 
                         Text(
                             text = clientText,
                             fontSize = 16.sp,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(top = 8.dp),
+                            textAlign = TextAlign.Center
                         )
 
-                        // Dodajemy AnimatedVisibility do obszaru z przyciskiem "Pokaż listę klientów"
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .align(Alignment.CenterHorizontally),
                             contentAlignment = Alignment.Center
                         ) {
-                            TextButton(onClick = { showClientList.value = !showClientList.value }) {
-                                Text(
-                                    text = if (showClientList.value) "Ukryj listę" else "Pokaż listę",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
+                            if (appoiments.isNotEmpty()) {
+                                TextButton(onClick = { showClientList.value = !showClientList.value }) {
+                                    Text(
+                                        text = if (showClientList.value) "Ukryj listę klientów" else "Pokaż listę klientów",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    )
+                                }
                             }
                         }
                     }
 
                     AnimatedVisibility(visible = showClientList.value) {
-                        // Tutaj wyświetlamy listę klientów (zmień na odpowiednią logikę)
                         if (showClientList.value) {
                             Column(
                                 modifier = Modifier.padding(
@@ -152,8 +153,9 @@ class PopUpDialogs {
                                         Spacer(modifier = Modifier.width(8.dp))
 
                                         Text(
-                                            text = appointment.startTime.toString() + " - " + appointment.date.toString(),
-                                            fontSize = 14.sp
+                                            text = "${appointment.date}, ${appointment.startTime}",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Normal,
                                         )
                                     }
                                 }
@@ -165,11 +167,12 @@ class PopUpDialogs {
                         onClick = { onClick() },
                         onDismiss = { onDismissRequest() },
                         cancelText = "Pomiń",
-                        confirmText = "Wyślij",
+                        confirmText = "Wyślij powiadomienia",
                     )
                 }
             }
         }
     }
+
 }
 

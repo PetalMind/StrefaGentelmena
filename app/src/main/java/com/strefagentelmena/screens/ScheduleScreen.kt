@@ -65,6 +65,7 @@ import com.strefagentelmena.uiComposable.reusableScreen
 import com.strefagentelmena.uiComposable.selectorsUI
 import com.strefagentelmena.viewModel.ScheduleModelView
 import kotlinx.coroutines.launch
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalTime
@@ -81,16 +82,15 @@ class Schedule {
         navController: NavController,
         viewModel: ScheduleModelView,
     ) {
-        val viewState by viewModel.viewState.observeAsState(AppState.Loading)
+        val viewState by viewModel.viewState.observeAsState(AppState.Idle)
 
+
+        LaunchedEffect(Unit) {
+            viewModel.loadAllData()
+        }
 
         when (viewState) {
             AppState.Idle -> {
-                LaunchedEffect(Unit) {
-                    viewModel.viewState.value = AppState.Success
-                    viewModel.loadAllData()
-
-                }
             }
 
             AppState.Loading -> {
@@ -134,23 +134,13 @@ class Schedule {
         val selectedWorker by viewModel.selectedEmployee.observeAsState()
 
         // Obecny dzień w miesiącu
-        val currentSelectedDay = remember {
-            mutableIntStateOf(
-                appointmentDateSelection?.let {
-                    if (it.isNotEmpty()) sdf.parse(it)?.date
-                        ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-                    else Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-                } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-            )
-        }
+        val currentSelectedDay =
+            remember { mutableIntStateOf(getCurrentDay(appointmentDateSelection)) }
 
         LaunchedEffect(appointmentDateSelection) {
-            currentSelectedDay.intValue = appointmentDateSelection?.let {
-                if (it.isNotEmpty()) sdf.parse(it)?.date ?: Calendar.getInstance()
-                    .get(Calendar.DAY_OF_MONTH)
-                else Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-            } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+            currentSelectedDay.intValue = getCurrentDay(appointmentDateSelection)
         }
+
 
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -166,12 +156,10 @@ class Schedule {
         }
 
         LaunchedEffect(selectedWorker) {
-            if (appointments?.size == (0 ?: 0)) {
+            if (appointments?.size == 0) {
                 viewModel.loadAllData()
             }
-
         }
-
 
         Scaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -228,12 +216,24 @@ class Schedule {
         )
     }
 
+
+    private fun getCurrentDay(dateSelection: String?): Int {
+        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+        return dateSelection?.takeIf { it.isNotEmpty() }?.let {
+            try {
+                sdf.parse(it)?.date ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+            } catch (e: ParseException) {
+                Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+            }
+        } ?: Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    }
+
     @Composable
     private fun AddAppointmentFab(viewModel: ScheduleModelView) {
         buttonsUI.LargeFloatingActionButton(icon = Icons.Default.Add) {
             viewModel.setAppoimentState(true)
             viewModel.clearDate()
-            viewModel.showApoimentDialog()
+            viewModel.changeAppointmentDialogState()
         }
     }
 
@@ -256,7 +256,7 @@ class Schedule {
             AppointmentsList(viewModel) { selectedAppointment ->
                 viewModel.selectAppointmentAndClient(selectedAppointment)
                 viewModel.setAppoimentState(false)
-                viewModel.showApoimentDialog()
+                viewModel.changeAppointmentDialogState()
             }
         }
     }
@@ -267,11 +267,17 @@ class Schedule {
         val selectedEmpolyee by viewModel.selectedEmployee.observeAsState()
         val employeeList by viewModel.employeeList.observeAsState(emptyList())
 
-        LaunchedEffect(Unit) {
-            if (employeeList.isEmpty()) {
-                FirebaseEmployeeFunctions().loadEmployeesFromFirebase(firebaseDatabase = FirebaseDatabase.getInstance())
-            } else {
-                viewModel.setEmpolyee(employeeList[0])
+        LaunchedEffect(employeeList) {
+            when (employeeList.size) {
+                0 -> FirebaseEmployeeFunctions().loadEmployeesFromFirebase(firebaseDatabase = FirebaseDatabase.getInstance())
+
+                else -> {
+                    if (selectedEmpolyee!!.id == null) {
+                        viewModel.setEmpolyee(employeeList[0])
+                    } else {
+                        viewModel.getsAppoiments()
+                    }
+                }
             }
         }
 
@@ -407,12 +413,16 @@ class Schedule {
         val notificationDialogState by viewModel.onNotificationClickState.observeAsState(false)
         val selectedAppointment by viewModel.selectedAppointment.observeAsState(null)
         val context = LocalContext.current
-
+        val appointmentDialog by viewModel.appointmentDialog.observeAsState(false)
 
         val filteredAppointments = appointmentsList?.filter {
             it.date == selectedDate
         }?.sortedBy {
             it.startTime
+        }
+
+        LaunchedEffect(selectedDate) {
+            viewModel.getsAppoiments()
         }
 
         AnimatedContent(targetState = filteredAppointments, label = "", transitionSpec = {
@@ -440,9 +450,7 @@ class Schedule {
                             appointments = it,
                             onClick = onClick,
                             onNotificationClick = { appointment ->
-                                viewModel.selectAppointmentAndClient(appointment)
-                                viewModel.showNotificationState()
-
+                                //viewModel.changeNotificationDialogState()
                             }
                         )
                     }
@@ -455,10 +463,12 @@ class Schedule {
                 objectName = selectedAppointment?.customer?.fullName ?: "",
                 onConfirm = {
                     viewModel.sendNotificationForAppointment()
-                    viewModel.hideNotificationState()
-                    viewModel.hideApoimentDialog()
+                    viewModel.changeNotificationDialogState()
+                    if (appointmentDialog) {
+                        viewModel.changeAppointmentDialogState()
+                    }
                 },
-                onDismiss = { viewModel.hideNotificationState() }
+                onDismiss = { viewModel.changeNotificationDialogState() }
             )
         }
     }

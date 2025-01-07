@@ -5,12 +5,17 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.database.FirebaseDatabase
+import com.strefagentelmena.functions.fireBase.FirebaseFunctionsAppointments
 import com.strefagentelmena.models.Customer
-import com.strefagentelmena.models.CustomerIdGenerator
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.functions.fireBase.editCustomerInFirebase
 import com.strefagentelmena.functions.fireBase.getAllCustomersFromFirebase
+import com.strefagentelmena.functions.fireBase.removeCustomerFromFirebase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class CustomersModelView : ViewModel() {
@@ -24,8 +29,6 @@ class CustomersModelView : ViewModel() {
     val firstNameError = MutableLiveData<String>()
     val lastNameError = MutableLiveData<String>()
     val phoneNumberError = MutableLiveData<String>()
-
-    private val idGenerator = CustomerIdGenerator()
 
     val clientDialogState = MutableLiveData<Boolean>(false)
     val deleteDialogState = MutableLiveData<Boolean>(false)
@@ -47,19 +50,27 @@ class CustomersModelView : ViewModel() {
         customerNote.value = note
     }
 
-    suspend fun loadClients(firebaseDatabase: FirebaseDatabase) {
-        val customers = getAllCustomersFromFirebase(database = firebaseDatabase)
-        customersLists.value = customers
-        searchedCustomersLists.value = customersLists.value
+    fun loadClients(firebaseDatabase: FirebaseDatabase) {
+        viewModelScope.launch {
+            try {
+                val customers = withContext(Dispatchers.IO) {
+                    getAllCustomersFromFirebase(database = firebaseDatabase)
+                }
+                customersLists.value = customers
+                searchedCustomersLists.value = customers
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error loading customers: ${e.message}")
+            }
+        }
     }
+
 
     fun searchCustomers(query: String) {
         val customersToSearch = customersLists.value ?: emptyList()
         val matchingCustomers = if (query.isNotEmpty()) {
             customersToSearch.filter { customer ->
                 customer.fullName.contains(
-                    query,
-                    ignoreCase = true
+                    query, ignoreCase = true
                 ) || customer.phoneNumber.contains(query, ignoreCase = true)
             }
         } else {
@@ -68,12 +79,8 @@ class CustomersModelView : ViewModel() {
         searchedCustomersLists.value = matchingCustomers
     }
 
-    fun showDeleteDialog() {
-        deleteDialogState.value = true
-    }
-
-    fun closeDeleteDialog() {
-        deleteDialogState.value = false
+    fun changeDeleteDialogState() {
+        deleteDialogState.value = !deleteDialogState.value!!
     }
 
     fun setCustomerName(name: String) {
@@ -133,7 +140,7 @@ class CustomersModelView : ViewModel() {
 
     private fun createNewCustomer(): Customer {
         return Customer(
-            id = idGenerator.generateId(),
+            id = customersLists.value?.size?.plus(1) ?: 1,
             firstName = customerName.value ?: "",
             lastName = customerLastName.value ?: "",
             phoneNumber = customerPhoneNumber.value ?: "",
@@ -164,7 +171,7 @@ class CustomersModelView : ViewModel() {
      * Add Customer.
      *
      */
-    fun addCustomer(context: Context, firebaseDatabase: FirebaseDatabase) {
+    fun addCustomer(firebaseDatabase: FirebaseDatabase) {
         val currentList = customersLists.value?.toMutableList() ?: mutableListOf()
         val newClient = createNewCustomer()
 
@@ -187,6 +194,38 @@ class CustomersModelView : ViewModel() {
         // Zamknięcie dialogu i czyszczenie danych
         closeCustomerDialog()
         clearSelectedClientAndData()
+    }
+
+    fun add50RandomCustomers(database: FirebaseDatabase) {
+        val random = java.util.Random()
+
+        repeat(50) {
+            val randomId = random.nextInt(1000000) // Unikalne losowe ID
+            val firstName = "FirstName${random.nextInt(1000)}"
+            val lastName = "LastName${random.nextInt(1000)}"
+            val phoneNumber = "+48${random.nextInt(1000000000)}"
+            val noted = "Note ${random.nextInt(100)}"
+
+            // Tworzenie nowego klienta
+            val newCustomer = Customer(
+                id = randomId,
+                firstName = firstName,
+                lastName = lastName,
+                phoneNumber = phoneNumber,
+                noted = noted
+            )
+
+            // Dodanie klienta do Firebase
+            addNewCustomerToFirebase(
+                database = database, newCustomer = newCustomer
+            ) { success ->
+                if (success) {
+                    Log.i("Firebase", "Customer $randomId added successfully")
+                } else {
+                    Log.e("Firebase", "Failed to add customer $randomId")
+                }
+            }
+        }
     }
 
     private fun setSearchedCustomersList(currentList: MutableList<Customer>) {
@@ -299,12 +338,49 @@ class CustomersModelView : ViewModel() {
                 ?: throw IllegalArgumentException("PhoneNumber cannot be null"),
             noted = customerNote.value ?: ""
             ?: throw IllegalArgumentException("Note cannot be null"),
-            appointment = selectedCustomer.value?.appointment
-                ?: Appointment()
+            appointment = selectedCustomer.value?.appointment ?: Appointment()
 
         )
     }
 
+    fun deleteCustomer(database: FirebaseDatabase) {
+        val customersList = customersLists.value ?: return
+        val selectedCustomer = selectedCustomer.value ?: return
+
+        val customerToDeleteIndex = customersList.indexOfFirst { it.id == selectedCustomer.id }
+
+        if (customerToDeleteIndex == -1) {
+            setMessage("Klient nie został znaleziony")
+            return
+        }
+
+        customersLists.value = customersList.toMutableList().apply {
+            removeAt(customerToDeleteIndex)
+            removeCustomerFromFirebase(
+                database,
+                selectedCustomer.id.toString(),
+                completion = { success ->
+                    if (success) {
+                        setMessage("Klient ${selectedCustomer.fullName} został usunięty")
+                    } else {
+                        setMessage("Błąd usuwania klienta")
+                    }
+                })
+        }
+    }
+
+    fun findAndDeleteAppoiments() {
+        viewModelScope.launch {
+            val appoiments =
+                FirebaseFunctionsAppointments().loadAppointmentsFromFirebase(firebaseDatabase = FirebaseDatabase.getInstance())
+
+            val findAndDelete = appoiments.filter {
+                it.customer.id == selectedCustomer.value?.id
+
+            }
+
+        }
+    }
 
     fun sortClientsByName() {
         customersLists.value = customersLists.value?.sortedBy { it.fullName }

@@ -8,11 +8,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -49,45 +51,41 @@ import java.time.format.FormatStyle
 val callendarHeaderUI = CalendarHeaderUI()
 
 class CalendarHeaderUI {
-    @SuppressLint("NewApi")
     @Composable
-    fun ContentItem(date: CalendarUiModel.Date, onClickListener: (CalendarUiModel.Date) -> Unit) {
+    fun ContentItem(
+        date: CalendarUiModel.Date,
+        onClickListener: (CalendarUiModel.Date) -> Unit
+    ) {
+        val containerColor = if (date.isSelected) colorsUI.cream else colorsUI.cardGrey
+        val fontWeight = if (date.isSelected) FontWeight.Bold else FontWeight.Normal
+        val textStyle =
+            if (date.isSelected) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge
+
         Card(
-            border = BorderStroke(width = 1.dp, color = colorsUI.cardGrey),
+            border = BorderStroke(1.dp, colorsUI.cardGrey),
             elevation = CardDefaults.cardElevation(defaultElevation = if (date.isSelected) 8.dp else 4.dp),
             modifier = Modifier
-                .clickable {
-                    onClickListener(date)
-                }
-                .padding(vertical = 4.dp, horizontal = 4.dp),
-            colors = CardDefaults.cardColors(
-                // background colors of the selected date
-                // and the non-selected date are different
-                containerColor = if (date.isSelected) {
-                    colorsUI.cream
-                } else {
-                    colorsUI.cardGrey
-                },
-            ),
+                .clickable { onClickListener(date) }
+                .padding(4.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor)
         ) {
             Column(
                 modifier = Modifier
-                    .width(48.dp)
-                    .height(58.dp)
-                    .padding(4.dp)
+                    .size(width = 48.dp, height = 58.dp)
+                    .padding(4.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = date.day, // day "Mon", "Tue"
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    fontWeight = if (date.isSelected) FontWeight.Bold else FontWeight.Normal,
+                    text = date.day, // "Mon", "Tue"
+                    fontWeight = fontWeight,
                     style = MaterialTheme.typography.bodySmall
                 )
 
                 Text(
-                    text = date.date.dayOfMonth.toString(), // date "15", "16"
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    fontWeight = if (date.isSelected) FontWeight.Bold else FontWeight.Normal,
-                    style = if (date.isSelected) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge,
+                    text = date.date.dayOfMonth.toString(), // "15", "16"
+                    fontWeight = fontWeight,
+                    style = textStyle
                 )
             }
         }
@@ -180,7 +178,6 @@ class CalendarHeaderUI {
                     }
                 )
             })
-
         }
     }
 
@@ -214,7 +211,9 @@ class CalendarHeaderUI {
                     // show "Dzisiaj" if user selects today's date
                     // else, show the full format of the date
                     text = if (it.selectedDate.isToday) {
-                        "Dzisiaj"
+                        "Dzisiaj, " + it.selectedDate.date.format(
+                            DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+                        )
                     } else {
                         it.selectedDate.date.format(
                             DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)

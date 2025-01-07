@@ -56,7 +56,7 @@ class SettingsUiElements {
     ) {
         // Dynamiczna wysokość karty z animacją
         val cardHeight by animateDpAsState(
-            targetValue = if (expandedState) 420.dp else 60.dp, // Dopasuj wysokość
+            targetValue = if (expandedState) 500.dp else 60.dp, // Dopasuj wysokość
             animationSpec = tween(
                 durationMillis = 300,
                 easing = LinearOutSlowInEasing

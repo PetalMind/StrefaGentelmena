@@ -555,20 +555,20 @@ class Cards {
                         fontWeight = FontWeight.Medium
                     )
 
-                    if (customer.appointment?.customer?.id != (0 ?: return@Card)) {
+                    customer.appointment?.date?.let { date ->
                         Row {
                             Text(
                                 text = "Ostatnia wizyta: ",
                                 style = MaterialTheme.typography.bodyLarge,
                             )
-
                             Text(
-                                text = customer.appointment?.date.toString(),
+                                text = date,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                             )
                         }
                     }
+
                 }
             }
         }
