@@ -139,14 +139,18 @@ class CustomersModelView : ViewModel() {
     }
 
     private fun createNewCustomer(): Customer {
+        // Znajdź najwyższe istniejące ID w liście klientów
+        val maxId = customersLists.value?.maxOfOrNull { it.id } ?: 0
+
         return Customer(
-            id = customersLists.value?.size?.plus(1) ?: 1,
+            id = maxId + 1, // Ustaw nowe ID jako największe istniejące + 1
             firstName = customerName.value ?: "",
             lastName = customerLastName.value ?: "",
             phoneNumber = customerPhoneNumber.value ?: "",
             noted = customerNote.value ?: ""
         )
     }
+
 
 
     fun clearSelectedClientAndData() {
@@ -196,37 +200,6 @@ class CustomersModelView : ViewModel() {
         clearSelectedClientAndData()
     }
 
-    fun add50RandomCustomers(database: FirebaseDatabase) {
-        val random = java.util.Random()
-
-        repeat(50) {
-            val randomId = random.nextInt(1000000) // Unikalne losowe ID
-            val firstName = "FirstName${random.nextInt(1000)}"
-            val lastName = "LastName${random.nextInt(1000)}"
-            val phoneNumber = "+48${random.nextInt(1000000000)}"
-            val noted = "Note ${random.nextInt(100)}"
-
-            // Tworzenie nowego klienta
-            val newCustomer = Customer(
-                id = randomId,
-                firstName = firstName,
-                lastName = lastName,
-                phoneNumber = phoneNumber,
-                noted = noted
-            )
-
-            // Dodanie klienta do Firebase
-            addNewCustomerToFirebase(
-                database = database, newCustomer = newCustomer
-            ) { success ->
-                if (success) {
-                    Log.i("Firebase", "Customer $randomId added successfully")
-                } else {
-                    Log.e("Firebase", "Failed to add customer $randomId")
-                }
-            }
-        }
-    }
 
     private fun setSearchedCustomersList(currentList: MutableList<Customer>) {
         searchedCustomersLists.value = currentList
