@@ -1,0 +1,163 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@300&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .screen {
+    width: 300px; height: 620px;
+    background: #0E0E0E;
+    border-radius: 44px;
+    border: 1px solid #2A2A2A;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 28px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* subtle radial glow behind logo */
+  .glow {
+    position: absolute;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 70%);
+    animation: pulse-glow 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { transform: scale(0.9); opacity: 0.6; }
+    50%       { transform: scale(1.1); opacity: 1; }
+  }
+
+  /* scissors SVG */
+  .scissors-wrap {
+    position: relative; width: 72px; height: 72px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1;
+  }
+
+  .scissors-svg { overflow: visible; }
+
+  /* blade A: rotuje w górę i dół */
+  #blade-a {
+    transform-origin: 36px 36px;
+    animation: open-a 1.6s ease-in-out infinite;
+  }
+  /* blade B: rotuje w przeciwną stronę */
+  #blade-b {
+    transform-origin: 36px 36px;
+    animation: open-b 1.6s ease-in-out infinite;
+  }
+
+  @keyframes open-a {
+    0%, 100% { transform: rotate(-14deg); }
+    50%       { transform: rotate(0deg); }
+  }
+  @keyframes open-b {
+    0%, 100% { transform: rotate(14deg); }
+    50%       { transform: rotate(0deg); }
+  }
+
+  /* logo text */
+  .logo-block { text-align: center; z-index: 1; }
+  .logo-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic; font-size: 22px;
+    color: #C9A84C; letter-spacing: 0.04em;
+  }
+  .logo-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: #444;
+    margin-top: 4px;
+  }
+
+  /* dots */
+  .dots { display: flex; gap: 7px; z-index: 1; }
+  .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #C9A84C; opacity: 0.2;
+    animation: dot-pulse 1.4s ease-in-out infinite;
+  }
+  .dot:nth-child(1) { animation-delay: 0s; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dot-pulse {
+    0%, 80%, 100% { opacity: 0.15; transform: scale(0.9); }
+    40%           { opacity: 1;    transform: scale(1.2); }
+  }
+
+  /* thin progress bar at bottom */
+  .progress-track {
+    position: absolute; bottom: 56px;
+    left: 40px; right: 40px;
+    height: 1px; background: #1E1E1E;
+    border-radius: 1px; overflow: hidden;
+    z-index: 1;
+  }
+  .progress-fill {
+    height: 100%; width: 40%;
+    background: #C9A84C;
+    border-radius: 1px;
+    animation: progress 2.4s ease-in-out infinite;
+  }
+  @keyframes progress {
+    0%   { width: 0%;   opacity: 1; }
+    80%  { width: 100%; opacity: 1; }
+    100% { width: 100%; opacity: 0; }
+  }
+</style>
+
+<div style="padding: 2rem 1rem; background: #080808; border-radius: 16px;">
+  <div class="screen">
+
+    <div class="glow"></div>
+
+    <!-- animowane nożyczki -->
+    <div class="scissors-wrap">
+      <svg class="scissors-svg" width="72" height="72" viewBox="0 0 72 72" fill="none">
+        <!-- pivot dot -->
+        <circle cx="36" cy="36" r="2.5" fill="#C9A84C" opacity="0.9"/>
+
+        <!-- blade A (górna) -->
+        <g id="blade-a">
+          <!-- ostrze -->
+          <line x1="36" y1="36" x2="66" y2="14" stroke="#C9A84C" stroke-width="2" stroke-linecap="round"/>
+          <!-- uchwyt / kółko -->
+          <circle cx="20" cy="26" r="7" stroke="#C9A84C" stroke-width="1.6" fill="none"/>
+          <line x1="36" y1="36" x2="26.5" y2="30" stroke="#C9A84C" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="20" cy="26" r="3" fill="#C9A84C" opacity="0.25"/>
+        </g>
+
+        <!-- blade B (dolna) -->
+        <g id="blade-b">
+          <line x1="36" y1="36" x2="66" y2="58" stroke="#C9A84C" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="20" cy="46" r="7" stroke="#C9A84C" stroke-width="1.6" fill="none"/>
+          <line x1="36" y1="36" x2="26.5" y2="42" stroke="#C9A84C" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="20" cy="46" r="3" fill="#C9A84C" opacity="0.25"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- nazwa -->
+    <div class="logo-block">
+      <div class="logo-name">Strefa Gentlemana</div>
+      <div class="logo-sub">Kinga Kloss</div>
+    </div>
+
+    <!-- kropki -->
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <!-- pasek postępu -->
+    <div class="progress-track">
+      <div class="progress-fill"></div>
+    </div>
+
+  </div>
+</div>

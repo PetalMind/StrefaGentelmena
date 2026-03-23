@@ -8,9 +8,13 @@ import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.enums.AppState
 import com.strefagentelmena.functions.fireBase.FirebaseEmployeeFunctions
 import com.strefagentelmena.functions.fireBase.FirebaseProfilePreferences
+import com.strefagentelmena.functions.fireBase.FirebaseRealtimeDatabaseBackup
 import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
+import com.strefagentelmena.models.settngsModel.parseEmployeeDisplayDate
 import kotlinx.coroutines.launch
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class SettingsModelView : ViewModel() {
     val isNewEmplyee = MutableLiveData(false)
@@ -23,6 +27,10 @@ class SettingsModelView : ViewModel() {
     val newEmployee = MutableLiveData(Employee())
     val empolyeeName = MutableLiveData("")
     val empolyeeSurname = MutableLiveData("")
+    val empolyeeWorkStartTime = MutableLiveData(Employee.DEFAULT_WORK_START)
+    val empolyeeWorkEndTime = MutableLiveData(Employee.DEFAULT_WORK_END)
+    val empolyeeVacationFrom = MutableLiveData("")
+    val empolyeeVacationTo = MutableLiveData("")
     val empoleesList = MutableLiveData<MutableList<Employee>>(mutableListOf())
     val addEmpolyeeState = MutableLiveData(false)
     val notificationSendStartTime = MutableLiveData("")
@@ -38,6 +46,8 @@ class SettingsModelView : ViewModel() {
     val backButtonViewState = MutableLiveData<Boolean>(false)
     val updateViewState = MutableLiveData<Boolean>(false)
 
+    val backupViewState = MutableLiveData(false)
+    val backupInProgress = MutableLiveData(false)
 
     fun setIsNewEmplyee(value: Boolean) {
         isNewEmplyee.value = value
@@ -71,6 +81,10 @@ class SettingsModelView : ViewModel() {
         newEmployee.value = Employee()
         empolyeeName.value = ""
         empolyeeSurname.value = ""
+        empolyeeWorkStartTime.value = Employee.DEFAULT_WORK_START
+        empolyeeWorkEndTime.value = Employee.DEFAULT_WORK_END
+        empolyeeVacationFrom.value = ""
+        empolyeeVacationTo.value = ""
     }
 
     fun setNewProfileName(value: String) {
@@ -85,8 +99,29 @@ class SettingsModelView : ViewModel() {
         selectedEmployee.value = value
         empolyeeName.value = value.name
         empolyeeSurname.value = value.surname
+        empolyeeWorkStartTime.value =
+            value.workStartTime.ifBlank { Employee.DEFAULT_WORK_START }
+        empolyeeWorkEndTime.value =
+            value.workEndTime.ifBlank { Employee.DEFAULT_WORK_END }
+        empolyeeVacationFrom.value = value.vacationFrom
+        empolyeeVacationTo.value = value.vacationTo
     }
 
+    fun setEmpolyeeWorkStartTime(value: String) {
+        empolyeeWorkStartTime.value = value
+    }
+
+    fun setEmpolyeeWorkEndTime(value: String) {
+        empolyeeWorkEndTime.value = value
+    }
+
+    fun setEmpolyeeVacationFrom(value: String) {
+        empolyeeVacationFrom.value = value
+    }
+
+    fun setEmpolyeeVacationTo(value: String) {
+        empolyeeVacationTo.value = value
+    }
 
     /*
     * Set notification message
@@ -110,11 +145,29 @@ class SettingsModelView : ViewModel() {
             return
         }
 
+        val ws = empolyeeWorkStartTime.value?.trim().orEmpty().ifBlank { Employee.DEFAULT_WORK_START }
+        val we = empolyeeWorkEndTime.value?.trim().orEmpty().ifBlank { Employee.DEFAULT_WORK_END }
+        if (!isValidWorkWindow(ws, we)) {
+            setMessages("Godzina zakończenia pracy musi być późniejsza niż rozpoczęcia")
+            return
+        }
+
+        validateVacationOrNull()?.let {
+            setMessages(it)
+            return
+        }
+        val vf = empolyeeVacationFrom.value?.trim().orEmpty()
+        val vt = empolyeeVacationTo.value?.trim().orEmpty()
+
         // Generujemy ID dla nowego pracownika
         val newEmployee = Employee().apply {
             this.id = (empoleesList.value?.maxOfOrNull { it.id ?: 0 } ?: 0) + 1
             this.name = name
             this.surname = surname
+            this.workStartTime = ws
+            this.workEndTime = we
+            this.vacationFrom = vf
+            this.vacationTo = vt
         }
 
         empoleesList.value?.add(newEmployee)
@@ -170,10 +223,30 @@ class SettingsModelView : ViewModel() {
     }
 
     fun editEmployee(value: Employee) {
+        val ws = (empolyeeWorkStartTime.value ?: value.workStartTime).trim()
+            .ifBlank { Employee.DEFAULT_WORK_START }
+        val we = (empolyeeWorkEndTime.value ?: value.workEndTime).trim()
+            .ifBlank { Employee.DEFAULT_WORK_END }
+        if (!isValidWorkWindow(ws, we)) {
+            setMessages("Godzina zakończenia pracy musi być późniejsza niż rozpoczęcia")
+            return
+        }
+
+        validateVacationOrNull()?.let {
+            setMessages(it)
+            return
+        }
+        val vf = empolyeeVacationFrom.value?.trim().orEmpty()
+        val vt = empolyeeVacationTo.value?.trim().orEmpty()
+
         val updatedEmployee = Employee().apply {
             this.id = value.id
             this.name = empolyeeName.value ?: value.name
             this.surname = empolyeeSurname.value ?: value.surname
+            this.workStartTime = ws
+            this.workEndTime = we
+            this.vacationFrom = vf
+            this.vacationTo = vt
         }
 
         FirebaseEmployeeFunctions().editEmployeeInFirebase(firebaseDatabase = FirebaseDatabase.getInstance(),
@@ -197,8 +270,33 @@ class SettingsModelView : ViewModel() {
         notificationViewState.value = !notificationViewState.value!!
     }
 
+    fun setBackupViewState() {
+        backupViewState.value = !(backupViewState.value ?: false)
+    }
+
+    fun backupDatabaseToStorage() {
+        if (backupInProgress.value == true) return
+        viewModelScope.launch {
+            backupInProgress.value = true
+            try {
+                val result = FirebaseRealtimeDatabaseBackup.exportFullDatabaseJsonToStorage()
+                if (result.success) {
+                    setMessages("Kopia zapisana w Storage: ${result.storagePath}")
+                } else {
+                    setMessages("Błąd kopii zapasowej: ${result.errorMessage ?: "nieznany"}")
+                }
+            } finally {
+                backupInProgress.value = false
+            }
+        }
+    }
+
     fun setBackButtonViewState() {
         backButtonViewState.value = !backButtonViewState.value!!
+    }
+
+    fun setUpdateViewState() {
+        updateViewState.value = !(updateViewState.value ?: false)
     }
 
     private fun setViewState(state: AppState) {
@@ -225,6 +323,7 @@ class SettingsModelView : ViewModel() {
         backButtonViewState.value = false
         updateViewState.value = false
         empolyeeViewState.value = false
+        backupViewState.value = false
     }
 
 
@@ -286,5 +385,31 @@ class SettingsModelView : ViewModel() {
         messages.value = ""
     }
 
+    private fun isValidWorkWindow(start: String, end: String): Boolean {
+        return try {
+            val fmt = DateTimeFormatter.ofPattern("HH:mm")
+            val a = LocalTime.parse(start, fmt)
+            val b = LocalTime.parse(end, fmt)
+            b.isAfter(a)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Komunikat błędu lub null gdy OK / brak urlopu. */
+    private fun validateVacationOrNull(): String? {
+        val from = empolyeeVacationFrom.value?.trim().orEmpty()
+        val to = empolyeeVacationTo.value?.trim().orEmpty()
+        if (from.isEmpty() && to.isEmpty()) return null
+        if (from.isEmpty()) return "Uzupełnij datę początku urlopu"
+        val fd = parseEmployeeDisplayDate(from) ?: return "Niepoprawna data początku urlopu (dd.MM.yyyy)"
+        if (to.isEmpty()) return null
+        val td = parseEmployeeDisplayDate(to) ?: return "Niepoprawna data końca urlopu (dd.MM.yyyy)"
+        return if (td.isBefore(fd)) {
+            "Koniec urlopu nie może być wcześniejszy niż początek"
+        } else {
+            null
+        }
+    }
 
 }

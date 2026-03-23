@@ -27,6 +27,20 @@ class AppFunctions {
         }
     }
 
+    @SuppressLint("QueryPermissionsNeeded")
+    fun openSmsComposer(context: Context, phoneNumber: String, body: String? = null) {
+        val e164 = normalizePolishPhoneToE164(phoneNumber) ?: return
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("smsto:${Uri.encode(e164)}")
+            if (!body.isNullOrBlank()) {
+                putExtra("sms_body", body.trim())
+            }
+        }
+        if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+        }
+    }
+
 //    fun getCurrentWeekDays(dateString: String): List<Int> {
 //        val simpleDateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 //        val date =
@@ -152,4 +166,21 @@ class AppFunctions {
 
         return nextWeekDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
     }
+}
+
+/**
+ * Normalizacja do E.164 dla Polski (+48 i 9 cyfr krajowych).
+ * Akceptuje m.in. 9 cyfr, 48XXXXXXXXX, 0048… po usunięciu separatorów.
+ */
+fun normalizePolishPhoneToE164(raw: String?): String? {
+    if (raw.isNullOrBlank()) return null
+    val digits = raw.filter { it.isDigit() }
+    if (digits.isEmpty()) return null
+    val national = when {
+        digits.startsWith("0048") -> digits.removePrefix("0048").takeIf { it.length == 9 } ?: return null
+        digits.startsWith("48") && digits.length == 11 -> digits.drop(2).takeIf { it.length == 9 } ?: return null
+        digits.length == 9 -> digits
+        else -> return null
+    }
+    return "+48$national"
 }

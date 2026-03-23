@@ -2,8 +2,9 @@ package com.strefagentelmena.functions.fireBase
 
 import android.util.Log
 import com.google.firebase.database.FirebaseDatabase
-import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.appoimentsModel.Appointment
+import com.strefagentelmena.models.normalizedAfterFirebaseLoad
+import com.strefagentelmena.models.normalizedForFirebaseWrite
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.LocalTime
@@ -24,7 +25,7 @@ class FirebaseFunctionsAppointments {
         // Sprawdzamy, czy id jest prawidłowe (czy nie jest 0 lub inne niepożądane wartości)
         if (appointmentId.isNotEmpty()) {
             // Zapisujemy appointment w Firebase z Twoim własnym id
-            appointmentsRef.child(appointmentId).setValue(newAppointment)
+            appointmentsRef.child(appointmentId).setValue(newAppointment.normalizedForFirebaseWrite())
                 .addOnSuccessListener {
                     Log.e("Firebase", "Appointment added successfully with ID: $appointmentId")
                     completion(true) // Wizyta została dodana
@@ -49,7 +50,7 @@ class FirebaseFunctionsAppointments {
         val appointmentRef =
             appointmentsRef.child(updatedAppointment.id.toString()) // Aktualizujemy konkretną wizytę przez jej ID
 
-        appointmentRef.setValue(updatedAppointment)
+        appointmentRef.setValue(updatedAppointment.normalizedForFirebaseWrite())
             .addOnSuccessListener {
                 Log.e("Firebase", "Appointment updated successfully")
                 completion(true)
@@ -68,12 +69,13 @@ class FirebaseFunctionsAppointments {
     ) {
         val appointmentsRef = firebaseDatabase.getReference("Appointments")
 
-        appointments.forEach { appointment ->
-            val appointmentId = appointment?.id ?: return@forEach
+        appointments.forEach { ap ->
+            val appointment = ap ?: return@forEach
+            val appointmentId = appointment.id
             val appointmentRef = appointmentsRef.child(appointmentId.toString())
 
             // Przekazanie appointment do Firebase
-            appointmentRef.setValue(appointment)
+            appointmentRef.setValue(appointment.normalizedForFirebaseWrite())
                 .addOnSuccessListener {
                     Log.e("Firebase", "Appointment saved successfully with ID: $appointmentId")
                     completion(true) // Success
@@ -95,7 +97,7 @@ class FirebaseFunctionsAppointments {
 
             for (snapshot in dataSnapshot.children) {
                 val appointment = snapshot.getValue(Appointment::class.java)
-                appointment?.let { appointments.add(it) }
+                appointment?.let { appointments.add(it.normalizedAfterFirebaseLoad()) }
             }
 
             appointments // Zwracamy załadowaną listę

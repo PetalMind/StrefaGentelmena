@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Paleta salonu (mockup HTML) -->
+    <color name="salon_bg">#FF0E0E0E</color>
+    <color name="salon_bg2">#FF161616</color>
+    <color name="salon_gold">#FFC9A84C</color>
+    <color name="salon_text">#FFE8E0CC</color>
+
     <color name="light_blue_50">#FFE1F5FE</color>
     <color name="light_blue_200">#FF81D4FA</color>
     <color name="light_blue_600">#FF039BE5</color>

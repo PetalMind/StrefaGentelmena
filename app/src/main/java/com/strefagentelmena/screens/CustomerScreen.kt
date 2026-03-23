@@ -9,6 +9,7 @@ import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,12 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -42,24 +45,40 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
-import com.google.firebase.FirebaseApp
+import com.strefagentelmena.navigation.NavPendingActions
+import com.strefagentelmena.navigation.popBackStackOrNavigateToMain
 import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.R
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.uiComposable.buttonsUI
 import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
+import com.strefagentelmena.uiComposable.StrefaDialogButton
+import com.strefagentelmena.uiComposable.StrefaDialogButtonRow
+import com.strefagentelmena.uiComposable.StrefaDialogButtonStyle
+import com.strefagentelmena.uiComposable.StrefaDialogDeleteButton
+import com.strefagentelmena.uiComposable.StrefaDialogFloatingBar
+import com.strefagentelmena.uiComposable.StrefaModalBodyText
+import com.strefagentelmena.uiComposable.StrefaModalIconFrame
+import com.strefagentelmena.uiComposable.StrefaModalIconVariant
+import com.strefagentelmena.uiComposable.StrefaModalPanel
+import com.strefagentelmena.uiComposable.StrefaModalTitleText
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
 import com.strefagentelmena.uiComposable.reusableScreen
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
+import com.strefagentelmena.ui.theme.SalonBg2
+import com.strefagentelmena.ui.theme.SalonGold
+import com.strefagentelmena.ui.theme.SalonIconBoxBorder
+import com.strefagentelmena.ui.theme.SalonRed
+import com.strefagentelmena.ui.theme.SalonText
 import com.strefagentelmena.viewModel.CustomersModelView
 import kotlinx.coroutines.launch
-import com.strefagentelmena.functions.fireBase.removeCustomerFromFirebase
 
 val screenCustomerView = CustomerScreen()
 
@@ -71,6 +90,7 @@ class CustomerScreen {
         navController: NavController,
     ) {
         val customerList by viewModel.customersLists.observeAsState(arrayListOf())
+        val catalogReady by viewModel.customersCatalogReady.observeAsState(false)
         val searchedCustomerList by viewModel.searchedCustomersLists.observeAsState(arrayListOf())
         val clientDialogState by viewModel.clientDialogState.observeAsState(false)
         val searchState by viewModel.searchState.observeAsState(false)
@@ -78,10 +98,7 @@ class CustomerScreen {
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
         val selectedClient by viewModel.selectedCustomer.observeAsState(null)
 
-        val context = LocalContext.current
         val searchText = remember { mutableStateOf("") }
-        val firebaseDatabase by remember { mutableStateOf<FirebaseDatabase?>(null) }
-        var firebaseApp = FirebaseApp.initializeApp(context)
 
         val showedList = rememberUpdatedState(
             if (searchState) searchedCustomerList else customerList
@@ -94,7 +111,25 @@ class CustomerScreen {
         LaunchedEffect(Unit) {
             viewModel.clearMessage()
             viewModel.closeAllDialogs()
-            viewModel.loadClients(firebaseDatabase ?: FirebaseDatabase.getInstance())
+            viewModel.loadClients(FirebaseDatabase.getInstance())
+        }
+
+        LaunchedEffect(catalogReady, customerList) {
+            if (!catalogReady) return@LaunchedEffect
+            val id = NavPendingActions.peekCustomerEditId() ?: return@LaunchedEffect
+            if (id <= 0) {
+                NavPendingActions.consumeCustomerEditId()
+                return@LaunchedEffect
+            }
+            val c = customerList.firstOrNull { it.id == id }
+            NavPendingActions.consumeCustomerEditId()
+            if (c != null) {
+                viewModel.selectedCustomer.value = c
+                viewModel.setSelectedCustomerData()
+                viewModel.showAddCustomerDialog()
+            } else {
+                viewModel.messages.value = "Nie znaleziono klienta na liście."
+            }
         }
 
         // Efekt wyzwalany, gdy wartość 'message' się zmienia
@@ -109,7 +144,18 @@ class CustomerScreen {
 
         Scaffold(
             snackbarHost = {
-                SnackbarHost(hostState = snackbarHostState)
+                SnackbarHost(hostState = snackbarHostState) { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .border(0.5.dp, SalonIconBoxBorder, RoundedCornerShape(12.dp)),
+                        shape = RoundedCornerShape(12.dp),
+                        containerColor = SalonBg2,
+                        contentColor = SalonText,
+                        actionColor = SalonGold,
+                    )
+                }
             },
             floatingActionButton = {
                 buttonsUI.LargeFloatingActionButton(icon = Icons.Default.Add, onClick = {
@@ -120,7 +166,7 @@ class CustomerScreen {
             floatingActionButtonPosition = FabPosition.End,
             topBar = {
                 headersUI.AppBarWithBackArrow(title = "Klienci salonu", onBackPressed = {
-                    navController.navigate("mainScreen")
+                    navController.popBackStackOrNavigateToMain()
                 }, compose = {
                     Box(modifier = Modifier.padding(end = 8.dp)) {
                         Box(modifier = Modifier
@@ -168,7 +214,7 @@ class CustomerScreen {
                 } else {
                     showedList.value?.let {
                         ClientLazyColumn(customerList = it,
-                            paddingValues = PaddingValues(8.dp, 4.dp),
+                            paddingValues = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                             onCustomerClick = { customer ->
                                 viewModel.selectedCustomer.value = customer
                                 viewModel.showAddCustomerDialog()
@@ -179,9 +225,7 @@ class CustomerScreen {
                             },
                             onDelete = {
                                 viewModel.selectedCustomer.value = it
-                                viewModel.deleteCustomer(
-                                    firebaseDatabase ?: FirebaseDatabase.getInstance()
-                                )
+                                viewModel.deleteCustomer(FirebaseDatabase.getInstance())
                                 viewModel.changeDeleteDialogState()
                                 viewModel.loadClients(FirebaseDatabase.getInstance())
                             })
@@ -206,14 +250,14 @@ class CustomerScreen {
             dialogsUI.OnAddOrEditCustomerDialog(onClose = { viewModel.closeCustomerDialog() },
                 onAddCustomer = {
                     if (viewModel.checkFormValidity()) {
-                        viewModel.addCustomer(firebaseDatabase ?: FirebaseDatabase.getInstance())
+                        viewModel.addCustomer(FirebaseDatabase.getInstance())
                     }
                 },
                 viewModel = viewModel,
                 onEditCustomer = {
-                    viewModel.editCustomer(
-                        context, firebaseDatabase ?: FirebaseDatabase.getInstance()
-                    )
+                    if (viewModel.checkFormValidity()) {
+                        viewModel.editCustomer(FirebaseDatabase.getInstance())
+                    }
                 },
                 onDeleteCustomer = {
                     viewModel.changeDeleteDialogState()
@@ -224,16 +268,69 @@ class CustomerScreen {
             visible = deleteDialogState,
             enter = fadeIn() + expandIn(),
         ) {
-            dialogsUI.DeleteDialog(
+            DeleteCustomerStrefaDialog(
+                customerName = selectedClient?.fullName?.ifBlank { "—" } ?: "—",
                 onDismiss = { viewModel.changeDeleteDialogState() },
                 onConfirm = {
                     selectedClient?.let {
-                        viewModel.deleteCustomer(firebaseDatabase ?: FirebaseDatabase.getInstance())
+                        viewModel.deleteCustomer(FirebaseDatabase.getInstance())
                     }
                     viewModel.changeDeleteDialogState()
                 },
-                objectName = selectedClient?.fullName ?: ""
             )
+        }
+    }
+
+    @Composable
+    private fun DeleteCustomerStrefaDialog(
+        customerName: String,
+        onDismiss: () -> Unit,
+        onConfirm: () -> Unit,
+    ) {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    StrefaModalPanel {
+                        StrefaModalIconFrame(
+                            variant = StrefaModalIconVariant.Danger,
+                            icon = Icons.Outlined.Delete,
+                            iconTint = SalonRed,
+                        )
+                        StrefaModalTitleText("Usunąć klienta?")
+                        StrefaModalBodyText(
+                            text = "Klient $customerName zostanie trwale usunięty. Tej operacji nie można cofnąć.",
+                        )
+                    }
+                    StrefaDialogFloatingBar(
+                        modifier = Modifier.padding(top = 12.dp),
+                    ) {
+                        StrefaDialogButtonRow(
+                            first = { m ->
+                                StrefaDialogButton(
+                                    "Anuluj",
+                                    onDismiss,
+                                    m,
+                                    StrefaDialogButtonStyle.Ghost,
+                                )
+                            },
+                            second = { m ->
+                                StrefaDialogDeleteButton(
+                                    onClick = onConfirm,
+                                    modifier = m,
+                                )
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -251,7 +348,7 @@ class CustomerScreen {
                 }) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_sort),
-                    contentDescription = "Search",
+                    contentDescription = "Sortuj listę",
                 )
             }
         }
@@ -271,14 +368,14 @@ class CustomerScreen {
             DropdownMenuItem(onClick = {
                 viewModel.sortClientsByDate()
                 expanded = false
-            }, text = { Text(text = "Sortuj po dacie od najnowszych") }, leadingIcon = {
+            }, text = { Text(text = "Ostatnia wizyta: od najnowszej") }, leadingIcon = {
                 Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
             })
 
             DropdownMenuItem(onClick = {
                 viewModel.sortClientsByDateDesc()
                 expanded = false
-            }, text = { Text(text = "Sortuj po dacie od najstarszych") }, leadingIcon = {
+            }, text = { Text(text = "Ostatnia wizyta: od najdawniejszej") }, leadingIcon = {
                 Icon(Icons.Filled.DateRange, contentDescription = "Sort Options")
             })
         }

@@ -1,0 +1,363 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;0,500&family=DM+Sans:wght@300;400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0E0E0E; --bg2: #161616; --bg3: #1E1E1E;
+    --border: #262626; --border2: #2E2E2E;
+    --gold: #C9A84C; --gold-dim: rgba(201,168,76,0.1); --gold-border: rgba(201,168,76,0.25);
+    --text: #E8E0CC; --muted: #555; --muted2: #888;
+    --red: #E07070; --red-dim: rgba(200,70,70,0.1); --red-border: rgba(200,70,70,0.25);
+    --green: #6DBF88; --green-dim: rgba(70,160,100,0.1); --green-border: rgba(70,160,100,0.25);
+  }
+  body { font-family: 'DM Sans', sans-serif; }
+
+  .page { padding: 2rem 1.5rem; background: #080808; border-radius: 16px; display: flex; flex-direction: column; gap: 40px; }
+
+  .section-label {
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+  }
+
+  /* ── PHONE SHELL ── */
+  .phone {
+    width: 300px; height: 580px;
+    background: var(--bg);
+    border-radius: 40px; border: 1px solid #2A2A2A;
+    overflow: hidden; position: relative;
+    margin: 0 auto;
+    display: flex; flex-direction: column;
+  }
+
+  /* ── DIMMED BG ── */
+  .overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: flex; align-items: flex-end;
+    z-index: 10;
+  }
+  .overlay.center { align-items: center; justify-content: center; }
+
+  /* fake screen content behind dialog */
+  .fake-screen {
+    flex: 1; padding: 20px 18px;
+    display: flex; flex-direction: column; gap: 10px;
+    overflow: hidden;
+  }
+  .fake-topbar { height: 44px; background: var(--bg2); border-radius: 12px; }
+  .fake-row { height: 54px; background: var(--bg2); border-radius: 10px; }
+  .fake-row.short { height: 36px; }
+
+  /* ── BOTTOM SHEET ── */
+  .sheet {
+    background: var(--bg2);
+    border-radius: 22px 22px 0 0;
+    border-top: 0.5px solid var(--border2);
+    padding: 16px 20px 28px;
+    width: 100%;
+  }
+
+  .sheet-handle {
+    width: 36px; height: 3px; border-radius: 2px;
+    background: #333; margin: 0 auto 18px;
+  }
+
+  .sheet-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic; font-size: 20px;
+    color: var(--gold); margin-bottom: 4px;
+  }
+
+  .sheet-sub { font-size: 11px; color: var(--muted2); margin-bottom: 18px; font-weight: 300; }
+
+  /* ── MODAL CENTER ── */
+  .modal {
+    background: var(--bg2);
+    border-radius: 20px;
+    border: 0.5px solid var(--border2);
+    padding: 24px 22px;
+    width: calc(100% - 40px);
+  }
+
+  .modal-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+  }
+  .modal-icon svg { width: 22px; height: 22px; fill: none; stroke-width: 1.6; }
+
+  .modal-title {
+    font-size: 15px; font-weight: 500;
+    color: var(--text); margin-bottom: 8px; line-height: 1.3;
+  }
+  .modal-body {
+    font-size: 12px; color: var(--muted2); font-weight: 300;
+    line-height: 1.6; margin-bottom: 20px;
+  }
+
+  /* ── PRZYCISKI ── */
+  .btn-row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; padding: 12px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+    text-align: center; cursor: pointer; letter-spacing: 0.02em;
+  }
+
+  .btn-ghost { background: var(--bg3); border: 0.5px solid var(--border2); color: var(--muted2); }
+  .btn-gold { background: var(--gold); color: #0E0E0E; border: none; }
+  .btn-red { background: var(--red-dim); border: 0.5px solid var(--red-border); color: var(--red); }
+  .btn-green { background: var(--green-dim); border: 0.5px solid var(--green-border); color: var(--green); }
+  .btn-full { width: 100%; margin-top: 8px; }
+
+  /* ── FORM ELEMENTS ── */
+  .field {
+    background: var(--bg3); border: 0.5px solid var(--border2);
+    border-radius: 10px; padding: 11px 13px;
+    font-size: 12px; font-family: 'DM Sans', sans-serif;
+    color: var(--text); width: 100%;
+  }
+  .field.muted { color: var(--muted); font-weight: 300; }
+  .field-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .field-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .field-row { display: flex; gap: 8px; }
+  .field-row .field-group { flex: 1; }
+
+  /* ── OPTION LIST ── */
+  .option-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .option {
+    background: var(--bg3); border: 0.5px solid var(--border2);
+    border-radius: 11px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+  }
+  .option.selected { border-color: var(--gold-border); background: var(--gold-dim); }
+  .option-radio {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 1px solid var(--border2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .option.selected .option-radio { border-color: var(--gold); }
+  .option-radio-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+  .option-text { font-size: 12px; color: var(--text); }
+  .option-sub { font-size: 10px; color: var(--muted2); margin-top: 1px; }
+
+  /* conflict highlight */
+  .conflict-block {
+    background: var(--red-dim); border: 0.5px solid var(--red-border);
+    border-radius: 10px; padding: 10px 12px;
+    display: flex; gap: 8px; align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .conflict-block svg { width: 14px; height: 14px; stroke: var(--red); fill: none; stroke-width: 1.6; flex-shrink: 0; margin-top: 1px; }
+  .conflict-text { font-size: 11px; color: #B07070; line-height: 1.5; font-weight: 300; }
+
+  /* success state */
+  .success-ring {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 1.5px solid var(--green-border);
+    background: var(--green-dim);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .success-ring svg { width: 22px; height: 22px; stroke: var(--green); fill: none; stroke-width: 2; }
+</style>
+
+<div class="page">
+
+  <!-- ── 1. BOTTOM SHEET: OPCJE WIZYTY ── -->
+  <div>
+    <div class="section-label">Bottom sheet — opcje wizyty</div>
+    <div class="phone">
+      <div class="fake-screen">
+        <div class="fake-topbar"></div>
+        <div class="fake-row"></div>
+        <div class="fake-row short"></div>
+        <div class="fake-row"></div>
+      </div>
+      <div class="overlay">
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-title">Bartłomiej Wiśniewski</div>
+          <div class="sheet-sub">Strzyżenie + broda · 20 marca · 09:30</div>
+          <div class="option-list">
+            <div class="option">
+              <svg style="width:15px;height:15px;stroke:#888;fill:none;stroke-width:1.5;" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <div><div class="option-text">Edytuj wizytę</div></div>
+            </div>
+            <div class="option">
+              <svg style="width:15px;height:15px;stroke:#888;fill:none;stroke-width:1.5;" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <div><div class="option-text">Profil klienta</div></div>
+            </div>
+            <div class="option">
+              <svg style="width:15px;height:15px;stroke:#888;fill:none;stroke-width:1.5;" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <div><div class="option-text">Zmień termin</div></div>
+            </div>
+            <div class="option">
+              <svg style="width:15px;height:15px;stroke:var(--red);fill:none;stroke-width:1.5;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              <div><div class="option-text" style="color:var(--red);">Usuń wizytę</div></div>
+            </div>
+          </div>
+          <div class="btn btn-ghost btn-full">Anuluj</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. MODAL: POTWIERDZENIE USUNIĘCIA ── -->
+  <div>
+    <div class="section-label">Modal — potwierdzenie usunięcia</div>
+    <div class="phone">
+      <div class="fake-screen">
+        <div class="fake-topbar"></div>
+        <div class="fake-row"></div>
+        <div class="fake-row"></div>
+        <div class="fake-row short"></div>
+      </div>
+      <div class="overlay center">
+        <div class="modal">
+          <div class="modal-icon" style="background:var(--red-dim);border:0.5px solid var(--red-border);">
+            <svg viewBox="0 0 24 24" style="stroke:var(--red);"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </div>
+          <div class="modal-title">Usunąć tę wizytę?</div>
+          <div class="modal-body">Wizyta Bartłomieja Wiśniewskiego z 20 marca o 09:30 zostanie trwale usunięta. Tej operacji nie można cofnąć.</div>
+          <div class="btn-row">
+            <div class="btn btn-ghost">Anuluj</div>
+            <div class="btn btn-red">Usuń</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. BOTTOM SHEET: DODAJ WIZYTĘ (FORMULARZ) ── -->
+  <div>
+    <div class="section-label">Bottom sheet — szybkie dodanie wizyty</div>
+    <div class="phone">
+      <div class="fake-screen">
+        <div class="fake-topbar"></div>
+        <div class="fake-row short"></div>
+        <div class="fake-row"></div>
+      </div>
+      <div class="overlay">
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-title">Nowa wizyta</div>
+          <div class="sheet-sub">Piątek, 20 marca</div>
+          <div class="field-group">
+            <div class="field-label">Klient</div>
+            <div class="field">Bartłomiej Wiśniewski</div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <div class="field-label">Godzina</div>
+              <div class="field">09:30</div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Czas trwania</div>
+              <div class="field">60 min</div>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Usługa</div>
+            <div class="field">Strzyżenie + broda</div>
+          </div>
+          <div class="btn-row" style="margin-top:4px;">
+            <div class="btn btn-ghost">Anuluj</div>
+            <div class="btn btn-gold">Zapisz</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. MODAL: KONFLIKT WIZYT ── -->
+  <div>
+    <div class="section-label">Modal — konflikt wizyt</div>
+    <div class="phone">
+      <div class="fake-screen">
+        <div class="fake-topbar"></div>
+        <div class="fake-row"></div>
+        <div class="fake-row short"></div>
+        <div class="fake-row"></div>
+      </div>
+      <div class="overlay center">
+        <div class="modal">
+          <div class="modal-icon" style="background:rgba(201,168,76,0.1);border:0.5px solid var(--gold-border);">
+            <svg viewBox="0 0 24 24" style="stroke:var(--gold);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="modal-title">Wizyty się nakładają</div>
+          <div class="conflict-block">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div class="conflict-text">Bartłomiej W. (09:30–10:30) koliduje z Marek K. (10:00–10:30) o 30 minut.</div>
+          </div>
+          <div class="modal-body" style="margin-bottom:16px;">Czy chcesz przesunąć wizytę Marka na 10:30, czy edytować ręcznie?</div>
+          <div class="btn-row">
+            <div class="btn btn-ghost">Edytuj ręcznie</div>
+            <div class="btn btn-gold">Przesuń na 10:30</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. MODAL: SUKCES ── -->
+  <div>
+    <div class="section-label">Modal — potwierdzenie sukcesu</div>
+    <div class="phone">
+      <div class="fake-screen">
+        <div class="fake-topbar"></div>
+        <div class="fake-row"></div>
+        <div class="fake-row short"></div>
+        <div class="fake-row"></div>
+      </div>
+      <div class="overlay center">
+        <div class="modal" style="text-align:center;">
+          <div class="success-ring">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="modal-title" style="text-align:center;">Wizyta zapisana</div>
+          <div class="modal-body" style="text-align:center;">Bartłomiej Wiśniewski · 20 marca · 09:30<br>Strzyżenie + broda · 80 zł</div>
+          <div class="btn btn-gold btn-full">Gotowe</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. BOTTOM SHEET: WYBÓR USŁUGI ── -->
+  <div>
+    <div class="section-label">Bottom sheet — wybór usługi</div>
+    <div class="phone">
+      <div class="fake-screen">
+        <div class="fake-topbar"></div>
+        <div class="fake-row short"></div>
+        <div class="fake-row"></div>
+      </div>
+      <div class="overlay">
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-title">Wybierz usługę</div>
+          <div class="sheet-sub">Czas trwania i cena zostaną uzupełnione automatycznie</div>
+          <div class="option-list">
+            <div class="option">
+              <div class="option-radio"></div>
+              <div><div class="option-text">Strzyżenie</div><div class="option-sub">30 min · 60 zł</div></div>
+            </div>
+            <div class="option selected">
+              <div class="option-radio"><div class="option-radio-dot"></div></div>
+              <div><div class="option-text">Strzyżenie + broda</div><div class="option-sub">60 min · 80 zł</div></div>
+            </div>
+            <div class="option">
+              <div class="option-radio"></div>
+              <div><div class="option-text">Broda</div><div class="option-sub">30 min · 40 zł</div></div>
+            </div>
+            <div class="option">
+              <div class="option-radio"></div>
+              <div><div class="option-text">Pielęgnacja głowy</div><div class="option-sub">45 min · 70 zł</div></div>
+            </div>
+          </div>
+          <div class="btn btn-gold btn-full">Potwierdź wybór</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

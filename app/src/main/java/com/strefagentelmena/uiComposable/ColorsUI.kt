@@ -1,33 +1,48 @@
 package com.strefagentelmena.uiComposable
 
 import androidx.compose.ui.graphics.Color
+import com.strefagentelmena.ui.theme.SalonBg
+import com.strefagentelmena.ui.theme.SalonBg2
+import com.strefagentelmena.ui.theme.SalonBg3
+import com.strefagentelmena.ui.theme.SalonBorder
+import com.strefagentelmena.ui.theme.SalonGold
+import com.strefagentelmena.ui.theme.SalonGoldBorder
+import com.strefagentelmena.ui.theme.SalonGoldDim
+import com.strefagentelmena.ui.theme.SalonMuted
+import com.strefagentelmena.ui.theme.SalonMuted2
+import com.strefagentelmena.ui.theme.SalonText
 
 val colorsUI = ColorsUI()
 
+/**
+ * Kolory pomocnicze — nazwy historyczne, wartości dopasowane do mockupu HTML (złoto na grafitowym tle).
+ * Preferuj [androidx.compose.material3.MaterialTheme.colorScheme] w nowych ekranach.
+ */
 class ColorsUI {
-    val rusticBrown = Color(0xFFc08a42)
-    val buttonsGreen = Color(0xFF004225)
-    val headersBlue = Color(0xFF96B6C5)
-    val grey = Color(0xFFF1F0E8)
-    val darkGrey = Color(0xFF787A91)
-    val yellow = Color(0xFFEEE0C9)
-    val cardGrey = Color(0xFFF5F5F5)
-    val mintGreen = Color(0xFF689F38)
-    val green = Color(0xFF6B9080)
-    val teaGreen = Color(0xFFC8D6AF)
-    val papaya = Color(0xFFFFECCC)
-    val sunset = Color(0xFFF2D0A4)
-    val amaranthPurple = Color(0xFFA4303F)
-    val murrey = Color(0xFF870058)
-    val fontGrey = Color(0xFF333333)
-    val fireEngineRed = Color(0xFFC42021)
-    val chocolateCosmos = Color(0xFF6C0E23)
-    val mustard = Color(0xFFF7CE5B)
-    val carmine = Color(0xFF9B1D20)
-    val raisinBlack = Color(0xFF272932)
-    val bittersweet = Color(0xFFF05D5E)
-    val babyBlue = Color(0xFF6DAEDB)
-    val jade = Color(0xFF59A96A)
-    val cream = Color(0xFFEAEFBD)
-    val safaron = Color(0xFFCEB992)
+    val rusticBrown = SalonGold
+    val buttonsGreen = SalonGold
+    val headersBlue = SalonBg
+    val grey = SalonBg2
+    val darkGrey = SalonMuted2
+    val yellow = SalonGoldDim
+    val cardGrey = SalonBg2
+    val mintGreen = SalonGold
+    val green = SalonGold
+    val teaGreen = SalonGoldDim
+    val papaya = SalonBg2
+    val sunset = SalonGoldBorder
+    val amaranthPurple = Color(0xFFCC6666)
+    val murrey = SalonMuted
+    val fontGrey = SalonText
+    val fireEngineRed = Color(0xFFE57373)
+    val chocolateCosmos = Color(0xFF8B3A3A)
+    val mustard = SalonGold
+    val carmine = Color(0xFFB71C1C)
+    val raisinBlack = SalonBg3
+    val bittersweet = Color(0xFFFF8A65)
+    val babyBlue = SalonGold.copy(alpha = 0.28f)
+    val jade = SalonGold
+    val cream = SalonGold
+    val safaron = SalonGold
+    val border = SalonBorder
 }

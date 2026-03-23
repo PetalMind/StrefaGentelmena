@@ -71,11 +71,14 @@ class ButtonsUI {
         icon: ImageVector,
         onClick: () -> Unit,
         modifier: Modifier = Modifier,
-        color: Color = MaterialTheme.colorScheme.primary
+        color: Color = MaterialTheme.colorScheme.onPrimary
     ) {
         Button(
             onClick = onClick,
-            colors = ButtonDefaults.buttonColors(containerColor = colorsUI.teaGreen),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = color,
+            ),
             modifier = modifier
         ) {
             Icon(imageVector = icon, contentDescription = null, tint = color)

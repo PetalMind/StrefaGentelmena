@@ -1,17 +1,18 @@
 package com.strefagentelmena.uiComposable.settingsUI
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.strefagentelmena.uiComposable.buttonsUI
@@ -32,11 +32,20 @@ import com.strefagentelmena.uiComposable.cardUI
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.textModernTextFieldUI
+import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.viewModel.SettingsModelView
+import com.strefagentelmena.work.ScheduledBackupScheduler
 
 val settingsViews = SettingsViews()
 
 class SettingsViews {
+
+    companion object {
+        /** Dwie zaplanowane kopie dziennie (6:00 i 22:00) — wywołaj przy starcie aplikacji. */
+        fun scheduleAutomaticDatabaseBackups(context: Context) {
+            ScheduledBackupScheduler.scheduleTwiceDaily(context.applicationContext)
+        }
+    }
 
     @Composable
     fun ProfileView(viewModel: SettingsModelView) {
@@ -47,7 +56,7 @@ class SettingsViews {
             Log.e("ProfileView", "profilePreferences: ${profilePreferences!!.userName}")
         }
 
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxWidth()) {
             textModernTextFieldUI.ModernTextField(
                 value = newProfileName,
                 onValueChange = { it -> viewModel.setNewProfileName(it) },
@@ -55,7 +64,9 @@ class SettingsViews {
                 label = "Nazwa użytkownika",
                 leadingIcon = {
                     Icon(
-                        Icons.Default.Person, contentDescription = null
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 isError = profilePreferences!!.userName.isEmpty(),
@@ -81,7 +92,7 @@ class SettingsViews {
         val isAddingEmployee by viewModel.addEmpolyeeState.observeAsState()
         val deleteEmployeeDialog by viewModel.deleteEmployeeDialog.observeAsState(false)
 
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxWidth()) {
             when (isAddingEmployee) {
                 true -> {
                     EmpolyeeAddView(viewModel)
@@ -93,7 +104,10 @@ class SettingsViews {
 
                 null -> {
                     Column {
-                        Text("Lista pracowników jest pusta")
+                        Text(
+                            "Lista pracowników jest pusta",
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
             }
@@ -129,7 +143,8 @@ class SettingsViews {
                     "Lista pracowników",
                     modifier = Modifier.padding(20.dp),
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 buttonsUI.IconButton(
@@ -138,29 +153,33 @@ class SettingsViews {
                         viewModel.setAddNewEmployeeState()
                     },
                     icon = Icons.Outlined.Add,
-                    color = colorsUI.headersBlue,
-                    modifier = Modifier.padding(20.dp) // Add padding to the IconButton as well
+                    modifier = Modifier.padding(20.dp)
                 )
             }
 
             if (showAddEmployeeView) {
                 EmpolyeeAddView(viewModel)
             } else {
-                LazyColumn {
-                    items(employeeList!!, key = { it.id!! }) { employee ->
-                        cardUI.SwipeToDismissEmployeeCard(employee = employee,
+                // Column zamiast LazyColumn — rodzic ma verticalScroll; zagnieżdżone listy źle liczą wysokość.
+                Column(Modifier.fillMaxWidth()) {
+                    employeeList.orEmpty().forEach { employee ->
+                        cardUI.SwipeToDismissEmployeeCard(
+                            employee = employee,
                             onClick = {
                                 viewModel.setIsNewEmplyee(false)
                                 viewModel.setAddNewEmployeeState()
                                 viewModel.setSlectedEmpolyee(employee)
-                            }, onDismiss = {
+                            },
+                            onDismiss = {
                                 viewModel.setSlectedEmpolyee(employee)
                                 viewModel.setEmpolyeeDeleteDialog()
-                            }, onEdit = {
+                            },
+                            onEdit = {
                                 viewModel.setIsNewEmplyee(false)
                                 viewModel.setAddNewEmployeeState()
                                 viewModel.setSlectedEmpolyee(employee)
-                            })
+                            },
+                        )
                     }
                 }
             }
@@ -170,9 +189,12 @@ class SettingsViews {
 
     @Composable
     fun EmpolyeeAddView(viewModel: SettingsModelView) {
-        val context = LocalContext.current
         val empolyeeName by viewModel.empolyeeName.observeAsState()
         val empolyeeSurname by viewModel.empolyeeSurname.observeAsState()
+        val empolyeeWorkStart by viewModel.empolyeeWorkStartTime.observeAsState(Employee.DEFAULT_WORK_START)
+        val empolyeeWorkEnd by viewModel.empolyeeWorkEndTime.observeAsState(Employee.DEFAULT_WORK_END)
+        val empolyeeVacationFrom by viewModel.empolyeeVacationFrom.observeAsState("")
+        val empolyeeVacationTo by viewModel.empolyeeVacationTo.observeAsState("")
         val newEmpolyee by viewModel.newEmployee.observeAsState()
         val addNewEmpolyeeState by viewModel.addEmpolyeeState.observeAsState()
         val isNewEmplyee by viewModel.isNewEmplyee.observeAsState()
@@ -184,12 +206,13 @@ class SettingsViews {
             }
         }
 
-        Column {
+        Column(Modifier.fillMaxWidth()) {
             Text(
                 text,
                 modifier = Modifier.padding(10.dp),
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             textModernTextFieldUI.ModernTextField(
@@ -204,6 +227,40 @@ class SettingsViews {
                 onValueChange = { it -> viewModel.setEmpolyeeSurname(it) },
                 modifier = Modifier.padding(10.dp),
                 label = "Nazwisko pracowika",
+            )
+
+            textModernTextFieldUI.TimeOutlinedTextField(
+                value = empolyeeWorkStart ?: Employee.DEFAULT_WORK_START,
+                onValueChange = { viewModel.setEmpolyeeWorkStartTime(it) },
+                modifier = Modifier.padding(10.dp),
+                label = "Początek pracy (harmonogram)",
+            )
+
+            textModernTextFieldUI.TimeOutlinedTextField(
+                value = empolyeeWorkEnd ?: Employee.DEFAULT_WORK_END,
+                onValueChange = { viewModel.setEmpolyeeWorkEndTime(it) },
+                modifier = Modifier.padding(10.dp),
+                label = "Koniec pracy (harmonogram)",
+            )
+
+            Text(
+                text = "Urlop (nie można zaplanować wizyt w tym zakresie)",
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            textModernTextFieldUI.DateOutlinedTextField(
+                value = empolyeeVacationFrom.orEmpty(),
+                onValueChange = { viewModel.setEmpolyeeVacationFrom(it) },
+                modifier = Modifier.padding(10.dp),
+                label = "Urlop od (dd.MM.yyyy)",
+            )
+            textModernTextFieldUI.DateOutlinedTextField(
+                value = empolyeeVacationTo.orEmpty(),
+                onValueChange = { viewModel.setEmpolyeeVacationTo(it) },
+                modifier = Modifier.padding(10.dp),
+                label = "Urlop do (opcjonalnie, jeden dzień jeśli puste)",
             )
 
             buttonsUI.ButtonsRow(
@@ -226,9 +283,7 @@ class SettingsViews {
         val notificationSendEndTime by viewModel.notificationSendEndTime.observeAsState("")
         val notificationSendAutomatic by viewModel.notificationSendAutomatic.observeAsState()
 
-        Column(
-            Modifier.fillMaxSize()
-        ) {
+        Column(Modifier.fillMaxWidth()) {
             textModernTextFieldUI.TimeOutlinedTextField(
                 value = notificationSendStartTime,
                 onValueChange = { it -> viewModel.setNotificationSendStartTime(it) },
@@ -266,8 +321,39 @@ class SettingsViews {
 
     @Composable
     fun UpgradeView(viewModel: SettingsModelView) {
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxWidth()) {
 
+        }
+    }
+
+    /**
+     * Kopia zapasowa do Storage jest planowana automatycznie dwa razy dziennie (6:00 i 22:00, czas lokalny).
+     */
+    @Composable
+    fun BackupView(viewModel: SettingsModelView) {
+        val backupInProgress by viewModel.backupInProgress.observeAsState(false)
+
+        Column(Modifier.fillMaxWidth()) {
+            Text(
+                "Eksport całej bazy (Realtime Database) do pliku JSON w Storage " +
+                    "(gs://strefagentlemena.appspot.com, folder backups/).",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                "Automatyczna kopia zapasowa uruchamia się dwa razy dziennie: o 6:00 i o 22:00 (czas urządzenia), " +
+                    "o ile jest połączenie z siecią.",
+                modifier = Modifier.padding(top = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { viewModel.backupDatabaseToStorage() },
+                enabled = !backupInProgress,
+            ) {
+                Text(if (backupInProgress) "Trwa tworzenie kopii…" else "Utwórz kopię i wyślij")
+            }
         }
     }
 }

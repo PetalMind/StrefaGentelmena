@@ -1,18 +1,14 @@
 package com.strefagentelmena.ui.theme
 
 import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -22,38 +18,15 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.strefagentelmena.R
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
-
 private val myCustomFont = FontFamily(
     Font(R.font.proxima_nova_regular),
 )
 
-
 val TypographyCustom = Typography(
     displayLarge = TextStyle(
         fontFamily = myCustomFont,
-        fontWeight = FontWeight.W700, // Grubszy font dla dużych nagłówków
-        fontSize = 32.sp // Przykładowy rozmiar czcionki
+        fontWeight = FontWeight.W700,
+        fontSize = 32.sp
     ),
     displayMedium = TextStyle(
         fontFamily = myCustomFont,
@@ -67,7 +40,7 @@ val TypographyCustom = Typography(
     ),
     headlineLarge = TextStyle(
         fontFamily = myCustomFont,
-        fontWeight = FontWeight.W600, // Średni font dla nagłówków
+        fontWeight = FontWeight.W600,
         fontSize = 28.sp
     ),
     headlineMedium = TextStyle(
@@ -82,7 +55,7 @@ val TypographyCustom = Typography(
     ),
     titleLarge = TextStyle(
         fontFamily = myCustomFont,
-        fontWeight = FontWeight.W500, // Normalny font dla tytułów
+        fontWeight = FontWeight.W500,
         fontSize = 20.sp
     ),
     titleMedium = TextStyle(
@@ -97,7 +70,7 @@ val TypographyCustom = Typography(
     ),
     bodyLarge = TextStyle(
         fontFamily = myCustomFont,
-        fontWeight = FontWeight.Normal, // Domyślna waga dla tekstu
+        fontWeight = FontWeight.Normal,
         fontSize = 18.sp
     ),
     bodyMedium = TextStyle(
@@ -112,7 +85,7 @@ val TypographyCustom = Typography(
     ),
     labelLarge = TextStyle(
         fontFamily = myCustomFont,
-        fontWeight = FontWeight.W400, // Lekki font dla etykiet
+        fontWeight = FontWeight.W400,
         fontSize = 16.sp
     ),
     labelMedium = TextStyle(
@@ -127,29 +100,84 @@ val TypographyCustom = Typography(
     ),
 )
 
+private val SalonColorScheme = darkColorScheme(
+    primary = SalonGold,
+    onPrimary = SalonBg,
+    primaryContainer = SalonGoldDim,
+    onPrimaryContainer = SalonGold,
+    inversePrimary = SalonText,
+    secondary = SalonMuted2,
+    onSecondary = SalonBg,
+    secondaryContainer = SalonBg3,
+    onSecondaryContainer = SalonText,
+    tertiary = SalonMuted,
+    onTertiary = SalonText,
+    tertiaryContainer = SalonBg2,
+    onTertiaryContainer = SalonMuted2,
+    background = SalonBg,
+    onBackground = SalonText,
+    surface = SalonBg2,
+    onSurface = SalonText,
+    surfaceVariant = SalonBg3,
+    onSurfaceVariant = SalonMuted2,
+    surfaceTint = Color.Unspecified,
+    inverseSurface = SalonText,
+    inverseOnSurface = SalonBg,
+    error = Color(0xFFE57373),
+    onError = SalonBg,
+    errorContainer = Color(0xFF5C2B2B),
+    onErrorContainer = Color(0xFFFFDAD6),
+    outline = SalonBorder,
+    outlineVariant = SalonBorderElevated,
+    scrim = Color(0xFF000000),
+)
+
+private val SalonLightColorScheme = lightColorScheme(
+    primary = SalonGold,
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFF4D6),
+    onPrimaryContainer = Color(0xFF4A3A10),
+    inversePrimary = SalonGold,
+    secondary = Color(0xFF6A6252),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFEDE1C0),
+    onSecondaryContainer = Color(0xFF252017),
+    tertiary = Color(0xFF71624A),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFF7E6C4),
+    onTertiaryContainer = Color(0xFF251A05),
+    background = Color(0xFFFFFBF2),
+    onBackground = Color(0xFF1A1A1A),
+    surface = Color(0xFFFFF8E9),
+    onSurface = Color(0xFF1A1A1A),
+    surfaceVariant = Color(0xFFF2E8D6),
+    onSurfaceVariant = Color(0xFF514737),
+    surfaceTint = Color.Unspecified,
+    inverseSurface = Color(0xFF2A2A2A),
+    inverseOnSurface = Color(0xFFF8F1E0),
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+    outline = Color(0xFF8A816E),
+    outlineVariant = Color(0xFFD6C9AF),
+    scrim = Color(0xFF000000),
+)
 
 @Composable
 fun StrefaGentelmenaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,
+    @Suppress("UNUSED_PARAMETER") dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
+    val colorScheme = if (darkTheme) SalonColorScheme else SalonLightColorScheme
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            window.statusBarColor = colorScheme.background.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 

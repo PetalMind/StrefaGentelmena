@@ -1,0 +1,231 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0E0E0E; --bg2: #161616; --border: #262626;
+    --gold: #C9A84C; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.28);
+    --text: #E8E0CC; --muted: #888;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: #080808; }
+
+  .wrap { padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 32px; }
+
+  .section-title {
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+
+  /* ── BANNER BASE ── */
+  .banner {
+    border-radius: 14px;
+    padding: 13px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    border: 0.5px solid;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .banner-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .banner-icon svg { width: 16px; height: 16px; fill: none; stroke-width: 1.6; }
+
+  .banner-body { flex: 1; }
+  .banner-title { font-size: 13px; font-weight: 500; line-height: 1.2; margin-bottom: 3px; }
+  .banner-desc { font-size: 11px; font-weight: 300; line-height: 1.5; }
+
+  .banner-close {
+    flex-shrink: 0; opacity: 0.4; cursor: pointer; padding: 2px;
+  }
+  .banner-close svg { width: 12px; height: 12px; stroke-width: 2; fill: none; }
+
+  .banner-action {
+    margin-top: 9px;
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.04em;
+    display: inline-flex; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .banner-action svg { width: 11px; height: 11px; fill: none; stroke-width: 2; }
+
+  /* ── WARIANTY KOLORYSTYCZNE ── */
+
+  /* warning — złoty */
+  .b-warning {
+    background: rgba(201,168,76,0.08);
+    border-color: rgba(201,168,76,0.25);
+  }
+  .b-warning .banner-icon { background: rgba(201,168,76,0.14); }
+  .b-warning .banner-icon svg { stroke: var(--gold); }
+  .b-warning .banner-title { color: #E2C97E; }
+  .b-warning .banner-desc { color: #A89060; }
+  .b-warning .banner-close svg { stroke: var(--gold); }
+  .b-warning .banner-action { color: var(--gold); }
+
+  /* error — czerwony */
+  .b-error {
+    background: rgba(180,50,50,0.1);
+    border-color: rgba(180,50,50,0.25);
+  }
+  .b-error .banner-icon { background: rgba(180,50,50,0.15); }
+  .b-error .banner-icon svg { stroke: #E07070; }
+  .b-error .banner-title { color: #E07070; }
+  .b-error .banner-desc { color: #906060; }
+  .b-error .banner-close svg { stroke: #E07070; }
+  .b-error .banner-action { color: #E07070; }
+
+  /* info — neutralny */
+  .b-info {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .b-info .banner-icon { background: rgba(255,255,255,0.07); }
+  .b-info .banner-icon svg { stroke: var(--muted); }
+  .b-info .banner-title { color: var(--text); }
+  .b-info .banner-desc { color: var(--muted); }
+  .b-info .banner-close svg { stroke: var(--muted); }
+  .b-info .banner-action { color: var(--text); }
+
+  /* success — zielony */
+  .b-success {
+    background: rgba(60,130,80,0.1);
+    border-color: rgba(60,130,80,0.25);
+  }
+  .b-success .banner-icon { background: rgba(60,130,80,0.15); }
+  .b-success .banner-icon svg { stroke: #6DBF88; }
+  .b-success .banner-title { color: #6DBF88; }
+  .b-success .banner-desc { color: #508060; }
+  .b-success .banner-close svg { stroke: #6DBF88; }
+  .b-success .banner-action { color: #6DBF88; }
+
+  /* ── PHONE PREVIEW ── */
+  .phone-preview {
+    width: 300px; background: var(--bg);
+    border-radius: 32px; border: 1px solid #2A2A2A;
+    overflow: hidden; margin: 0 auto;
+  }
+  .phone-topbar {
+    padding: 16px 18px 12px; border-bottom: 0.5px solid var(--border);
+  }
+  .phone-title { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .phone-head { font-size: 18px; color: var(--gold); font-family: 'DM Sans', sans-serif; font-weight: 400; }
+  .phone-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* mini slot */
+  .mini-slot {
+    background: rgba(201,168,76,0.1); border: 0.5px solid rgba(201,168,76,0.25);
+    border-left: 2px solid var(--gold); border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .mini-slot.conflict { border-left-color: #E07070; background: rgba(180,50,50,0.1); border-color: rgba(180,50,50,0.2); }
+  .mini-slot-time { font-size: 10px; color: var(--gold); }
+  .mini-slot.conflict .mini-slot-time { color: #E07070; }
+  .mini-slot-name { font-size: 12px; color: var(--text); margin-top: 2px; }
+</style>
+
+<div class="wrap">
+
+  <!-- ── SEKCJA 1: WSZYSTKIE WARIANTY ── -->
+  <div>
+    <div class="section-title">Warianty bannera</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+
+      <!-- WARNING: nakładające się wizyty -->
+      <div class="banner b-warning">
+        <div class="banner-icon">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="banner-body">
+          <div class="banner-title">Wizyty się nakładają</div>
+          <div class="banner-desc">09:30 Bartłomiej W. i 10:00 Marek K. kolidują o 30 minut.</div>
+          <div class="banner-action">Rozwiąż konflikt <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+        <div class="banner-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+      </div>
+
+      <!-- ERROR: brak klienta -->
+      <div class="banner b-error">
+        <div class="banner-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="banner-body">
+          <div class="banner-title">Wizyta bez przypisanego klienta</div>
+          <div class="banner-desc">Wizyta o 14:00 nie ma przypisanego klienta.</div>
+          <div class="banner-action">Uzupełnij dane <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+        <div class="banner-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+      </div>
+
+      <!-- INFO: przypomnienie -->
+      <div class="banner b-info">
+        <div class="banner-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="banner-body">
+          <div class="banner-title">Następna wizyta za 15 minut</div>
+          <div class="banner-desc">Piotr Nowak · Strzyżenie + broda · 09:30</div>
+          <div class="banner-action">Zobacz profil <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+        <div class="banner-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+      </div>
+
+      <!-- SUCCESS: wizyta dodana -->
+      <div class="banner b-success">
+        <div class="banner-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="banner-body">
+          <div class="banner-title">Wizyta została zapisana</div>
+          <div class="banner-desc">Bartłomiej W. · 20 marca · 09:30</div>
+        </div>
+        <div class="banner-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SEKCJA 2: PODGLĄD W APLIKACJI ── -->
+  <div>
+    <div class="section-title">Podgląd w harmonogramie</div>
+    <div class="phone-preview">
+      <div class="phone-topbar">
+        <div class="phone-title">Piątek, 20 marca</div>
+        <div class="phone-head">Harmonogram</div>
+      </div>
+      <div class="phone-body">
+
+        <!-- banner warning na górze ekranu -->
+        <div class="banner b-warning" style="border-radius:10px; padding:10px 12px;">
+          <div class="banner-icon" style="width:26px;height:26px;border-radius:7px;">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="banner-body">
+            <div class="banner-title" style="font-size:12px;">Wizyty się nakładają</div>
+            <div class="banner-desc" style="font-size:10px;">09:30 i 10:00 kolidują o 30 minut.</div>
+          </div>
+        </div>
+
+        <!-- sloty -->
+        <div class="mini-slot conflict">
+          <div class="mini-slot-time">09:30 – 10:30</div>
+          <div class="mini-slot-name">Bartłomiej Wiśniewski</div>
+        </div>
+        <div class="mini-slot conflict">
+          <div class="mini-slot-time">10:00 – 10:30</div>
+          <div class="mini-slot-name">Marek Kowalski</div>
+        </div>
+        <div class="mini-slot">
+          <div class="mini-slot-time">13:30 – 14:00</div>
+          <div class="mini-slot-name">Piotr Nowak</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

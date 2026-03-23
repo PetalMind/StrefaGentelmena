@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.StrefaGentelmena" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.StrefaGentelmena" parent="android:Theme.Material.NoActionBar">
+        <!-- Rodzic Material ustawia jasne colorBackground — bez tego bywa biały błysk przed pierwszą klatką Compose. -->
+        <item name="android:colorBackground">@color/salon_bg</item>
+        <item name="android:statusBarColor">@color/salon_bg</item>
+        <item name="android:navigationBarColor">@color/salon_bg</item>
+        <item name="android:windowBackground">@color/salon_bg</item>
+        <!-- Android 12+ — systemowy splash; bez tego tło za ikoną często jest jasne. -->
+        <item name="android:windowSplashScreenBackground">@color/salon_bg</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/salon_bg</item>
+    </style>
 
     <style name="Theme.StrefaGentelmena.AppWidgetContainerParent" parent="@android:style/Theme.DeviceDefault">
         <!-- Radius of the outer bound of widgets to make the rounded corners -->

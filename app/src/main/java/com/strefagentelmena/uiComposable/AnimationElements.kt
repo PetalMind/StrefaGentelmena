@@ -12,7 +12,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,10 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
@@ -53,8 +58,46 @@ class AnimationElements {
     fun NotificationIcon(
         notificationSent: Boolean,
         modifier: Modifier = Modifier,
+        /** Wąskie układy (np. kolumny harmonogramu): tylko ikona, stały rozmiar — bez rozszerzającego się tekstu. */
+        compact: Boolean = false,
+        /** Rozmiar pola z ikoną w trybie [compact] (min. ok. 28 dp, żeby dzwonek był czytelny). */
+        compactTouchSize: Dp = 40.dp,
         onClick: () -> Unit
     ) {
+        if (compact) {
+            val bg = if (notificationSent) colorsUI.teaGreen else colorsUI.sunset
+            val desc =
+                if (notificationSent) "Powiadomienie wysłane" else "Oczekuje na wysłanie powiadomienia — dotknij, aby wysłać"
+            val side = compactTouchSize.coerceIn(28.dp, 48.dp)
+            val iconDp = side * 0.52f
+            Surface(
+                shape = CircleShape,
+                color = bg,
+                modifier = modifier
+                    .size(side)
+                    .semantics { contentDescription = desc }
+                    .then(
+                        if (!notificationSent) {
+                            Modifier.clickable { onClick() }
+                        } else {
+                            Modifier
+                        },
+                    ),
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = if (notificationSent) Icons.Default.Notifications else Icons.Outlined.Notifications,
+                        contentDescription = null,
+                        tint = colorsUI.fontGrey,
+                        modifier = Modifier
+                            .size(iconDp)
+                            .alpha(if (notificationSent) 1f else 0.55f),
+                    )
+                }
+            }
+            return
+        }
+
         val transition = updateTransition(notificationSent, label = "")
 
         val iconAlpha by transition.animateFloat(label = "") {

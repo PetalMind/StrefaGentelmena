@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.strefagentelmena.functions.calendarUiFunctions.CalendarDataSource
 import com.strefagentelmena.models.calendarUiModel.CalendarUiModel
+import com.strefagentelmena.ui.theme.SalonBg
 import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.viewModel.ScheduleModelView
 import java.time.LocalDate
@@ -57,12 +58,14 @@ class CalendarHeaderUI {
         onClickListener: (CalendarUiModel.Date) -> Unit
     ) {
         val containerColor = if (date.isSelected) colorsUI.cream else colorsUI.cardGrey
+        val cellContentColor =
+            if (date.isSelected) SalonBg else MaterialTheme.colorScheme.onSurface
         val fontWeight = if (date.isSelected) FontWeight.Bold else FontWeight.Normal
         val textStyle =
             if (date.isSelected) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge
 
         Card(
-            border = BorderStroke(1.dp, colorsUI.cardGrey),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             elevation = CardDefaults.cardElevation(defaultElevation = if (date.isSelected) 8.dp else 4.dp),
             modifier = Modifier
                 .clickable { onClickListener(date) }
@@ -79,13 +82,15 @@ class CalendarHeaderUI {
                 Text(
                     text = date.day, // "Mon", "Tue"
                     fontWeight = fontWeight,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cellContentColor
                 )
 
                 Text(
                     text = date.date.dayOfMonth.toString(), // "15", "16"
                     fontWeight = fontWeight,
-                    style = textStyle
+                    style = textStyle,
+                    color = cellContentColor
                 )
             }
         }

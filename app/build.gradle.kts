@@ -18,8 +18,8 @@ android {
         applicationId = "com.strefagentlemanakingakloss"
         minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.7"
+        versionCode = 3
+        versionName = "1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -63,6 +63,7 @@ android {
 dependencies {
 
     implementation(libs.core.ktx)
+    implementation(libs.core.splashscreen)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.activity.compose)
     implementation(platform(libs.compose.bom))
@@ -75,13 +76,15 @@ dependencies {
     implementation(libs.runtime.livedata)
     implementation(libs.livedata)
     implementation(libs.viewmodel)
+    implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.livedata)
     implementation(libs.accompanist.permissions)
-    implementation(libs.google.services)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.database.ktx)
+    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.work.runtime.ktx)
 
     //  implementation(libs.runtime)
     testImplementation(libs.junit)
