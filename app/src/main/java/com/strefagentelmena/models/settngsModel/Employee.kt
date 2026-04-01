@@ -13,6 +13,12 @@ class Employee(
     var vacationFrom: String = "",
     /** Koniec urlopu (`dd.MM.yyyy`); puste przy ustawionym [vacationFrom] = jeden dzień. */
     var vacationTo: String = "",
+    /**
+     * Początek niedostępności w dniu urlopu (`HH:mm`). Oba pola puste = cały dzień wolny w każdym dniu zakresu.
+     * Gdy oba ustawione — ten sam przedział **każdego dnia** od [vacationFrom] do [vacationTo].
+     */
+    var vacationTimeFrom: String = "",
+    var vacationTimeTo: String = "",
 ) {
     /** Pełna etykieta do list wyboru i zapisu (np. w Firestore `displayName`). */
     val displayName: String
@@ -26,9 +32,12 @@ class Employee(
         workEndTime: String = this.workEndTime,
         vacationFrom: String = this.vacationFrom,
         vacationTo: String = this.vacationTo,
+        vacationTimeFrom: String = this.vacationTimeFrom,
+        vacationTimeTo: String = this.vacationTimeTo,
     ): Employee {
         return Employee(
-            id, name, surname, workStartTime, workEndTime, vacationFrom, vacationTo,
+            id, name, surname, workStartTime, workEndTime,
+            vacationFrom, vacationTo, vacationTimeFrom, vacationTimeTo,
         )
     }
 

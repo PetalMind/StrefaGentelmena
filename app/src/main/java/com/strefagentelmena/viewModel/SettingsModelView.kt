@@ -11,6 +11,7 @@ import com.strefagentelmena.functions.fireBase.FirebaseProfilePreferences
 import com.strefagentelmena.functions.fireBase.FirebaseRealtimeDatabaseBackup
 import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
+import com.strefagentelmena.models.appoimentsModel.parseAppointmentTimeString
 import com.strefagentelmena.models.settngsModel.parseEmployeeDisplayDate
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -31,6 +32,10 @@ class SettingsModelView : ViewModel() {
     val empolyeeWorkEndTime = MutableLiveData(Employee.DEFAULT_WORK_END)
     val empolyeeVacationFrom = MutableLiveData("")
     val empolyeeVacationTo = MutableLiveData("")
+    /** true = cały dzień w każdym dniu zakresu; false = [empolyeeVacationTimeFrom]–[empolyeeVacationTimeTo] codziennie. */
+    val empolyeeVacationWholeDay = MutableLiveData(true)
+    val empolyeeVacationTimeFrom = MutableLiveData("")
+    val empolyeeVacationTimeTo = MutableLiveData("")
     val empoleesList = MutableLiveData<MutableList<Employee>>(mutableListOf())
     val addEmpolyeeState = MutableLiveData(false)
     val notificationSendStartTime = MutableLiveData("")
@@ -85,6 +90,9 @@ class SettingsModelView : ViewModel() {
         empolyeeWorkEndTime.value = Employee.DEFAULT_WORK_END
         empolyeeVacationFrom.value = ""
         empolyeeVacationTo.value = ""
+        empolyeeVacationWholeDay.value = true
+        empolyeeVacationTimeFrom.value = ""
+        empolyeeVacationTimeTo.value = ""
     }
 
     fun setNewProfileName(value: String) {
@@ -105,6 +113,13 @@ class SettingsModelView : ViewModel() {
             value.workEndTime.ifBlank { Employee.DEFAULT_WORK_END }
         empolyeeVacationFrom.value = value.vacationFrom
         empolyeeVacationTo.value = value.vacationTo
+        val tf = value.vacationTimeFrom.trim()
+        val tt = value.vacationTimeTo.trim()
+        val partial = tf.isNotEmpty() && tt.isNotEmpty() &&
+            parseAppointmentTimeString(tf) != null && parseAppointmentTimeString(tt) != null
+        empolyeeVacationWholeDay.value = !partial
+        empolyeeVacationTimeFrom.value = tf
+        empolyeeVacationTimeTo.value = tt
     }
 
     fun setEmpolyeeWorkStartTime(value: String) {
@@ -121,6 +136,30 @@ class SettingsModelView : ViewModel() {
 
     fun setEmpolyeeVacationTo(value: String) {
         empolyeeVacationTo.value = value
+    }
+
+    fun setEmpolyeeVacationWholeDay(wholeDay: Boolean) {
+        val wasWhole = empolyeeVacationWholeDay.value != false
+        empolyeeVacationWholeDay.value = wholeDay
+        if (wholeDay) {
+            empolyeeVacationTimeFrom.value = ""
+            empolyeeVacationTimeTo.value = ""
+        } else if (wasWhole) {
+            if (empolyeeVacationTimeFrom.value.isNullOrBlank() &&
+                empolyeeVacationTimeTo.value.isNullOrBlank()
+            ) {
+                empolyeeVacationTimeFrom.value = "12:00"
+                empolyeeVacationTimeTo.value = "13:00"
+            }
+        }
+    }
+
+    fun setEmpolyeeVacationTimeFrom(value: String) {
+        empolyeeVacationTimeFrom.value = value
+    }
+
+    fun setEmpolyeeVacationTimeTo(value: String) {
+        empolyeeVacationTimeTo.value = value
     }
 
     /*
@@ -158,6 +197,7 @@ class SettingsModelView : ViewModel() {
         }
         val vf = empolyeeVacationFrom.value?.trim().orEmpty()
         val vt = empolyeeVacationTo.value?.trim().orEmpty()
+        val (vtf, vtt) = resolvedVacationTimeFieldsForSave()
 
         // Generujemy ID dla nowego pracownika
         val newEmployee = Employee().apply {
@@ -168,6 +208,8 @@ class SettingsModelView : ViewModel() {
             this.workEndTime = we
             this.vacationFrom = vf
             this.vacationTo = vt
+            this.vacationTimeFrom = vtf
+            this.vacationTimeTo = vtt
         }
 
         empoleesList.value?.add(newEmployee)
@@ -238,6 +280,7 @@ class SettingsModelView : ViewModel() {
         }
         val vf = empolyeeVacationFrom.value?.trim().orEmpty()
         val vt = empolyeeVacationTo.value?.trim().orEmpty()
+        val (vtf, vtt) = resolvedVacationTimeFieldsForSave()
 
         val updatedEmployee = Employee().apply {
             this.id = value.id
@@ -247,6 +290,8 @@ class SettingsModelView : ViewModel() {
             this.workEndTime = we
             this.vacationFrom = vf
             this.vacationTo = vt
+            this.vacationTimeFrom = vtf
+            this.vacationTimeTo = vtt
         }
 
         FirebaseEmployeeFunctions().editEmployeeInFirebase(firebaseDatabase = FirebaseDatabase.getInstance(),
@@ -400,16 +445,49 @@ class SettingsModelView : ViewModel() {
     private fun validateVacationOrNull(): String? {
         val from = empolyeeVacationFrom.value?.trim().orEmpty()
         val to = empolyeeVacationTo.value?.trim().orEmpty()
-        if (from.isEmpty() && to.isEmpty()) return null
+        val wholeDay = empolyeeVacationWholeDay.value != false
+        val tFrom = empolyeeVacationTimeFrom.value?.trim().orEmpty()
+        val tTo = empolyeeVacationTimeTo.value?.trim().orEmpty()
+
+        if (from.isEmpty() && to.isEmpty()) {
+            if (!wholeDay && (tFrom.isNotEmpty() || tTo.isNotEmpty())) {
+                return "Uzupełnij datę urlopu / wolnego albo wybierz „cały dzień”"
+            }
+            return null
+        }
         if (from.isEmpty()) return "Uzupełnij datę początku urlopu"
         val fd = parseEmployeeDisplayDate(from) ?: return "Niepoprawna data początku urlopu (dd.MM.yyyy)"
-        if (to.isEmpty()) return null
-        val td = parseEmployeeDisplayDate(to) ?: return "Niepoprawna data końca urlopu (dd.MM.yyyy)"
-        return if (td.isBefore(fd)) {
-            "Koniec urlopu nie może być wcześniejszy niż początek"
-        } else {
-            null
+        if (to.isEmpty()) {
+            if (!wholeDay) {
+                return validatePartialVacationTimesOrNull()
+            }
+            return null
         }
+        val td = parseEmployeeDisplayDate(to) ?: return "Niepoprawna data końca urlopu (dd.MM.yyyy)"
+        if (td.isBefore(fd)) {
+            return "Koniec urlopu nie może być wcześniejszy niż początek"
+        }
+        return if (!wholeDay) validatePartialVacationTimesOrNull() else null
+    }
+
+    private fun validatePartialVacationTimesOrNull(): String? {
+        val tFrom = empolyeeVacationTimeFrom.value?.trim().orEmpty()
+        val tTo = empolyeeVacationTimeTo.value?.trim().orEmpty()
+        if (tFrom.isEmpty() || tTo.isEmpty()) {
+            return "Uzupełnij godzinę początku i końca wolnego albo włącz „cały dzień”"
+        }
+        val s = parseAppointmentTimeString(tFrom) ?: return "Niepoprawna godzina początku (HH:mm)"
+        val e = parseAppointmentTimeString(tTo) ?: return "Niepoprawna godzina końca (HH:mm)"
+        if (!e.isAfter(s)) {
+            return "Koniec wolnego musi być późniejszy niż początek"
+        }
+        return null
+    }
+
+    private fun resolvedVacationTimeFieldsForSave(): Pair<String, String> {
+        if (empolyeeVacationWholeDay.value != false) return "" to ""
+        return empolyeeVacationTimeFrom.value?.trim().orEmpty() to
+            empolyeeVacationTimeTo.value?.trim().orEmpty()
     }
 
 }

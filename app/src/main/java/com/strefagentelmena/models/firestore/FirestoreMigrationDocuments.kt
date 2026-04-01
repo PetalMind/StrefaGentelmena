@@ -130,6 +130,8 @@ fun employeeToFirestoreMap(employee: Employee): Map<String, Any> {
         )
         put("vacationFrom", employee.vacationFrom)
         put("vacationTo", employee.vacationTo)
+        put("vacationTimeFrom", employee.vacationTimeFrom)
+        put("vacationTimeTo", employee.vacationTimeTo)
     }
 }
 

@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     id("com.google.gms.google-services")
+    alias(libs.plugins.kotlinCompose)
 
 }
 
@@ -18,8 +19,8 @@ android {
         applicationId = "com.strefagentlemanakingakloss"
         minSdk = 28
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.9"
+        versionCode = 5
+        versionName = "2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -48,9 +49,6 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
     }
     packaging {
         resources {

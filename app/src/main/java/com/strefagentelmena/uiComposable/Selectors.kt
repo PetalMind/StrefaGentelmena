@@ -23,7 +23,6 @@ import androidx.compose.ui.text.withStyle
 import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.childrenOfParent
 import com.strefagentelmena.models.familyRootAccounts
-import com.strefagentelmena.models.settngsModel.isOnVacationOn
 import com.strefagentelmena.viewModel.ScheduleModelView
 
 val selectorsUI = Selectors()
@@ -182,7 +181,6 @@ class Selectors {
         val isNewAppointment by viewModel.isNewAppointment.observeAsState(false)
         val appoiment by viewModel.selectedAppointment.observeAsState()
         val appointmentDialog by viewModel.appointmentDialog.observeAsState()
-        val appointmentDate by viewModel.selectedAppointmentDate.observeAsState("")
 
         val shouldOpen = remember { mutableStateOf(false) }
 
@@ -208,10 +206,6 @@ class Selectors {
             onItemChange = { },
             isEditable = true,
             items = employeesList.orEmpty()
-                .filter { emp ->
-                    val onVacation = emp.isOnVacationOn(appointmentDate)
-                    !onVacation || emp.id != null && emp.id == selectedWorker?.id
-                }
                 .filterNot { it.id == selectedWorker?.id }
                 .map { it.displayName }
                 .filter { it.isNotEmpty() },

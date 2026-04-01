@@ -32,11 +32,14 @@ import com.strefagentelmena.models.normalizedForFirebaseWrite
 import com.strefagentelmena.models.withVisitAggregatesFromAppointments
 import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.models.settngsModel.ProfilePreferences
-import com.strefagentelmena.models.settngsModel.isOnVacationOn
+import com.strefagentelmena.models.settngsModel.parseEmployeeDisplayDate
+import com.strefagentelmena.models.settngsModel.vacationBlocksAppointment
 import com.strefagentelmena.models.settngsModel.vacationRangeLabel
+import com.strefagentelmena.models.settngsModel.hasPartialVacationHours
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -70,10 +73,15 @@ class ScheduleModelView : ViewModel() {
     val messages = MutableLiveData<String?>("")
     val viewState = MutableLiveData<AppState>(AppState.Idle)
 
+    /** Tryb wyświetlania harmonogramu: true = wizyty jedna pod drugą (pełna szerokość), false = obok siebie. Domyślnie true. */
+    val isStackedTimelineView = MutableLiveData<Boolean>(true)
+
     /**
      *Dialogs states
      */
     val appointmentDialog = MutableLiveData(false)
+    /** Szybki urlop / wolne z paska harmonogramu (bez wchodzenia w Ustawienia). */
+    val quickVacationDialogVisible = MutableLiveData(false)
     val deleteDialogState = MutableLiveData(false)
     val onNotificationClickState = MutableLiveData(false)
     /** Po zapisie edycji wizyty — pytanie o ponowne wysłanie SMS (null = brak dialogu). */
@@ -121,6 +129,10 @@ class ScheduleModelView : ViewModel() {
 
     fun setAppoimentNote(newValue: String) {
         selectedAppointmentNote.value = newValue
+    }
+
+    fun toggleTimelineViewMode() {
+        isStackedTimelineView.value = !(isStackedTimelineView.value ?: true)
     }
 
     fun appendSelectedAppointmentNote() {
@@ -386,11 +398,6 @@ class ScheduleModelView : ViewModel() {
     fun createNewAppointment(
         isNew: Boolean,
     ) {
-        vacationViolationMessageOrNull()?.let {
-            appointmentError.value = it
-            return
-        }
-
         val id = if (isNew) appointmentsList.value?.size else selectedAppointment.value?.id
         if (!isNew && id == null) {
             appointmentError.value = "Brak wybranej wizyty"
@@ -778,19 +785,6 @@ class ScheduleModelView : ViewModel() {
             return false
         }
 
-        vacationViolationMessageOrNull()?.let {
-            appointmentError.value = it
-            // #region agent log
-            AgentDebugLog.log(
-                hypothesisId = "H5",
-                location = "ScheduleModelView.editAppointment",
-                message = "exit_false",
-                data = mapOf("reason" to "vacation", "errLen" to it.length.toString()),
-            )
-            // #endregion
-            return false
-        }
-
         val smsContact = selectedClient.parentCustomerId.takeIf { it > 0 } ?: 0
         val updatedAppointment = selectedAppointment.value?.copy(
             notificationSent = onNotificationClickState.value ?: notificationIsSent,
@@ -1026,6 +1020,148 @@ class ScheduleModelView : ViewModel() {
     fun closeAllDialog() {
         appointmentDialog.value = false
         deleteDialogState.value = false
+        quickVacationDialogVisible.value = false
+    }
+
+    fun setQuickVacationDialogVisible(visible: Boolean) {
+        quickVacationDialogVisible.value = visible
+    }
+
+    /**
+     * Zapis urlopu/wolnego dla aktualnie wybranego pracownika (jak w ustawieniach pracownika).
+     * [vacationTo] puste = jeden dzień ([vacationFrom]).
+     */
+    fun saveQuickVacationFromSchedule(
+        vacationFrom: String,
+        vacationTo: String,
+        wholeDay: Boolean,
+        vacationTimeFrom: String,
+        vacationTimeTo: String,
+    ) {
+        val emp = selectedEmployee.value ?: run {
+            setMessages("Wybierz pracownika")
+            return
+        }
+        val eid = emp.id ?: run {
+            setMessages("Brak ID pracownika — zapisz pracownika w ustawieniach")
+            return
+        }
+        val vf = vacationFrom.trim()
+        val vt = vacationTo.trim()
+        if (vf.isEmpty()) {
+            setMessages("Podaj datę początku (dd.MM.yyyy)")
+            return
+        }
+        parseEmployeeDisplayDate(vf) ?: run {
+            setMessages("Niepoprawna data początku (dd.MM.yyyy)")
+            return
+        }
+        if (vt.isNotEmpty()) {
+            val td = parseEmployeeDisplayDate(vt) ?: run {
+                setMessages("Niepoprawna data końca (dd.MM.yyyy)")
+                return
+            }
+            val fd = parseEmployeeDisplayDate(vf)!!
+            if (td.isBefore(fd)) {
+                setMessages("Koniec urlopu nie może być wcześniejszy niż początek")
+                return
+            }
+        }
+        val (vtf, vtt) = if (wholeDay) {
+            "" to ""
+        } else {
+            val tf = vacationTimeFrom.trim()
+            val tt = vacationTimeTo.trim()
+            if (tf.isEmpty() || tt.isEmpty()) {
+                setMessages("Uzupełnij godziny wolnego albo wybierz „cały dzień”")
+                return
+            }
+            val s = parseAppointmentTimeString(tf) ?: run {
+                setMessages("Niepoprawna godzina początku (HH:mm)")
+                return
+            }
+            val e = parseAppointmentTimeString(tt) ?: run {
+                setMessages("Niepoprawna godzina końca (HH:mm)")
+                return
+            }
+            if (!e.isAfter(s)) {
+                setMessages("Koniec wolnego musi być późniejszy niż początek")
+                return
+            }
+            tf to tt
+        }
+        val updated = emp.copy(
+            id = eid,
+            vacationFrom = vf,
+            vacationTo = vt,
+            vacationTimeFrom = vtf,
+            vacationTimeTo = vtt,
+        )
+        FirebaseEmployeeFunctions().editEmployeeInFirebase(
+            FirebaseDatabase.getInstance(),
+            updated,
+        ) { success ->
+            viewModelScope.launch {
+                if (success) {
+                    setMessages("Zapisano urlop / wolne dla ${updated.displayName}")
+                    quickVacationDialogVisible.value = false
+                    reloadEmployeesKeepingSelection(eid)
+                } else {
+                    setMessages("Nie udało się zapisać urlopu")
+                }
+            }
+        }
+    }
+
+    /** Usuwa wpis urlopu u wybranego pracownika (wszystkie pola urlopowe). */
+    fun clearVacationForSelectedEmployee() {
+        val emp = selectedEmployee.value ?: run {
+            setMessages("Wybierz pracownika")
+            return
+        }
+        val eid = emp.id ?: run {
+            setMessages("Brak ID pracownika")
+            return
+        }
+        val cleared = emp.copy(
+            id = eid,
+            vacationFrom = "",
+            vacationTo = "",
+            vacationTimeFrom = "",
+            vacationTimeTo = "",
+        )
+        FirebaseEmployeeFunctions().editEmployeeInFirebase(
+            FirebaseDatabase.getInstance(),
+            cleared,
+        ) { success ->
+            viewModelScope.launch {
+                if (success) {
+                    setMessages("Usunięto urlop / wolne u ${cleared.displayName}")
+                    quickVacationDialogVisible.value = false
+                    reloadEmployeesKeepingSelection(eid)
+                } else {
+                    setMessages("Nie udało się usunąć urlopu")
+                }
+            }
+        }
+    }
+
+    private suspend fun reloadEmployeesKeepingSelection(preferredEmployeeId: Int) {
+        val list = try {
+            withContext(Dispatchers.IO) {
+                FirebaseEmployeeFunctions().loadEmployeesFromFirebase(FirebaseDatabase.getInstance())
+            }
+        } catch (e: Exception) {
+            Log.e("ScheduleModelView", "reloadEmployeesKeepingSelection", e)
+            return
+        }
+        employeeList.value = list
+        val found = list.firstOrNull { it.id == preferredEmployeeId }
+        if (found != null) {
+            selectedEmployee.value = found
+        }
+        ensureSelectedEmployeeAvailableForCurrentDate()
+        getsAppoiments()
     }
 
     fun sendNotificationForAppointment() {
@@ -1182,6 +1318,7 @@ class ScheduleModelView : ViewModel() {
     private fun buildScheduleInformationNoticeOrNull(): String? {
         val parts = listOfNotNull(
             workHoursOutsideNoticeMessageOrNull(),
+            vacationOverlapNoticeMessageOrNull(),
             overlapNoticeMessageOrNull(),
         )
         if (parts.isEmpty()) return null
@@ -1190,14 +1327,14 @@ class ScheduleModelView : ViewModel() {
 
     fun checkAppointmentsList() {
         appointmentScheduleNotice.value = buildScheduleInformationNoticeOrNull().orEmpty()
-        val vacation = vacationViolationMessageOrNull()
+        val vacationNotice = vacationOverlapNoticeMessageOrNull()
         // #region agent log
         AgentDebugLog.log(
             hypothesisId = "H3",
             location = "ScheduleModelView.checkAppointmentsList",
             message = "conflict_probe",
             data = mapOf(
-                "hasVacationBlock" to (vacation != null).toString(),
+                "hasVacationNotice" to (vacationNotice != null).toString(),
                 "noticeLen" to (appointmentScheduleNotice.value?.length ?: 0).toString(),
                 "start" to (selectedAppointmentStartTime.value ?: ""),
                 "end" to (selectedAppointmentEndTime.value ?: ""),
@@ -1205,10 +1342,6 @@ class ScheduleModelView : ViewModel() {
             ),
         )
         // #endregion
-        if (vacation != null) {
-            appointmentError.value = vacation
-            return
-        }
         if ((buildSchedulingProbeOrNull() != null || workHoursProbeParsable()) &&
             appointmentError.value != "Niepoprawny format godziny"
         ) {
@@ -1241,33 +1374,35 @@ class ScheduleModelView : ViewModel() {
             parseAppointmentTimeString(endStr) != null
     }
 
-    private fun vacationViolationMessageOrNull(): String? {
+    /**
+     * Informacja (nie błąd): wizyta nachodzi na urlop/wolne — zapis nadal dozwolony.
+     */
+    private fun vacationOverlapNoticeMessageOrNull(): String? {
         val emp = selectedEmployee.value ?: return null
         val date = selectedAppointmentDate.value?.takeIf { it.isNotBlank() } ?: return null
         if (isNewAppointment.value != true) {
             val existing = selectedAppointment.value
             val sameSlot =
                 existing != null &&
-                    existing.id != null && existing.id != 0 &&
+                    existing.id != 0 &&
                     existing.date == date &&
                     existing.effectiveEmployeeId() == emp.id
             if (sameSlot) return null
         }
-        if (!emp.isOnVacationOn(date)) return null
+        val startStr = selectedAppointmentStartTime.value?.takeIf { it.isNotBlank() } ?: return null
+        val endStr = selectedAppointmentEndTime.value?.takeIf { it.isNotBlank() } ?: return null
+        if (!emp.vacationBlocksAppointment(date, startStr, endStr)) return null
         val label = emp.vacationRangeLabel().ifBlank { date }
-        return "${emp.displayName} ma urlop w tym dniu ($label). Wybierz innego pracownika lub zmień datę."
+        return if (emp.hasPartialVacationHours()) {
+            "Wybrany termin nachodzi na wolne / urlop ($label). Możesz zapisać mimo to."
+        } else {
+            "Ten dzień jest oznaczony jako urlop / wolne u pracownika ($label). Możesz zapisać mimo to."
+        }
     }
 
-    /** Gdy wybrany pracownik ma urlop w aktualnie wybranym dniu harmonogramu — pierwszy dostępny. */
+    /** Zostawione pod wywołania z zapisu daty / ładowania — bez automatycznej zmiany pracownika przy urlopie. */
     fun ensureSelectedEmployeeAvailableForCurrentDate() {
-        val date = selectedAppointmentDate.value?.takeIf { it.isNotBlank() } ?: return
-        val list = employeeList.value ?: return
-        val current = selectedEmployee.value
-        if (current != null && !current.isOnVacationOn(date)) return
-        val fallback = list.firstOrNull { !it.isOnVacationOn(date) }
-        if (fallback != null) {
-            selectedEmployee.value = fallback
-        }
+        // Nie przełączamy pracownika z powodu urlopu — tylko informacja na harmonogramie i w formularzu.
     }
 
     fun getsAppoiments() {
@@ -1304,4 +1439,3 @@ class ScheduleModelView : ViewModel() {
 
 
 }
-

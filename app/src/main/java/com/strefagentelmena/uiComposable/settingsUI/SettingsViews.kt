@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.strefagentelmena.uiComposable.settingsUI
 
 import android.content.Context
@@ -13,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -195,6 +198,9 @@ class SettingsViews {
         val empolyeeWorkEnd by viewModel.empolyeeWorkEndTime.observeAsState(Employee.DEFAULT_WORK_END)
         val empolyeeVacationFrom by viewModel.empolyeeVacationFrom.observeAsState("")
         val empolyeeVacationTo by viewModel.empolyeeVacationTo.observeAsState("")
+        val vacationWholeDay by viewModel.empolyeeVacationWholeDay.observeAsState(true)
+        val empolyeeVacationTimeFrom by viewModel.empolyeeVacationTimeFrom.observeAsState("")
+        val empolyeeVacationTimeTo by viewModel.empolyeeVacationTimeTo.observeAsState("")
         val newEmpolyee by viewModel.newEmployee.observeAsState()
         val addNewEmpolyeeState by viewModel.addEmpolyeeState.observeAsState()
         val isNewEmplyee by viewModel.isNewEmplyee.observeAsState()
@@ -244,24 +250,61 @@ class SettingsViews {
             )
 
             Text(
-                text = "Urlop (nie można zaplanować wizyt w tym zakresie)",
+                text = "Urlop / wolne (blokuje zapisy w harmonogramie)",
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+            Text(
+                text = "Zakres dat — dzień początku wymagany, koniec pusty = jeden dzień. Przy „wybrane godziny” ten sam przedział obowiązuje każdego dnia w zakresie.",
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             textModernTextFieldUI.DateOutlinedTextField(
                 value = empolyeeVacationFrom.orEmpty(),
                 onValueChange = { viewModel.setEmpolyeeVacationFrom(it) },
                 modifier = Modifier.padding(10.dp),
-                label = "Urlop od (dd.MM.yyyy)",
+                label = "Od dnia (dd.MM.yyyy)",
             )
             textModernTextFieldUI.DateOutlinedTextField(
                 value = empolyeeVacationTo.orEmpty(),
                 onValueChange = { viewModel.setEmpolyeeVacationTo(it) },
                 modifier = Modifier.padding(10.dp),
-                label = "Urlop do (opcjonalnie, jeden dzień jeśli puste)",
+                label = "Do dnia (opcjonalnie)",
             )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = vacationWholeDay,
+                    onClick = { viewModel.setEmpolyeeVacationWholeDay(true) },
+                    label = { Text("Cały dzień") },
+                )
+                FilterChip(
+                    selected = !vacationWholeDay,
+                    onClick = { viewModel.setEmpolyeeVacationWholeDay(false) },
+                    label = { Text("Wybrane godziny") },
+                )
+            }
+            if (!vacationWholeDay) {
+                textModernTextFieldUI.TimeOutlinedTextField(
+                    value = empolyeeVacationTimeFrom.orEmpty(),
+                    onValueChange = { viewModel.setEmpolyeeVacationTimeFrom(it) },
+                    modifier = Modifier.padding(10.dp),
+                    label = "Wolne od (HH:mm)",
+                )
+                textModernTextFieldUI.TimeOutlinedTextField(
+                    value = empolyeeVacationTimeTo.orEmpty(),
+                    onValueChange = { viewModel.setEmpolyeeVacationTimeTo(it) },
+                    modifier = Modifier.padding(10.dp),
+                    label = "Wolne do (HH:mm)",
+                )
+            }
 
             buttonsUI.ButtonsRow(
                 onClick = {

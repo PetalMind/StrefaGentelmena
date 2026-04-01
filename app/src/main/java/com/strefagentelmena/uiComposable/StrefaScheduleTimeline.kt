@@ -1,5 +1,6 @@
 package com.strefagentelmena.uiComposable
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +58,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.max
+import kotlin.math.min
 
 /** Kolory z makiet `strefa_harmonogram_timeline.html`. */
 object StrefaHarmonogramColors {
@@ -77,6 +80,7 @@ object StrefaHarmonogramColors {
 }
 
 private val plLocale: Locale = Locale.forLanguageTag("pl-PL")
+private const val MIN_APPOINTMENT_CARD_HEIGHT_MINUTES = 40
 
 private fun polishDayShort(day: DayOfWeek): String = when (day) {
     DayOfWeek.MONDAY -> "Pn"
@@ -96,6 +100,16 @@ private data class TimelineApptLayout(
     val lane: Int,
     val totalLanes: Int,
 )
+
+private data class TimelineBreakLayout(
+    val startMinOfDay: Int,
+    val endExclusiveMinOfDay: Int,
+)
+
+private sealed interface TimelineStackedItem {
+    data class Appt(val appointment: Appointment, val visualIndex: Int) : TimelineStackedItem
+    data class Gap(val startMinOfDay: Int, val endExclusiveMinOfDay: Int) : TimelineStackedItem
+}
 
 /** Przypisanie pasów przy pionowej osi: czas w dół (wysokość = długość wizyty), nakładki obok siebie. */
 private fun layoutTimelineAppointments(
@@ -144,6 +158,103 @@ private fun layoutTimelineAppointments(
     }.sortedWith(compareBy({ it.offsetMin }, { it.appointment.startTime }))
 }
 
+private fun appointmentStartEndMinutesOrNull(appointment: Appointment): Pair<Int, Int>? {
+    val block = appointment.timelineBlockOffsetAndDurationMinutesOrNull(gridStartMinuteOfDay = 0)
+        ?: return null
+    val start = block.first
+    val endExclusive = start + block.second.coerceAtLeast(1)
+    return start to endExclusive
+}
+
+private fun timelineBreaksBetweenAppointments(appointments: List<Appointment>): List<TimelineBreakLayout> {
+    val intervals = appointments
+        .mapNotNull { appt -> appointmentStartEndMinutesOrNull(appt) }
+        .sortedBy { it.first }
+
+    if (intervals.size < 2) return emptyList()
+
+    val mergedBusy = mutableListOf<Pair<Int, Int>>()
+    for ((start, endExclusive) in intervals) {
+        val last = mergedBusy.lastOrNull()
+        if (last == null || start > last.second) {
+            mergedBusy.add(start to endExclusive)
+        } else {
+            mergedBusy[mergedBusy.lastIndex] = last.first to max(last.second, endExclusive)
+        }
+    }
+
+    val gaps = mutableListOf<TimelineBreakLayout>()
+    for (i in 0 until mergedBusy.lastIndex) {
+        val gapStart = mergedBusy[i].second
+        val gapEnd = mergedBusy[i + 1].first
+        if (gapEnd > gapStart) {
+            gaps.add(TimelineBreakLayout(gapStart, gapEnd))
+        }
+    }
+    return gaps
+}
+
+private fun stackedItemsWithBreaks(appointments: List<Appointment>): List<TimelineStackedItem> {
+    if (appointments.isEmpty()) return emptyList()
+    val withMinutes = appointments.mapNotNull { appt ->
+        val interval = appointmentStartEndMinutesOrNull(appt) ?: return@mapNotNull null
+        Triple(appt, interval.first, interval.second)
+    }.sortedBy { it.second }
+    if (withMinutes.isEmpty()) return emptyList()
+
+    val result = mutableListOf<TimelineStackedItem>()
+    var clusterEnd = withMinutes.first().third
+    var visualIndex = 0
+
+    withMinutes.forEachIndexed { idx, (appt, _, endExclusive) ->
+        result.add(TimelineStackedItem.Appt(appointment = appt, visualIndex = visualIndex++))
+        clusterEnd = max(clusterEnd, endExclusive)
+        val nextStart = withMinutes.getOrNull(idx + 1)?.second ?: return@forEachIndexed
+        if (nextStart > clusterEnd) {
+            result.add(
+                TimelineStackedItem.Gap(
+                    startMinOfDay = clusterEnd,
+                    endExclusiveMinOfDay = nextStart,
+                )
+            )
+        }
+    }
+    return result
+}
+
+private fun minuteOfDayLabel(minuteOfDay: Int): String {
+    val clamped = minuteOfDay.coerceAtLeast(0)
+    val h = (clamped / 60) % 24
+    val m = clamped % 60
+    return "%02d:%02d".format(h, m)
+}
+
+private fun breakRangeLabel(startMinOfDay: Int, endExclusiveMinOfDay: Int): String =
+    "${minuteOfDayLabel(startMinOfDay)} - ${minuteOfDayLabel(endExclusiveMinOfDay)}"
+
+private fun computeTimelineMinuteHeightScale(
+    layouts: List<TimelineApptLayout>,
+): Float {
+    val minDuration = layouts.minOfOrNull { it.durationMin } ?: return 1f
+    if (minDuration <= 0) return 1f
+    return max(1f, MIN_APPOINTMENT_CARD_HEIGHT_MINUTES.toFloat() / minDuration.toFloat())
+}
+
+private fun mergeTimelineBoundsWithVacation(
+    appointments: List<Appointment>,
+    vacationAbsent: Pair<Int, Int>?,
+): Pair<Int, Int> {
+    val (a0, a1) = computeTimelineGridMinuteBounds(appointments)
+    if (vacationAbsent == null) return a0 to a1
+    val (v0, v1) = vacationAbsent
+    var start = min(a0, v0)
+    var end = max(a1, v1)
+    start = (start / 60) * 60
+    end = ((end + 59) / 60) * 60
+    if (end <= start) end = start + 60
+    return start to end
+}
+
 private fun formatTopMeta(date: LocalDate): String {
     val raw = date.format(
         DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", plLocale),
@@ -164,15 +275,34 @@ fun StrefaHarmonogramTimelineContent(
     addButtonLabel: String = "",
     appointments: List<Appointment>,
     isViewingToday: Boolean,
+    isStacked: Boolean = false,
     onAppointmentClick: (Appointment) -> Unit,
     onNotificationClick: (Appointment) -> Unit,
+    /** Urlop/wolne: minuty dnia [początek, koniec wyłącznie) — pasek na osi czasu. */
+    vacationAbsentMinutes: Pair<Int, Int>? = null,
+    vacationAbsentLabel: String = "",
 ) {
-    val (gridStartMin, gridEndMin) = remember(appointments) {
-        computeTimelineGridMinuteBounds(appointments)
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    
+    val (gridStartMin, gridEndMin) = remember(appointments, vacationAbsentMinutes) {
+        mergeTimelineBoundsWithVacation(appointments, vacationAbsentMinutes)
     }
     val spanMinutes = gridEndMin - gridStartMin
-    val timelineHeight: Dp = spanMinutes.dp
     val dayListState = rememberLazyListState()
+    val rawLayouts = remember(appointments, gridStartMin) {
+        layoutTimelineAppointments(appointments, gridStartMin)
+    }
+    val minuteHeightScale = remember(rawLayouts) {
+        computeTimelineMinuteHeightScale(rawLayouts)
+    }
+    val timelineHeight: Dp = (spanMinutes.toFloat() * minuteHeightScale).dp
+    val timelineBreaks = remember(appointments) {
+        timelineBreaksBetweenAppointments(appointments)
+    }
+    val stackedItems = remember(appointments) {
+        stackedItemsWithBreaks(appointments)
+    }
 
     LaunchedEffect(selectedDate, dayStripDates) {
         val idx = dayStripDates.indexOf(selectedDate)
@@ -190,15 +320,20 @@ fun StrefaHarmonogramTimelineContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(top = 18.dp, bottom = 12.dp),
+                .padding(
+                    top = if (isLandscape) 6.dp else 18.dp, 
+                    bottom = if (isLandscape) 4.dp else 12.dp
+                ),
         ) {
-            Text(
-                text = formatTopMeta(selectedDate),
-                color = StrefaHarmonogramColors.Muted,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Light,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            if (!isLandscape) {
+                Text(
+                    text = formatTopMeta(selectedDate),
+                    color = StrefaHarmonogramColors.Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Light,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -207,16 +342,24 @@ fun StrefaHarmonogramTimelineContent(
                 Text(
                     text = "Harmonogram",
                     color = StrefaHarmonogramColors.Gold,
-                    fontSize = 22.sp,
+                    fontSize = if (isLandscape) 18.sp else 22.sp,
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Medium,
                 )
+                if (isLandscape) {
+                    Text(
+                        text = formatTopMeta(selectedDate),
+                        color = StrefaHarmonogramColors.Muted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Light,
+                    )
+                }
                 Row(
                     modifier = Modifier.clickable(onClick = onAddClick),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (addButtonLabel.isNotBlank()) {
+                    if (addButtonLabel.isNotBlank() && !isLandscape) {
                         Text(
                             text = addButtonLabel,
                             color = StrefaHarmonogramColors.Gold,
@@ -226,7 +369,7 @@ fun StrefaHarmonogramTimelineContent(
                     }
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(if (isLandscape) 24.dp else 28.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(StrefaHarmonogramColors.GoldDim)
                             .border(0.5.dp, StrefaHarmonogramColors.GoldBorder, RoundedCornerShape(8.dp)),
@@ -236,7 +379,7 @@ fun StrefaHarmonogramTimelineContent(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Dodaj wizytę",
                             tint = StrefaHarmonogramColors.Gold,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(if (isLandscape) 12.dp else 14.dp),
                         )
                     }
                 }
@@ -256,6 +399,7 @@ fun StrefaHarmonogramTimelineContent(
             daysWithAppointments = daysWithAppointments,
             onSelect = onSelectDate,
             listState = dayListState,
+            isLandscape = isLandscape
         )
 
         Box(
@@ -265,69 +409,32 @@ fun StrefaHarmonogramTimelineContent(
                 .background(StrefaHarmonogramColors.Border),
         )
 
-        // Oś czasu pionowa: góra = początek siatki (≥ 08:00, rozszerzane gdy wizyty zaczynają wcześniej), 1 dp ≈ 1 min.
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 20.dp),
-        ) {
-            Box(
+        if (isStacked) {
+            Column(
                 modifier = Modifier
+                    .weight(1f)
                     .fillMaxWidth()
-                    .height(timelineHeight)
-                    .padding(top = 8.dp)
-                    .padding(end = 16.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .width(48.dp)
-                            .fillMaxHeight(),
-                    ) {
-                        HourLabels(
-                            spanMinutes = spanMinutes,
-                            gridStartMinuteOfDay = gridStartMin,
-                            gridEndMinuteOfDay = gridEndMin,
-                        )
-                    }
-                    BoxWithConstraints(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(0.dp)),
-                    ) {
-                        val layouts = remember(appointments, gridStartMin) {
-                            layoutTimelineAppointments(appointments, gridStartMin)
-                        }
-                        val gap = 2.dp
-                        val startPad = 4.dp
-                        val innerW = maxWidth - startPad
-                        TimelineGrid(
-                            spanMinutes = spanMinutes,
-                            gridStartMinuteOfDay = gridStartMin,
-                            gridEndMinuteOfDay = gridEndMin,
-                        )
-                        layouts.forEachIndexed { index, layout ->
-                            val lc = layout.totalLanes.coerceAtLeast(1)
-                            val totalGaps = gap * (lc - 1).coerceAtLeast(0)
-                            val colW = (innerW - totalGaps) / lc
-                            val xOff = startPad + colW * layout.lane + gap * layout.lane
-                            TimelineAppointmentBlock(
-                                layout = layout,
-                                columnWidth = colW,
-                                offsetXDp = xOff,
-                                useAltStripe = scheduleTimelineAltStripe(index),
-                                zBase = index,
-                                onClick = { onAppointmentClick(layout.appointment) },
-                                onNotificationClick = { onNotificationClick(layout.appointment) },
+                stackedItems.forEach { item ->
+                    when (item) {
+                        is TimelineStackedItem.Appt -> {
+                            val appt = item.appointment
+                            val dur = appt.timelineBlockOffsetAndDurationMinutesOrNull(0)?.second ?: 30
+                            AppointmentCard(
+                                appointment = appt,
+                                heightDp = max(dur, MIN_APPOINTMENT_CARD_HEIGHT_MINUTES).dp,
+                                useAltStripe = scheduleTimelineAltStripe(item.visualIndex),
+                                onClick = { onAppointmentClick(appt) },
+                                onNotificationClick = { onNotificationClick(appt) }
                             )
                         }
-                        if (isViewingToday) {
-                            NowIndicatorLine(
-                                spanMinutes = spanMinutes,
-                                gridStartMinuteOfDay = gridStartMin,
+                        is TimelineStackedItem.Gap -> {
+                            BreakCard(
+                                label = "Wolne ${breakRangeLabel(item.startMinOfDay, item.endExclusiveMinOfDay)}",
+                                heightDp = max(item.endExclusiveMinOfDay - item.startMinOfDay, 20).dp,
                             )
                         }
                     }
@@ -335,9 +442,9 @@ fun StrefaHarmonogramTimelineContent(
                 if (appointments.isEmpty()) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(start = 48.dp),
-                        contentAlignment = Alignment.Center,
+                            .fillMaxWidth()
+                            .padding(vertical = 20.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "Brak zaplanowanych wizyt",
@@ -347,69 +454,116 @@ fun StrefaHarmonogramTimelineContent(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun HarmonogramDayStrip(
-    dates: List<LocalDate>,
-    selected: LocalDate,
-    daysWithAppointments: Set<LocalDate>,
-    onSelect: (LocalDate) -> Unit,
-    listState: LazyListState,
-) {
-    LazyRow(
-        state = listState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        itemsIndexed(dates, key = { _, d -> d.toString() }) { _, date ->
-            val isSelected = date == selected
-            val hasDot = daysWithAppointments.contains(date)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+        } else {
+            // Oś czasu pionowa: góra = początek siatki (≥ 08:00, rozszerzane gdy wizyty zaczynają wcześniej), 1 dp ≈ 1 min.
+            Box(
                 modifier = Modifier
-                    .width(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(
-                        width = 0.5.dp,
-                        color = if (isSelected) StrefaHarmonogramColors.Gold else StrefaHarmonogramColors.Border,
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .background(
-                        if (isSelected) StrefaHarmonogramColors.Gold else Color.Transparent,
-                        RoundedCornerShape(12.dp),
-                    )
-                    .clickable { onSelect(date) }
-                    .padding(vertical = 7.dp, horizontal = 10.dp),
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 20.dp),
             ) {
-                Text(
-                    text = polishDayShort(date.dayOfWeek),
-                    fontSize = 9.sp,
-                    letterSpacing = 0.3.sp,
-                    color = if (isSelected) StrefaHarmonogramColors.Bg else StrefaHarmonogramColors.Muted2,
-                    fontWeight = FontWeight.Normal,
-                )
-                Text(
-                    text = date.dayOfMonth.toString(),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (isSelected) StrefaHarmonogramColors.Bg else StrefaHarmonogramColors.Text,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-                if (hasDot) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) Color(0x66000000) else StrefaHarmonogramColors.Gold,
-                            ),
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(timelineHeight)
+                        .padding(top = 8.dp)
+                        .padding(end = 16.dp),
+                ) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .width(48.dp)
+                                .fillMaxHeight(),
+                        ) {
+                            HourLabels(
+                                spanMinutes = spanMinutes,
+                                gridStartMinuteOfDay = gridStartMin,
+                                gridEndMinuteOfDay = gridEndMin,
+                                minuteHeightScale = minuteHeightScale,
+                            )
+                        }
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(0.dp)),
+                        ) {
+                            val startPad = 4.dp
+                            val innerW = maxWidth - startPad
+                            TimelineGrid(
+                                spanMinutes = spanMinutes,
+                                gridStartMinuteOfDay = gridStartMin,
+                                gridEndMinuteOfDay = gridEndMin,
+                                minuteHeightScale = minuteHeightScale,
+                            )
+                            vacationAbsentMinutes?.let { (vs, ve) ->
+                                val top = max(vs, gridStartMin)
+                                val bottom = min(ve, gridEndMin)
+                                if (bottom > top) {
+                                    val offsetMin = top - gridStartMin
+                                    val durationMin = bottom - top
+                                    VacationAbsenceCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .offset(y = (offsetMin.toFloat() * minuteHeightScale).dp)
+                                            .zIndex(0.25f),
+                                        label = vacationAbsentLabel.ifBlank { "Urlop / wolne" },
+                                        heightDp = (durationMin.toFloat() * minuteHeightScale).dp,
+                                    )
+                                }
+                            }
+                            timelineBreaks.forEach { gap ->
+                                val offsetMin = gap.startMinOfDay - gridStartMin
+                                val durationMin = gap.endExclusiveMinOfDay - gap.startMinOfDay
+                                if (offsetMin >= 0 && durationMin > 0) {
+                                    BreakCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .offset(y = (offsetMin.toFloat() * minuteHeightScale).dp),
+                                        label = "Wolne ${breakRangeLabel(gap.startMinOfDay, gap.endExclusiveMinOfDay)}",
+                                        heightDp = (durationMin.toFloat() * minuteHeightScale).dp,
+                                    )
+                                }
+                            }
+                            rawLayouts.forEachIndexed { index, layout ->
+                                val colW = innerW.coerceAtLeast(1.dp)
+                                AppointmentCard(
+                                    appointment = layout.appointment,
+                                    modifier = Modifier
+                                        .width(colW)
+                                        .offset(x = startPad, y = (layout.offsetMin.toFloat() * minuteHeightScale).dp)
+                                        .zIndex(1f + index * 0.01f),
+                                    heightDp = (layout.durationMin.toFloat() * minuteHeightScale).dp,
+                                    columnWidth = colW,
+                                    useAltStripe = scheduleTimelineAltStripe(index),
+                                    onClick = { onAppointmentClick(layout.appointment) },
+                                    onNotificationClick = { onNotificationClick(layout.appointment) },
+                                )
+                            }
+                            if (isViewingToday) {
+                                NowIndicatorLine(
+                                    spanMinutes = spanMinutes,
+                                    gridStartMinuteOfDay = gridStartMin,
+                                    minuteHeightScale = minuteHeightScale,
+                                )
+                            }
+                        }
+                    }
+                    if (appointments.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 48.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "Brak zaplanowanych wizyt",
+                                color = StrefaHarmonogramColors.Muted2,
+                                fontSize = 14.sp,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -417,81 +571,88 @@ private fun HarmonogramDayStrip(
 }
 
 @Composable
-private fun HourLabels(
-    spanMinutes: Int,
-    gridStartMinuteOfDay: Int,
-    gridEndMinuteOfDay: Int,
+private fun VacationAbsenceCard(
+    label: String,
+    heightDp: Dp,
+    modifier: Modifier = Modifier,
 ) {
-    val startHour = gridStartMinuteOfDay / 60
-    val endHour = gridEndMinuteOfDay / 60
-    for (h in startHour..endHour) {
-        val minuteFromStart = h * 60 - gridStartMinuteOfDay
-        if (minuteFromStart in 0..spanMinutes) {
+    val compact = heightDp < 28.dp
+    val textSize = if (compact) 9.sp else 10.sp
+    Box(
+        modifier = modifier
+            .height(heightDp)
+            .clip(RoundedCornerShape(10.dp))
+            .border(0.8.dp, Color(0x66E57373), RoundedCornerShape(10.dp))
+            .background(Color(0x28E57373), RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFFE8C4C4),
+            fontSize = textSize,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun BreakCard(
+    label: String,
+    heightDp: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val compact = heightDp < 28.dp
+    val markerSize = if (compact) 6.dp else 7.dp
+    val textSize = if (compact) 9.sp else 10.sp
+    Box(
+        modifier = modifier
+            .height(heightDp)
+            .clip(RoundedCornerShape(10.dp))
+            .border(0.8.dp, StrefaHarmonogramColors.GoldBorder, RoundedCornerShape(10.dp))
+            .background(Color(0x2BC9A84C), RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(markerSize)
+                    .clip(CircleShape)
+                    .background(StrefaHarmonogramColors.Gold),
+            )
             Text(
-                text = "%02d:00".format(h),
-                fontSize = 10.sp,
-                color = StrefaHarmonogramColors.Muted,
-                fontWeight = FontWeight.Light,
-                modifier = Modifier.offset(y = minuteFromStart.dp - 1.dp),
+                text = label,
+                color = StrefaHarmonogramColors.Text,
+                fontSize = textSize,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
 
 @Composable
-private fun TimelineGrid(
-    spanMinutes: Int,
-    gridStartMinuteOfDay: Int,
-    gridEndMinuteOfDay: Int,
-) {
-    val startHour = gridStartMinuteOfDay / 60
-    val endHourInclusive = gridEndMinuteOfDay / 60
-    for (h in startHour..endHourInclusive) {
-        val minuteFromStart = h * 60 - gridStartMinuteOfDay
-        if (minuteFromStart in 0..spanMinutes) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(0.5.dp)
-                    .offset(y = minuteFromStart.dp)
-                    .background(StrefaHarmonogramColors.Border),
-            )
-        }
-        val half = h * 60 + 30 - gridStartMinuteOfDay
-        if (half in 0 until spanMinutes) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(0.5.dp)
-                    .offset(y = half.dp)
-                    .background(StrefaHarmonogramColors.HalfLine),
-            )
-        }
-    }
-}
-
-@Composable
-private fun TimelineAppointmentBlock(
-    layout: TimelineApptLayout,
-    columnWidth: Dp,
-    offsetXDp: Dp,
+private fun AppointmentCard(
+    appointment: Appointment,
+    modifier: Modifier = Modifier,
+    heightDp: Dp,
+    columnWidth: Dp = 300.dp, // Domyślnie szeroka (np. w trybie stacked)
     useAltStripe: Boolean,
-    zBase: Int,
     onClick: () -> Unit,
     onNotificationClick: () -> Unit,
 ) {
-    val appointment = layout.appointment
-    val offsetMin = layout.offsetMin
-    val durationMin = layout.durationMin
-    val minHForTap = 24
-    val heightDp = max(durationMin, minHForTap).dp
-    val topDp = offsetMin.dp
     val leftGold = if (useAltStripe) StrefaHarmonogramColors.AltStripeLeft else StrefaHarmonogramColors.Gold
     val timeColor = if (useAltStripe) StrefaHarmonogramColors.AltTime else StrefaHarmonogramColors.Gold
     val fill = if (useAltStripe) StrefaHarmonogramColors.AltFillSolid else StrefaHarmonogramColors.CardFillSolid
     val stroke = if (useAltStripe) StrefaHarmonogramColors.AltBorder else StrefaHarmonogramColors.GoldBorder
 
-    val innerWidth = (columnWidth - 2.dp).coerceAtLeast(0.dp)
     val narrow = columnWidth < 72.dp
     val veryNarrow = columnWidth < 52.dp
     val padH = when {
@@ -519,15 +680,13 @@ private fun TimelineAppointmentBlock(
         narrow -> 8.sp
         else -> 9.sp
     }
-    val bellSide = (innerWidth - padH - 2.dp).coerceIn(24.dp, 40.dp)
-        .coerceAtMost((innerWidth - 4.dp).coerceAtLeast(22.dp))
+    val bellSide = (columnWidth - padH * 2 - 2.dp).coerceIn(24.dp, 40.dp)
+        .coerceAtMost((columnWidth - 4.dp).coerceAtLeast(22.dp))
 
     Box(
-        modifier = Modifier
-            .width(columnWidth.coerceAtLeast(1.dp))
+        modifier = modifier
+            .fillMaxWidth()
             .height(heightDp)
-            .offset(x = offsetXDp, y = topDp)
-            .zIndex(1f + zBase * 0.01f)
             .clip(RoundedCornerShape(10.dp))
             .border(0.5.dp, stroke, RoundedCornerShape(10.dp))
             .background(fill, RoundedCornerShape(10.dp))
@@ -606,7 +765,133 @@ private fun TimelineAppointmentBlock(
 }
 
 @Composable
-private fun NowIndicatorLine(spanMinutes: Int, gridStartMinuteOfDay: Int) {
+private fun HarmonogramDayStrip(
+    dates: List<LocalDate>,
+    selected: LocalDate,
+    daysWithAppointments: Set<LocalDate>,
+    onSelect: (LocalDate) -> Unit,
+    listState: LazyListState,
+    isLandscape: Boolean = false
+) {
+    LazyRow(
+        state = listState,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = if (isLandscape) 4.dp else 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        itemsIndexed(dates, key = { _, d -> d.toString() }) { _, date ->
+            val isSelected = date == selected
+            val hasDot = daysWithAppointments.contains(date)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .width(if (isLandscape) 42.dp else 48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(
+                        width = 0.5.dp,
+                        color = if (isSelected) StrefaHarmonogramColors.Gold else StrefaHarmonogramColors.Border,
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .background(
+                        if (isSelected) StrefaHarmonogramColors.Gold else Color.Transparent,
+                        RoundedCornerShape(12.dp),
+                    )
+                    .clickable { onSelect(date) }
+                    .padding(vertical = if (isLandscape) 4.dp else 7.dp, horizontal = 10.dp),
+            ) {
+                Text(
+                    text = polishDayShort(date.dayOfWeek),
+                    fontSize = if (isLandscape) 8.sp else 9.sp,
+                    letterSpacing = 0.3.sp,
+                    color = if (isSelected) StrefaHarmonogramColors.Bg else StrefaHarmonogramColors.Muted2,
+                    fontWeight = FontWeight.Normal,
+                )
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    fontSize = if (isLandscape) 13.sp else 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isSelected) StrefaHarmonogramColors.Bg else StrefaHarmonogramColors.Text,
+                    modifier = Modifier.padding(top = 1.dp),
+                )
+                if (hasDot && !isLandscape) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) Color(0x66000000) else StrefaHarmonogramColors.Gold,
+                            ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HourLabels(
+    spanMinutes: Int,
+    gridStartMinuteOfDay: Int,
+    gridEndMinuteOfDay: Int,
+    minuteHeightScale: Float,
+) {
+    val startHour = gridStartMinuteOfDay / 60
+    val endHour = gridEndMinuteOfDay / 60
+    for (h in startHour..endHour) {
+        val minuteFromStart = h * 60 - gridStartMinuteOfDay
+        if (minuteFromStart in 0..spanMinutes) {
+            Text(
+                text = "%02d:00".format(h),
+                fontSize = 10.sp,
+                color = StrefaHarmonogramColors.Muted,
+                fontWeight = FontWeight.Light,
+                modifier = Modifier.offset(y = (minuteFromStart.toFloat() * minuteHeightScale).dp - 1.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimelineGrid(
+    spanMinutes: Int,
+    gridStartMinuteOfDay: Int,
+    gridEndMinuteOfDay: Int,
+    minuteHeightScale: Float,
+) {
+    val startHour = gridStartMinuteOfDay / 60
+    val endHourInclusive = gridEndMinuteOfDay / 60
+    for (h in startHour..endHourInclusive) {
+        val minuteFromStart = h * 60 - gridStartMinuteOfDay
+        if (minuteFromStart in 0..spanMinutes) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .offset(y = (minuteFromStart.toFloat() * minuteHeightScale).dp)
+                    .background(StrefaHarmonogramColors.Border),
+            )
+        }
+        val half = h * 60 + 30 - gridStartMinuteOfDay
+        if (half in 0 until spanMinutes) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .offset(y = (half.toFloat() * minuteHeightScale).dp)
+                    .background(StrefaHarmonogramColors.HalfLine),
+            )
+        }
+    }
+}
+
+@Composable
+private fun NowIndicatorLine(
+    spanMinutes: Int,
+    gridStartMinuteOfDay: Int,
+    minuteHeightScale: Float,
+) {
     val now = LocalTime.now()
     val nowMin = now.hour * 60 + now.minute
     val offset = nowMin - gridStartMinuteOfDay
@@ -614,7 +899,7 @@ private fun NowIndicatorLine(spanMinutes: Int, gridStartMinuteOfDay: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = offset.dp)
+            .offset(y = (offset.toFloat() * minuteHeightScale).dp)
             .zIndex(2f),
     ) {
         Box(

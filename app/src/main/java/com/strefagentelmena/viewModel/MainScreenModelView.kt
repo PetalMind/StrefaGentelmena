@@ -70,10 +70,21 @@ class MainScreenModelView : ViewModel() {
     /** Tekst baneru na dashboard (pusty = brak aktywnych / zbliżających się urlopów). */
     val vacationDashboardReminder = MutableLiveData("")
 
+    /** Lista pracowników do filtrowania statystyk itp. */
+    val employees = MutableLiveData<List<Employee>>(emptyList())
+
     /** Statystyki salonu (ekran „Statystyki i analizy”) — odświeżane z klientów i wizyt. */
     val salonAnalytics = MutableLiveData(
         computeSalonAnalytics(emptyList(), emptyList()),
     )
+
+    /** Wybrany pracownik do statystyk (null = cały salon). */
+    val selectedEmployeeForAnalytics = MutableLiveData<Employee?>(null)
+
+    fun setSelectedEmployeeForAnalytics(employee: Employee?) {
+        selectedEmployeeForAnalytics.value = employee
+        refreshSalonAnalytics()
+    }
 
     fun deferNotifyDialog(minutes: Long) {
         _deferNotificationUntil.value = LocalDateTime.now().plusMinutes(minutes)
@@ -148,8 +159,9 @@ class MainScreenModelView : ViewModel() {
 
     private fun refreshSalonAnalytics() {
         salonAnalytics.value = computeSalonAnalytics(
-            customersLists.value.orEmpty(),
-            appointmentsLists.value.orEmpty(),
+            customers = customersLists.value.orEmpty(),
+            appointments = appointmentsLists.value.orEmpty(),
+            employeeId = selectedEmployeeForAnalytics.value?.id,
         )
     }
 
@@ -518,10 +530,11 @@ class MainScreenModelView : ViewModel() {
                 val appointments = withContext(Dispatchers.IO) {
                     loadApointmentsList()
                 }
-                val employees = withContext(Dispatchers.IO) {
+                val employeesLoaded = withContext(Dispatchers.IO) {
                     FirebaseEmployeeFunctions().loadEmployeesFromFirebase(FirebaseDatabase.getInstance())
                 }
-                vacationDashboardReminder.value = buildVacationDashboardReminderText(employees)
+                employees.value = employeesLoaded
+                vacationDashboardReminder.value = buildVacationDashboardReminderText(employeesLoaded)
 
                 // Aktualizacja listy spotkań na głównym wątku
                 setAppointmentsList(appointments)
@@ -543,7 +556,7 @@ class MainScreenModelView : ViewModel() {
                 // Obsługa błędów
                 Log.e("CheckAppointments", "Error while checking appointments: ${e.message}", e)
 
-                // Ustawienie stanu błędu w widoku
+                // Ustawienie stanu błędu v widoku
                 setViewState(AppState.Error)
                 messages.value = "Wystąpił błąd podczas sprawdzania spotkań."
             }

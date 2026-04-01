@@ -220,18 +220,21 @@ fun Appointment.timelineServiceLineOrBlank(): String = serviceDescription.trim()
 fun computeTimelineGridMinuteBounds(appointments: List<Appointment>): Pair<Int, Int> {
     val defStart = AppointmentScheduleTimeline.VISIBLE_DAY_START_MINUTE_OF_DAY
     val defEnd = AppointmentScheduleTimeline.VISIBLE_DAY_END_MINUTE_OF_DAY
-    var start = defStart
-    var end = defEnd
+    if (appointments.isEmpty()) return defStart to defEnd
+
+    var start = Int.MAX_VALUE
+    var end = Int.MIN_VALUE
     for (a in appointments) {
         val t = a.parsedStartEndTimesOrNull() ?: continue
         val (s, eex) = appointmentIntervalEndExclusiveMinutes(t.first, t.second)
         start = min(start, s)
         end = max(end, eex)
     }
+    if (start == Int.MAX_VALUE || end == Int.MIN_VALUE) return defStart to defEnd
     start = (start / 60) * 60
     end = ((end + 59) / 60) * 60
     if (end <= start) {
-        end = start + (defEnd - defStart)
+        end = start + 60
     }
     return start to end
 }

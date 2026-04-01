@@ -1,6 +1,7 @@
 package com.strefagentelmena.models
 
 import com.strefagentelmena.models.appoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.effectiveEmployeeId
 import com.strefagentelmena.models.appoimentsModel.parseAppointmentTimeString
 import java.time.LocalDate
 import java.time.YearMonth
@@ -91,8 +92,10 @@ fun computeSalonAnalytics(
     range: AnalyticsRange = AnalyticsRange.Month,
     customFrom: LocalDate? = null,
     customTo: LocalDate? = null,
+    employeeId: Int? = null,
 ): SalonAnalyticsUiState {
     val real = appointments.filter { it.id != 0 }
+        .filter { employeeId == null || it.effectiveEmployeeId() == employeeId }
 
     fun parseApptDate(a: Appointment): LocalDate? =
         runCatching { LocalDate.parse(a.date.trim(), apptDateFmt) }.getOrNull()

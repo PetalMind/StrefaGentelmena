@@ -1,14 +1,21 @@
 package com.strefagentelmena.screens
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -22,16 +29,25 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,7 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
-import com.strefagentelmena.AgentDebugLog
+import com.strefagentelmena.R
 import com.strefagentelmena.navigation.NavPendingActions
 import com.strefagentelmena.navigation.popBackStackOrNavigateToMain
 import com.google.firebase.database.FirebaseDatabase
@@ -50,7 +66,8 @@ import com.strefagentelmena.functions.fireBase.FirebaseEmployeeFunctions
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.appoimentsModel.effectiveEmployeeId
 import com.strefagentelmena.models.appoimentsModel.findFirstSchedulingOverlapPair
-import com.strefagentelmena.models.settngsModel.isOnVacationOn
+import com.strefagentelmena.models.settngsModel.vacationAbsentIntervalMinutesOnDate
+import com.strefagentelmena.models.settngsModel.vacationTimelineLabelForDate
 import com.strefagentelmena.uiComposable.StrefaBanner
 import com.strefagentelmena.uiComposable.StrefaBannerDensity
 import com.strefagentelmena.uiComposable.StrefaBannerVariant
@@ -70,6 +87,7 @@ import com.strefagentelmena.uiComposable.colorsUI
 import com.strefagentelmena.uiComposable.dialogsUI
 import com.strefagentelmena.uiComposable.headersUI
 import com.strefagentelmena.uiComposable.selectorsUI
+import com.strefagentelmena.uiComposable.textModernTextFieldUI
 import com.strefagentelmena.ui.theme.SalonGold
 import com.strefagentelmena.ui.theme.SalonText
 import com.strefagentelmena.viewModel.ScheduleModelView
@@ -202,6 +220,15 @@ class Schedule {
         if (appointmentDialogState) {
             dialogsUI.OnAddOrEditSchedule(viewModel = viewModel)
         }
+
+        val quickVacationVisible by viewModel.quickVacationDialogVisible.observeAsState(false)
+        if (quickVacationVisible) {
+            QuickVacationScheduleDialog(
+                viewModel = viewModel,
+                prefillDateFrom = appointmentDateSelection.orEmpty(),
+                onDismiss = { viewModel.setQuickVacationDialogVisible(false) },
+            )
+        }
     }
 
     @Composable
@@ -214,12 +241,21 @@ class Schedule {
             title = "Harmonogram",
             onBackPressed = { navController.popBackStackOrNavigateToMain() },
             compose = {
-                Box(modifier = Modifier.padding(end = 8.dp)) {
+                Row(
+                    modifier = Modifier.padding(end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val dateActionDescription =
+                        "Zmień dzień harmonogramu. Otwiera kalendarz, żeby przełączyć widok na inny dzień pracy salonu."
                     Box(
                         modifier = Modifier
-                            .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
                             .clip(RoundedCornerShape(15.dp))
-                            .padding(10.dp)
+                            .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = dateActionDescription
+                                role = Role.Button
+                            }
                             .clickable {
                                 dialogsUI.showDatePickerDialog(
                                     context = context,
@@ -230,12 +266,52 @@ class Schedule {
                                     }
                                 )
                             }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            Icons.Default.DateRange,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = "Zmień dzień",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                            )
+                        }
+                    }
+                    val vacationActionDescription =
+                        "Wolne w grafiku. Ustawia urlop, dzień wolny albo konkretne godziny niedostępności dla pracownika wybranego powyżej na tym ekranie."
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(15.dp))
+                            .background(colorsUI.headersBlue, RoundedCornerShape(15.dp))
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = vacationActionDescription
+                                role = Role.Button
+                            }
+                            .clickable { viewModel.setQuickVacationDialogVisible(true) }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_events),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = "Wolne w grafiku",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                            )
+                        }
                     }
                 }
             },
@@ -260,6 +336,9 @@ class Schedule {
         innerPadding: PaddingValues,
         viewModel: ScheduleModelView,
     ) {
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -271,7 +350,10 @@ class Schedule {
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Column(modifier = Modifier.padding(
+                    horizontal = 16.dp, 
+                    vertical = if (isLandscape) 4.dp else 12.dp
+                )) {
                     ChooseWorker(viewModel)
                 }
             }
@@ -296,21 +378,29 @@ class Schedule {
                 0 -> FirebaseEmployeeFunctions().loadEmployeesFromFirebase(firebaseDatabase = FirebaseDatabase.getInstance())
 
                 else -> {
-                    val date = appointmentDate.orEmpty()
                     val selected = selectedEmpolyee
                     if (selected?.id == null) {
-                        val firstOk = employeeList.firstOrNull { !it.isOnVacationOn(date) }
-                            ?: employeeList.first()
-                        viewModel.setEmpolyee(firstOk)
+                        employeeList.firstOrNull()?.let { viewModel.setEmpolyee(it) }
                     } else {
-                        viewModel.ensureSelectedEmployeeAvailableForCurrentDate()
                         viewModel.getsAppoiments()
                     }
                 }
             }
         }
 
-        selectorsUI.WorkerSelector(viewModel = viewModel)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            selectorsUI.WorkerSelector(viewModel = viewModel)
+            val date = appointmentDate.orEmpty()
+            val vacHint = selectedEmpolyee?.vacationTimelineLabelForDate(date)?.takeIf { it.isNotBlank() }
+            if (vacHint != null) {
+                Text(
+                    text = vacHint,
+                    modifier = Modifier.padding(top = 6.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 
 
@@ -352,6 +442,13 @@ class Schedule {
                 .toSet()
         }
 
+        val vacationAbsentMinutes = remember(selectedWorker, selectedDateString) {
+            selectedWorker?.vacationAbsentIntervalMinutesOnDate(selectedDateString.trim())
+        }
+        val vacationAbsentLabel = remember(selectedWorker, selectedDateString) {
+            selectedWorker?.vacationTimelineLabelForDate(selectedDateString.trim()).orEmpty()
+        }
+
         LaunchedEffect(selectedDateString) {
             viewModel.getsAppoiments()
         }
@@ -364,6 +461,20 @@ class Schedule {
                     variant = StrefaBannerVariant.Warning,
                     title = "Wizyty się nakładają",
                     description = formatOverlapPairBannerDescription(a, b),
+                    density = StrefaBannerDensity.Compact,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 8.dp, bottom = 4.dp),
+                )
+            }
+            if (vacationAbsentMinutes != null) {
+                StrefaBanner(
+                    variant = StrefaBannerVariant.Info,
+                    title = "Wolne w grafiku pracownika",
+                    description = vacationAbsentLabel.ifBlank {
+                        "Ten dzień ma zaznaczony urlop / wolne w ustawieniach pracownika."
+                    },
                     density = StrefaBannerDensity.Compact,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -385,11 +496,14 @@ class Schedule {
                 addButtonLabel = "Dodaj wizyte",
                 appointments = sortedAppointments,
                 isViewingToday = selectedLocalDate == LocalDate.now(),
+                isStacked = false,
                 onAppointmentClick = onClick,
                 onNotificationClick = { appointment ->
                     viewModel.selectAppointmentAndClient(appointment)
                     viewModel.openNotificationDialog()
                 },
+                vacationAbsentMinutes = vacationAbsentMinutes,
+                vacationAbsentLabel = vacationAbsentLabel,
             )
         }
 
@@ -414,6 +528,185 @@ class Schedule {
                 onConfirm = { viewModel.confirmResendNotificationAfterEdit() },
                 onDismiss = { viewModel.dismissResendNotificationAfterEdit() },
             )
+        }
+    }
+
+    @Composable
+    private fun QuickVacationScheduleDialog(
+        viewModel: ScheduleModelView,
+        prefillDateFrom: String,
+        onDismiss: () -> Unit,
+    ) {
+        val selectedWorker by viewModel.selectedEmployee.observeAsState()
+        var dateFrom by remember { mutableStateOf(prefillDateFrom) }
+        var dateTo by remember { mutableStateOf("") }
+        var wholeDay by remember { mutableStateOf(true) }
+        var timeFrom by remember { mutableStateOf("12:00") }
+        var timeTo by remember { mutableStateOf("13:00") }
+
+        LaunchedEffect(Unit) {
+            dateFrom = prefillDateFrom
+            dateTo = ""
+            wholeDay = true
+            timeFrom = "12:00"
+            timeTo = "13:00"
+        }
+
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    StrefaModalPanel {
+                        StrefaModalIconFrame(
+                            variant = StrefaModalIconVariant.Warning,
+                            icon = Icons.Default.DateRange,
+                            iconTint = SalonGold,
+                        )
+                        StrefaModalTitleText(
+                            text = "Wolne w grafiku pracownika",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            text = selectedWorker?.displayName?.ifBlank { "—" } ?: "Wybierz pracownika",
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = SalonText,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            text = "Zapis zastępuje wcześniejsze wpisy urlopu tej osoby z ustawień salonu. Dotyczy tylko pracownika wybranego na górze ekranu harmonogramu.",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp)
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            textModernTextFieldUI.DateOutlinedTextField(
+                                value = dateFrom,
+                                onValueChange = { dateFrom = it },
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                label = "Od dnia (dd.MM.yyyy)",
+                            )
+                            textModernTextFieldUI.DateOutlinedTextField(
+                                value = dateTo,
+                                onValueChange = { dateTo = it },
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                label = "Do dnia (opcjonalnie)",
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (wholeDay) colorsUI.headersBlue
+                                            else MaterialTheme.colorScheme.surfaceVariant,
+                                        )
+                                        .clickable { wholeDay = true }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "Cały dzień",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (!wholeDay) colorsUI.headersBlue
+                                            else MaterialTheme.colorScheme.surfaceVariant,
+                                        )
+                                        .clickable {
+                                            wholeDay = false
+                                        }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "Godziny",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                            if (!wholeDay) {
+                                textModernTextFieldUI.TimeOutlinedTextField(
+                                    value = timeFrom,
+                                    onValueChange = { timeFrom = it },
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    label = "Wolne od (HH:mm)",
+                                )
+                                textModernTextFieldUI.TimeOutlinedTextField(
+                                    value = timeTo,
+                                    onValueChange = { timeTo = it },
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    label = "Wolne do (HH:mm)",
+                                )
+                            }
+                        }
+                    }
+                    TextButton(
+                        onClick = { viewModel.clearVacationForSelectedEmployee() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                    ) {
+                        Text("Usuń urlop u tego pracownika")
+                    }
+                    StrefaDialogFloatingBar(modifier = Modifier.padding(top = 8.dp)) {
+                        StrefaDialogButtonRow(
+                            first = { m ->
+                                StrefaDialogButton(
+                                    text = "Anuluj",
+                                    onClick = onDismiss,
+                                    modifier = m,
+                                    style = StrefaDialogButtonStyle.Ghost,
+                                )
+                            },
+                            second = { m ->
+                                StrefaDialogNotifyButton(
+                                    text = "Zapisz",
+                                    onClick = {
+                                        viewModel.saveQuickVacationFromSchedule(
+                                            vacationFrom = dateFrom,
+                                            vacationTo = dateTo,
+                                            wholeDay = wholeDay,
+                                            vacationTimeFrom = timeFrom,
+                                            vacationTimeTo = timeTo,
+                                        )
+                                    },
+                                    modifier = m,
+                                )
+                            },
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
         }
     }
 

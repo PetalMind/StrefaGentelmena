@@ -54,6 +54,7 @@ import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.LoyalCustomerInsight
 import com.strefagentelmena.models.SalonKpiSummary
 import com.strefagentelmena.models.computeSalonAnalytics
+import com.strefagentelmena.models.settngsModel.Employee
 import com.strefagentelmena.uiComposable.RetentionRingCard
 import com.strefagentelmena.uiComposable.ScheduleFillSparklineHeatmapCard
 import com.strefagentelmena.uiComposable.StrefaDialogButton
@@ -89,18 +90,22 @@ class StatisticsScreen {
     ) {
         val customers by viewModel.customersLists.observeAsState(emptyList())
         val appointments by viewModel.appointmentsForAnalytics.observeAsState(emptyList())
+        val employees by viewModel.employees.observeAsState(emptyList())
         val context = LocalContext.current
         val today = LocalDate.now()
         var customFrom by rememberSaveable { mutableStateOf(today.minusDays(29)) }
         var customTo by rememberSaveable { mutableStateOf(today) }
         var selectedRange by rememberSaveable { mutableStateOf(AnalyticsRange.Month) }
-        val analytics = remember(customers, appointments, selectedRange, customFrom, customTo) {
+        var selectedEmployee by remember { mutableStateOf<Employee?>(null) }
+
+        val analytics = remember(customers, appointments, selectedRange, customFrom, customTo, selectedEmployee) {
             computeSalonAnalytics(
                 customers = customers,
                 appointments = appointments,
                 range = selectedRange,
                 customFrom = customFrom,
                 customTo = customTo,
+                employeeId = selectedEmployee?.id,
             )
         }
         var loyalExpanded by rememberSaveable { mutableStateOf(false) }
@@ -129,6 +134,14 @@ class StatisticsScreen {
                         .padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
+                    if (employees.isNotEmpty()) {
+                        WorkerSelector(
+                            employees = employees,
+                            selected = selectedEmployee,
+                            onSelected = { selectedEmployee = it },
+                        )
+                    }
+
                     RangeSelector(
                         selected = selectedRange,
                         onSelected = { selectedRange = it },
@@ -220,6 +233,61 @@ class StatisticsScreen {
                 onDismiss = { selectedCustomer = null },
                 onMissingPhone = { viewModel.newMessage("Brak numeru telefonu u tego klienta.") },
             )
+        }
+    }
+}
+
+@Composable
+private fun WorkerSelector(
+    employees: List<Employee>,
+    selected: Employee?,
+    onSelected: (Employee?) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SalonBg3, RoundedCornerShape(12.dp))
+            .border(1.dp, SalonBorder, RoundedCornerShape(12.dp))
+            .horizontalScroll(rememberScrollState())
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        val isAllSalon = selected == null
+        TextButton(
+            onClick = { onSelected(null) },
+            modifier = Modifier
+                .widthIn(min = 100.dp)
+                .background(
+                    color = if (isAllSalon) SalonGold.copy(alpha = 0.18f) else SalonBg3,
+                    shape = RoundedCornerShape(10.dp),
+                ),
+        ) {
+            Text(
+                text = "Cały salon",
+                color = if (isAllSalon) SalonGold else SalonMuted2,
+                fontWeight = if (isAllSalon) FontWeight.SemiBold else FontWeight.Medium,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        employees.forEach { employee ->
+            val isActive = selected?.id == employee.id
+            TextButton(
+                onClick = { onSelected(employee) },
+                modifier = Modifier
+                    .widthIn(min = 100.dp)
+                    .background(
+                        color = if (isActive) SalonGold.copy(alpha = 0.18f) else SalonBg3,
+                        shape = RoundedCornerShape(10.dp),
+                    ),
+            ) {
+                Text(
+                    text = employee.displayName.ifBlank { employee.name },
+                    color = if (isActive) SalonGold else SalonMuted2,
+                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
