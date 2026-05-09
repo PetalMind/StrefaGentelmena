@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,13 +46,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.strefagentelmena.functions.calendarUiFunctions.CalendarDataSource
+import com.strefagentelmena.models.Customer
 import com.strefagentelmena.models.appoimentsModel.Appointment
+import com.strefagentelmena.models.appoimentsModel.AppointmentScheduleTimeline
 import com.strefagentelmena.models.appoimentsModel.computeTimelineGridMinuteBounds
 import com.strefagentelmena.models.appoimentsModel.scheduleTimelineAltStripe
 import com.strefagentelmena.models.appoimentsModel.timelineBlockOffsetAndDurationMinutesOrNull
 import com.strefagentelmena.models.appoimentsModel.timelineClientDisplayName
 import com.strefagentelmena.models.appoimentsModel.timelineServiceLineOrBlank
 import com.strefagentelmena.models.appoimentsModel.timelineTimeRangeLabel
+import com.strefagentelmena.models.calendarUiModel.CalendarUiModel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -81,6 +86,7 @@ object StrefaHarmonogramColors {
 
 private val plLocale: Locale = Locale.forLanguageTag("pl-PL")
 private const val MIN_APPOINTMENT_CARD_HEIGHT_MINUTES = 40
+private val timelineDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
 private fun polishDayShort(day: DayOfWeek): String = when (day) {
     DayOfWeek.MONDAY -> "Pn"
@@ -264,6 +270,22 @@ private fun formatTopMeta(date: LocalDate): String {
     }
 }
 
+private fun buildHolidayAllDayAppointment(selectedDate: LocalDate, holidayName: String): Appointment {
+    return Appointment(
+        id = -selectedDate.hashCode(),
+        customer = Customer(firstName = "Święto", lastName = holidayName),
+        date = selectedDate.format(timelineDateFormatter),
+        startTime = "%02d:00".format(AppointmentScheduleTimeline.VISIBLE_DAY_START_MINUTE_OF_DAY / 60),
+        endTime = "%02d:00".format(AppointmentScheduleTimeline.VISIBLE_DAY_END_MINUTE_OF_DAY / 60),
+        serviceDescription = "Dzień niepracujący",
+        notificationSent = true,
+    )
+}
+
+private fun isVirtualHolidayAppointment(appointment: Appointment): Boolean {
+    return appointment.serviceDescription == "Dzień niepracujący" && appointment.customer.firstName == "Święto"
+}
+
 @Composable
 fun StrefaHarmonogramTimelineContent(
     modifier: Modifier = Modifier,
@@ -284,24 +306,42 @@ fun StrefaHarmonogramTimelineContent(
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    
-    val (gridStartMin, gridEndMin) = remember(appointments, vacationAbsentMinutes) {
-        mergeTimelineBoundsWithVacation(appointments, vacationAbsentMinutes)
+    val calendarDataSource = remember { CalendarDataSource() }
+    val dayMetaState = remember { mutableStateOf<Map<LocalDate, CalendarUiModel.Date>>(emptyMap()) }
+    val selectedDayMeta = dayMetaState.value[selectedDate]
+    val holidayAppointment = remember(selectedDate, selectedDayMeta?.holidayName) {
+        selectedDayMeta?.holidayName?.takeIf { selectedDayMeta.isHoliday }?.let {
+            buildHolidayAllDayAppointment(selectedDate, it)
+        }
+    }
+    val timelineAppointments = remember(appointments, holidayAppointment) {
+        if (holidayAppointment == null) appointments else appointments + holidayAppointment
+    }
+
+    val (gridStartMin, gridEndMin) = remember(timelineAppointments, vacationAbsentMinutes) {
+        mergeTimelineBoundsWithVacation(timelineAppointments, vacationAbsentMinutes)
     }
     val spanMinutes = gridEndMin - gridStartMin
     val dayListState = rememberLazyListState()
-    val rawLayouts = remember(appointments, gridStartMin) {
-        layoutTimelineAppointments(appointments, gridStartMin)
+    val rawLayouts = remember(timelineAppointments, gridStartMin) {
+        layoutTimelineAppointments(timelineAppointments, gridStartMin)
     }
     val minuteHeightScale = remember(rawLayouts) {
         computeTimelineMinuteHeightScale(rawLayouts)
     }
     val timelineHeight: Dp = (spanMinutes.toFloat() * minuteHeightScale).dp
-    val timelineBreaks = remember(appointments) {
-        timelineBreaksBetweenAppointments(appointments)
+    val timelineBreaks = remember(timelineAppointments) {
+        timelineBreaksBetweenAppointments(timelineAppointments)
     }
-    val stackedItems = remember(appointments) {
-        stackedItemsWithBreaks(appointments)
+    val stackedItems = remember(timelineAppointments) {
+        stackedItemsWithBreaks(timelineAppointments)
+    }
+
+    LaunchedEffect(dayStripDates, selectedDate) {
+        calendarDataSource.ensurePolishHolidaysInRange(dayStripDates)
+        dayMetaState.value = dayStripDates.associateWith { date ->
+            calendarDataSource.toDateUiModel(date, isSelectedDate = date == selectedDate)
+        }
     }
 
     LaunchedEffect(selectedDate, dayStripDates) {
@@ -397,10 +437,18 @@ fun StrefaHarmonogramTimelineContent(
             dates = dayStripDates,
             selected = selectedDate,
             daysWithAppointments = daysWithAppointments,
+            dayMetaByDate = dayMetaState.value,
             onSelect = onSelectDate,
             listState = dayListState,
             isLandscape = isLandscape
         )
+
+        if (selectedDayMeta?.isHoliday == true && !selectedDayMeta.holidayName.isNullOrBlank()) {
+            HolidayBanner(
+                holidayName = selectedDayMeta.holidayName,
+                isLandscape = isLandscape,
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -427,8 +475,8 @@ fun StrefaHarmonogramTimelineContent(
                                 appointment = appt,
                                 heightDp = max(dur, MIN_APPOINTMENT_CARD_HEIGHT_MINUTES).dp,
                                 useAltStripe = scheduleTimelineAltStripe(item.visualIndex),
-                                onClick = { onAppointmentClick(appt) },
-                                onNotificationClick = { onNotificationClick(appt) }
+                                onClick = { if (!isVirtualHolidayAppointment(appt)) onAppointmentClick(appt) },
+                                onNotificationClick = { if (!isVirtualHolidayAppointment(appt)) onNotificationClick(appt) }
                             )
                         }
                         is TimelineStackedItem.Gap -> {
@@ -439,7 +487,7 @@ fun StrefaHarmonogramTimelineContent(
                         }
                     }
                 }
-                if (appointments.isEmpty()) {
+                if (timelineAppointments.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -537,8 +585,16 @@ fun StrefaHarmonogramTimelineContent(
                                     heightDp = (layout.durationMin.toFloat() * minuteHeightScale).dp,
                                     columnWidth = colW,
                                     useAltStripe = scheduleTimelineAltStripe(index),
-                                    onClick = { onAppointmentClick(layout.appointment) },
-                                    onNotificationClick = { onNotificationClick(layout.appointment) },
+                                    onClick = {
+                                        if (!isVirtualHolidayAppointment(layout.appointment)) onAppointmentClick(
+                                            layout.appointment
+                                        )
+                                    },
+                                    onNotificationClick = {
+                                        if (!isVirtualHolidayAppointment(layout.appointment)) onNotificationClick(
+                                            layout.appointment
+                                        )
+                                    },
                                 )
                             }
                             if (isViewingToday) {
@@ -550,7 +606,7 @@ fun StrefaHarmonogramTimelineContent(
                             }
                         }
                     }
-                    if (appointments.isEmpty()) {
+                    if (timelineAppointments.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -769,6 +825,7 @@ private fun HarmonogramDayStrip(
     dates: List<LocalDate>,
     selected: LocalDate,
     daysWithAppointments: Set<LocalDate>,
+    dayMetaByDate: Map<LocalDate, CalendarUiModel.Date>,
     onSelect: (LocalDate) -> Unit,
     listState: LazyListState,
     isLandscape: Boolean = false
@@ -783,6 +840,12 @@ private fun HarmonogramDayStrip(
         itemsIndexed(dates, key = { _, d -> d.toString() }) { _, date ->
             val isSelected = date == selected
             val hasDot = daysWithAppointments.contains(date)
+            val dayMeta = dayMetaByDate[date]
+            val marker = when {
+                dayMeta?.isHoliday == true -> "SW"
+                dayMeta?.isWeekend == true -> "WE"
+                else -> null
+            }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -825,8 +888,40 @@ private fun HarmonogramDayStrip(
                             ),
                     )
                 }
+                if (!isLandscape && marker != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = marker,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isSelected) StrefaHarmonogramColors.Bg else StrefaHarmonogramColors.Gold,
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun HolidayBanner(
+    holidayName: String,
+    isLandscape: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = if (isLandscape) 4.dp else 8.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(StrefaHarmonogramColors.GoldDim)
+            .border(0.5.dp, StrefaHarmonogramColors.GoldBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = if (isLandscape) 7.dp else 9.dp),
+    ) {
+        Text(
+            text = "Święto: $holidayName",
+            color = StrefaHarmonogramColors.Gold,
+            fontSize = if (isLandscape) 11.sp else 12.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 

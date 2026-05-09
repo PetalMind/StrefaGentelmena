@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,8 +60,16 @@ class CalendarHeaderUI {
         onClickListener: (CalendarUiModel.Date) -> Unit
     ) {
         val containerColor = if (date.isSelected) colorsUI.cream else colorsUI.cardGrey
+        val specialDayColor = Color(0xFFB3261E)
+        val isSpecialDay = date.isHoliday || date.isWeekend
         val cellContentColor =
-            if (date.isSelected) SalonBg else MaterialTheme.colorScheme.onSurface
+            if (date.isSelected) {
+                SalonBg
+            } else if (isSpecialDay) {
+                specialDayColor
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
         val fontWeight = if (date.isSelected) FontWeight.Bold else FontWeight.Normal
         val textStyle =
             if (date.isSelected) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge
@@ -74,7 +84,7 @@ class CalendarHeaderUI {
         ) {
             Column(
                 modifier = Modifier
-                    .size(width = 48.dp, height = 58.dp)
+                    .size(width = 52.dp, height = 66.dp)
                     .padding(4.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -92,6 +102,18 @@ class CalendarHeaderUI {
                     style = textStyle,
                     color = cellContentColor
                 )
+
+                date.dayMarker?.let { marker ->
+                    Text(
+                        text = marker,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cellContentColor,
+                        modifier = Modifier.semantics {
+                            contentDescription = date.holidayName ?: if (date.isWeekend) "Weekend" else marker
+                        }
+                    )
+                }
             }
         }
     }
@@ -111,18 +133,22 @@ class CalendarHeaderUI {
     @SuppressLint("NewApi")
     @Composable
     fun CalendarHeader(modifier: Modifier = Modifier, viewModel: ScheduleModelView) {
-        val dataSource = CalendarDataSource()
+        val dataSource = remember { CalendarDataSource() }
         var calendarUiModel by remember { mutableStateOf(dataSource.getData(lastSelectedDate = dataSource.today)) }
         val selectedDate by viewModel.selectedAppointmentDate.observeAsState()
+
+        LaunchedEffect(calendarUiModel.startDate.date, calendarUiModel.endDate.date) {
+            dataSource.ensurePolishHolidaysInRange(calendarUiModel.visibleDates.map { it.date })
+            calendarUiModel = dataSource.getData(
+                startDate = calendarUiModel.startDate.date,
+                lastSelectedDate = calendarUiModel.selectedDate.date
+            )
+        }
 
         LaunchedEffect(selectedDate) {
             if (selectedDate != null) {
                 val dates = LocalDate.parse(selectedDate, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-                val date = CalendarUiModel.Date(
-                    isSelected = false,
-                    isToday = dates.isEqual(dataSource.today),
-                    date = dates
-                )
+                val date = dataSource.toDateUiModel(dates, isSelectedDate = false)
 
                 val finalStartDate = date.date.minusDays(0)
                 val newData = dataSource.getData(
@@ -138,8 +164,9 @@ class CalendarHeaderUI {
                             isSelected = it.date.atStartOfDay() == date.date.atStartOfDay()
                         )
                     }
+                    val selectedFromVisibleDates = updatedVisibleDates.firstOrNull { it.isSelected } ?: date
                     calendarUiModel = newData.copy(
-                        selectedDate = date,
+                        selectedDate = selectedFromVisibleDates,
                         visibleDates = updatedVisibleDates
                     )
                 }

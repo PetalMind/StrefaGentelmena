@@ -15,10 +15,20 @@ data class CalendarUiModel(
     data class Date(
         val date: LocalDate,
         val isSelected: Boolean,
-        val isToday: Boolean
+        val isToday: Boolean,
+        val isWeekend: Boolean = false,
+        val isHoliday: Boolean = false,
+        val holidayName: String? = null
     ) {
         @SuppressLint("NewApi")
         val day: String =
             date.format(DateTimeFormatter.ofPattern("E")) // get the day by formatting the date
+
+        val dayMarker: String?
+            get() = when {
+                isHoliday -> "SW"
+                isWeekend -> "WE"
+                else -> null
+            }
     }
 }
