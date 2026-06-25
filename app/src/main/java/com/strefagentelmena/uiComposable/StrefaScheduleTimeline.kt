@@ -704,10 +704,27 @@ private fun AppointmentCard(
     onClick: () -> Unit,
     onNotificationClick: () -> Unit,
 ) {
-    val leftGold = if (useAltStripe) StrefaHarmonogramColors.AltStripeLeft else StrefaHarmonogramColors.Gold
-    val timeColor = if (useAltStripe) StrefaHarmonogramColors.AltTime else StrefaHarmonogramColors.Gold
-    val fill = if (useAltStripe) StrefaHarmonogramColors.AltFillSolid else StrefaHarmonogramColors.CardFillSolid
-    val stroke = if (useAltStripe) StrefaHarmonogramColors.AltBorder else StrefaHarmonogramColors.GoldBorder
+    val isHolidayCard = isVirtualHolidayAppointment(appointment)
+    val leftGold = when {
+        isHolidayCard -> Color(0xFFE57373)
+        useAltStripe -> StrefaHarmonogramColors.AltStripeLeft
+        else -> StrefaHarmonogramColors.Gold
+    }
+    val timeColor = when {
+        isHolidayCard -> Color(0xFFFF8A80)
+        useAltStripe -> StrefaHarmonogramColors.AltTime
+        else -> StrefaHarmonogramColors.Gold
+    }
+    val fill = when {
+        isHolidayCard -> Color(0xFF2A1717)
+        useAltStripe -> StrefaHarmonogramColors.AltFillSolid
+        else -> StrefaHarmonogramColors.CardFillSolid
+    }
+    val stroke = when {
+        isHolidayCard -> Color(0x66E57373)
+        useAltStripe -> StrefaHarmonogramColors.AltBorder
+        else -> StrefaHarmonogramColors.GoldBorder
+    }
 
     val narrow = columnWidth < 72.dp
     val veryNarrow = columnWidth < 52.dp
@@ -912,13 +929,13 @@ private fun HolidayBanner(
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = if (isLandscape) 4.dp else 8.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(StrefaHarmonogramColors.GoldDim)
-            .border(0.5.dp, StrefaHarmonogramColors.GoldBorder, RoundedCornerShape(10.dp))
+            .background(Color(0x28E57373))
+            .border(0.5.dp, Color(0x66E57373), RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = if (isLandscape) 7.dp else 9.dp),
     ) {
         Text(
             text = "Święto: $holidayName",
-            color = StrefaHarmonogramColors.Gold,
+            color = Color(0xFFFF8A80),
             fontSize = if (isLandscape) 11.sp else 12.sp,
             fontWeight = FontWeight.Medium,
         )

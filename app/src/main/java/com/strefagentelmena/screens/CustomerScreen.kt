@@ -306,7 +306,7 @@ class CustomerScreen {
                         )
                         StrefaModalTitleText("Usunąć klienta?")
                         StrefaModalBodyText(
-                            text = "Klient $customerName zostanie trwale usunięty. Tej operacji nie można cofnąć.",
+                            text = "Klient $customerName zostanie ukryty wraz z jego wizytami. Dane pozostaną zapisane w Firebase.",
                         )
                     }
                     StrefaDialogFloatingBar(

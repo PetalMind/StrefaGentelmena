@@ -25,7 +25,9 @@ suspend fun getAllCustomersFromFirebase(database: FirebaseDatabase): List<Custom
                 try {
                     val customersList =
                         snapshot.children.mapNotNull {
-                            it.getValue(Customer::class.java)?.normalizedAfterFirebaseLoad()
+                            it.getValue(Customer::class.java)
+                                ?.takeUnless(Customer::deleted)
+                                ?.normalizedAfterFirebaseLoad()
                         }
                     continuation.resume(customersList) // Zwraca listę klientów
                 } catch (e: Exception) {
@@ -147,8 +149,7 @@ fun removeCustomerFromFirebase(
 
     val customersRef = database.getReference("Customers")
 
-    // Usuwanie danych klienta
-    customersRef.child(customerId).removeValue()
+    customersRef.child(customerId).child("deleted").setValue(true)
         .addOnSuccessListener {
             Log.i("Firebase", "Customer removed successfully with ID: $customerId")
             completion(true)
@@ -160,7 +161,7 @@ fun removeCustomerFromFirebase(
 }
 
 /**
- * Jedna operacja: usuwa klienta i powiązane wizyty (wartość null w [updateChildren] usuwa węzeł).
+ * Jedna operacja: oznacza klienta i powiązane wizyty jako usunięte.
  */
 fun removeCustomerAndTheirAppointmentsFromFirebase(
     database: FirebaseDatabase,
@@ -178,9 +179,9 @@ fun removeCustomerAndTheirAppointmentsFromFirebase(
         if (childId > 0) updates["Customers/$childId/parentCustomerId"] = 0
     }
     for (id in appointmentIds) {
-        if (id > 0) updates["Appointments/$id"] = null
+        if (id > 0) updates["Appointments/$id/deleted"] = true
     }
-    updates["Customers/$customerId"] = null
+    updates["Customers/$customerId/deleted"] = true
     database.reference.updateChildren(updates)
         .addOnSuccessListener {
             Log.i("Firebase", "Customer $customerId and ${appointmentIds.size} appointment(s) removed")

@@ -28,6 +28,8 @@ class Customer(
     var parentCustomerId: Int = 0,
     /** Data urodzenia `dd.MM.yyyy`; pusta gdy nieznana. Wiek liczony w locie (aktualizuje się co rok). */
     var birthDate: String = "",
+    /** Soft-delete: rekord pozostaje w Firebase, ale nie jest pokazywany w aplikacji. */
+    var deleted: Boolean = false,
 ) {
     val fullName: String
         get() = "$firstName $lastName"
@@ -46,6 +48,7 @@ class Customer(
         avgWeeksBetweenVisits: Double = this.avgWeeksBetweenVisits,
         parentCustomerId: Int = this.parentCustomerId,
         birthDate: String = this.birthDate,
+        deleted: Boolean = this.deleted,
     ): Customer {
         return Customer(
             id,
@@ -61,6 +64,7 @@ class Customer(
             avgWeeksBetweenVisits,
             parentCustomerId,
             birthDate,
+            deleted,
         )
     }
 }

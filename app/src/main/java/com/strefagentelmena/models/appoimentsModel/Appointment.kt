@@ -159,6 +159,8 @@ class Appointment(
      * Wizyta u dziecka: ID rodzica do SMS (numer z profilu rodzica). 0 = użyj [customer.phoneNumber].
      */
     var smsContactCustomerId: Int = 0,
+    /** Soft-delete: rekord pozostaje w Firebase, ale nie jest pokazywany w harmonogramie. */
+    var deleted: Boolean = false,
 ) {
     fun copy(
         id: Int = this.id,
@@ -172,6 +174,7 @@ class Appointment(
         employeeId: Int = this.employeeId,
         employee: Employee = this.employee,
         smsContactCustomerId: Int = this.smsContactCustomerId,
+        deleted: Boolean = this.deleted,
     ): Appointment {
         return Appointment(
             id = id,
@@ -185,6 +188,7 @@ class Appointment(
             employeeId = employeeId,
             employee = employee,
             smsContactCustomerId = smsContactCustomerId,
+            deleted = deleted,
         )
     }
 }

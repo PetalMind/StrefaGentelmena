@@ -97,7 +97,9 @@ class FirebaseFunctionsAppointments {
 
             for (snapshot in dataSnapshot.children) {
                 val appointment = snapshot.getValue(Appointment::class.java)
-                appointment?.let { appointments.add(it.normalizedAfterFirebaseLoad()) }
+                appointment
+                    ?.takeUnless(Appointment::deleted)
+                    ?.let { appointments.add(it.normalizedAfterFirebaseLoad()) }
             }
 
             appointments // Zwracamy załadowaną listę
@@ -107,7 +109,7 @@ class FirebaseFunctionsAppointments {
         }
     }
 
-    // Usuń appointment z Firebase
+    // Oznacz appointment jako usunięty, pozostawiając rekord w Firebase.
     fun deleteAppointmentFromFirebase(
         firebaseDatabase: FirebaseDatabase,
         appointmentId: Int,
@@ -116,7 +118,7 @@ class FirebaseFunctionsAppointments {
         val appointmentRef =
             firebaseDatabase.getReference("Appointments").child(appointmentId.toString())
 
-        appointmentRef.removeValue()
+        appointmentRef.child("deleted").setValue(true)
             .addOnSuccessListener {
                 Log.e("Firebase", "Appointment deleted successfully with ID: $appointmentId")
                 completion(true) // Success

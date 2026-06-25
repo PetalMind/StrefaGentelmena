@@ -268,7 +268,9 @@ class MainScreenModelView : ViewModel() {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val customers =
                         snapshot.children.mapNotNull {
-                            it.getValue(Customer::class.java)?.normalizedAfterFirebaseLoad()
+                            it.getValue(Customer::class.java)
+                                ?.takeUnless(Customer::deleted)
+                                ?.normalizedAfterFirebaseLoad()
                         }
                     continuation.resume(customers) // Wznawia coroutine z wynikiem
                 }
