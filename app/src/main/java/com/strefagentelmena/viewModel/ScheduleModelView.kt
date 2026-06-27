@@ -15,6 +15,7 @@ import com.strefagentelmena.functions.fireBase.FirebaseProfilePreferences
 import com.strefagentelmena.functions.fireBase.getAllCustomersFromFirebase
 import com.strefagentelmena.functions.fireBase.patchCustomerDerivedVisitFields
 import com.strefagentelmena.functions.isNotificationSendWindow
+import com.strefagentelmena.functions.SmsSendFailureReason
 import com.strefagentelmena.functions.smsManager
 import com.strefagentelmena.models.appoimentsModel.Appointment
 import com.strefagentelmena.models.appoimentsModel.DEFAULT_APPOINTMENT_DURATION_MINUTES
@@ -397,6 +398,7 @@ class ScheduleModelView : ViewModel() {
 
     fun createNewAppointment(
         isNew: Boolean,
+        sendSmsOnSave: Boolean = false,
     ) {
         val id = if (isNew) appointmentsList.value?.size else selectedAppointment.value?.id
         if (!isNew && id == null) {
@@ -458,7 +460,10 @@ class ScheduleModelView : ViewModel() {
 
         selectedAppointment.value = new
 
-        addAppointment(firebaseDatabase = FirebaseDatabase.getInstance())
+        addAppointment(
+            firebaseDatabase = FirebaseDatabase.getInstance(),
+            sendSmsOnSave = sendSmsOnSave,
+        )
         changeAppointmentDialogState()
     }
 
@@ -491,7 +496,10 @@ class ScheduleModelView : ViewModel() {
      * Add Appointment.
      *
      */
-    private fun addAppointment(firebaseDatabase: FirebaseDatabase) {
+    private fun addAppointment(
+        firebaseDatabase: FirebaseDatabase,
+        sendSmsOnSave: Boolean,
+    ) {
         viewModelScope.launch {
             try {
                 // Pobierz aktualną listę wizyt z Firebase
@@ -536,6 +544,7 @@ class ScheduleModelView : ViewModel() {
                         firebaseDatabase, appointmentWithId
                     ) { success ->
                         if (success) {
+                            selectedAppointment.value = appointmentWithId
                             val snapshot = currentAppointments.toList()
                             patchCustomerDerivedVisitFields(
                                 firebaseDatabase,
@@ -547,6 +556,9 @@ class ScheduleModelView : ViewModel() {
                                 snapshot,
                             )
                             setMessages("${appointmentWithId.customer.fullName} już niedługo na twoim fotelu")
+                            if (sendSmsOnSave) {
+                                sendConfirmationAfterSave(appointmentWithId)
+                            }
                             // #region agent log
                             AgentDebugLog.log(
                                 hypothesisId = "H-A",
@@ -1188,6 +1200,61 @@ class ScheduleModelView : ViewModel() {
             editAppointment(FirebaseDatabase.getInstance(), true)
         } else {
             explainSmsNotificationNotSent(appointment, profile)
+        }
+    }
+
+    private fun sendConfirmationAfterSave(appointment: Appointment) {
+        val profile = profilePreferences.value
+        if (profile == null) {
+            setMessages("Wizyta zapisana, ale ustawienia SMS nie są jeszcze dostępne.")
+            return
+        }
+        val notificationResult = try {
+            smsManager.sendNotificationDetailed(
+                appointment,
+                profile,
+                resolveSmsContactPhone(appointment),
+                ignoreReminderSchedule = true,
+            )
+        } catch (e: Exception) {
+            setMessages("Wizyta zapisana, ale SMS przerwano przez błąd aplikacji: ${e.message ?: "brak szczegółów"}.")
+            Log.e("SendConfirmation", "Error sending confirmation: ${e.message}", e)
+            return
+        }
+
+        if (!notificationResult.sent) {
+            setMessages("Wizyta zapisana, ale ${smsFailureMessageForSave(notificationResult.failureReason)}")
+            return
+        }
+
+        val withFlag = appointment.copy(notificationSent = true).normalizedForFirebaseWrite()
+        selectedAppointment.value = withFlag
+        currentBaseAppointmentsList.value = currentBaseAppointmentsList.value
+            ?.map { if (it.id == withFlag.id) withFlag else it }
+        getsAppoiments()
+        FirebaseFunctionsAppointments().editAppointmentInFirebase(
+            FirebaseDatabase.getInstance(),
+            withFlag,
+        ) { success ->
+            if (success) {
+                setMessages("Wizyta zapisana i SMS wysłany do ${appointment.customer.fullName}")
+            } else {
+                setMessages("SMS wysłany, ale nie udało się zapisać statusu powiadomienia.")
+            }
+        }
+    }
+
+    private fun smsFailureMessageForSave(reason: SmsSendFailureReason?): String {
+        return when (reason) {
+            SmsSendFailureReason.INVALID_PHONE -> "nie wysłano SMS: sprawdź numer telefonu klienta."
+            SmsSendFailureReason.MISSING_SEND_SMS_PERMISSION -> "nie wysłano SMS: aplikacja nie ma uprawnienia do wysyłania SMS."
+            SmsSendFailureReason.SMS_NOT_AVAILABLE -> "nie wysłano SMS: to urządzenie nie obsługuje wysyłania SMS."
+            SmsSendFailureReason.API_ERROR -> "nie wysłano SMS: telefon lub operator odrzucił wysyłkę."
+            SmsSendFailureReason.EMPTY_MESSAGE -> "nie wysłano SMS: treść wiadomości jest pusta."
+            SmsSendFailureReason.MESSAGE_TOO_LONG -> "nie wysłano SMS: treść wiadomości jest za długa."
+            SmsSendFailureReason.OUTSIDE_REMINDER_DATE,
+            SmsSendFailureReason.OUTSIDE_SEND_WINDOW,
+            null -> "nie wysłano SMS. Sprawdź numer telefonu, uprawnienia SMS lub sieć."
         }
     }
 

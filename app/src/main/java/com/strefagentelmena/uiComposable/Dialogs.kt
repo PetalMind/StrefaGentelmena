@@ -1,6 +1,10 @@
 package com.strefagentelmena.uiComposable
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -44,6 +48,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -85,6 +90,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
 import com.google.firebase.database.FirebaseDatabase
 import com.strefagentelmena.R
 import com.strefagentelmena.functions.appFunctions
@@ -1112,10 +1118,27 @@ class Dialogs {
         val deleteDialogState by viewModel.deleteDialogState.observeAsState(false)
         val selectedAppointment by viewModel.selectedAppointment.observeAsState()
         val appointmentError by viewModel.appointmentError.observeAsState("")
+        val context = LocalContext.current
 
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
         val sendNotification = remember { mutableStateOf(false) }
+        var sendSmsOnSave by remember(isNewState) { mutableStateOf(true) }
         val title = if (isNewState) "Dodaj" else "Edytuj"
+        fun saveNewAppointment() {
+            viewModel.createNewAppointment(
+                isNew = isNewState,
+                sendSmsOnSave = sendSmsOnSave,
+            )
+        }
+        val smsPermissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted) {
+                saveNewAppointment()
+            } else {
+                viewModel.setMessages("Nie można wysłać SMS bez uprawnienia. Wizyta nie została zapisana.")
+            }
+        }
 
         val selectedDate = remember(selectedAppointment, isNewState) {
             selectedAppointment?.date?.takeIf { it.isNotBlank() }?.let {
@@ -1186,6 +1209,24 @@ class Dialogs {
                                 .padding(bottom = 96.dp),
                         ) {
                             formUI.AppointmentForm(viewModel = viewModel)
+                            if (isNewState) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { sendSmsOnSave = !sendSmsOnSave }
+                                        .padding(top = 12.dp, bottom = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Checkbox(
+                                        checked = sendSmsOnSave,
+                                        onCheckedChange = { sendSmsOnSave = it },
+                                    )
+                                    Text(
+                                        text = "Wyślij SMS przy zapisie",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                }
+                            }
                         }
                     }
                     StrefaDialogFloatingBar(
@@ -1207,7 +1248,15 @@ class Dialogs {
                                     text = "Zapisz",
                                     onClick = {
                                         if (isNewState) {
-                                            viewModel.createNewAppointment(isNewState)
+                                            if (
+                                                sendSmsOnSave &&
+                                                ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) !=
+                                                PackageManager.PERMISSION_GRANTED
+                                            ) {
+                                                smsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
+                                            } else {
+                                                saveNewAppointment()
+                                            }
                                         } else if (
                                             viewModel.editAppointment(
                                                 FirebaseDatabase.getInstance(),
